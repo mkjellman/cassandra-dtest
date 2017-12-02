@@ -46,7 +46,7 @@ import sys
 import traceback
 import re
 import inspect
-from StringIO import StringIO
+from io import StringIO
 from time import time
 from xml.sax import saxutils
 
@@ -115,7 +115,7 @@ def exc_message(exc_info):
             result = str(exc)
         except UnicodeEncodeError:
             try:
-                result = unicode(exc)
+                result = str(exc)
             except UnicodeError:
                 # Fallback to args as neither str nor
                 # unicode(Exception(u'\xe6')) work in Python < 2.6
@@ -218,13 +218,13 @@ class DTestXunit(Plugin):
         self.stats['total'] = (self.stats['errors'] + self.stats['failures']
                                + self.stats['passes'] + self.stats['skipped'])
         self.error_report_file.write(
-            u'<?xml version="1.0" encoding="%(encoding)s"?>'
-            u'<testsuite name="%(testsuite_name)s" tests="%(total)d" '
-            u'errors="%(errors)d" failures="%(failures)d" '
-            u'skip="%(skipped)d">' % self.stats)
-        self.error_report_file.write(u''.join([force_unicode(e, self.encoding)
+            '<?xml version="1.0" encoding="%(encoding)s"?>'
+            '<testsuite name="%(testsuite_name)s" tests="%(total)d" '
+            'errors="%(errors)d" failures="%(failures)d" '
+            'skip="%(skipped)d">' % self.stats)
+        self.error_report_file.write(''.join([force_unicode(e, self.encoding)
                                                for e in self.errorlist]))
-        self.error_report_file.write(u'</testsuite>')
+        self.error_report_file.write('</testsuite>')
         self.error_report_file.close()
         if self.config.verbosity > 1:
             stream.writeln("-" * 70)
@@ -293,9 +293,9 @@ class DTestXunit(Plugin):
         id = test.id()
 
         self.errorlist.append(
-            u'<testcase classname=%(cls)s name=%(name)s time="%(taken).3f">'
-            u'<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
-            u'</%(type)s>%(systemout)s%(systemerr)s</testcase>' %
+            '<testcase classname=%(cls)s name=%(name)s time="%(taken).3f">'
+            '<%(type)s type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
+            '</%(type)s>%(systemout)s%(systemerr)s</testcase>' %
             {'cls': self._quoteattr(id_split(id)[0]),
              'name': self._quoteattr(id_split(id)[-1]),
              'taken': taken,
@@ -316,9 +316,9 @@ class DTestXunit(Plugin):
         id = test.id()
 
         self.errorlist.append(
-            u'<testcase classname=%(cls)s name=%(name)s time="%(taken).3f">'
-            u'<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
-            u'</failure>%(systemout)s%(systemerr)s</testcase>' %
+            '<testcase classname=%(cls)s name=%(name)s time="%(taken).3f">'
+            '<failure type=%(errtype)s message=%(message)s><![CDATA[%(tb)s]]>'
+            '</failure>%(systemout)s%(systemerr)s</testcase>' %
             {'cls': self._quoteattr(id_split(id)[0]),
              'name': self._quoteattr(id_split(id)[-1]),
              'taken': taken,

@@ -26,7 +26,7 @@ class TestBatch(Tester):
             APPLY BATCH;
         """)
         for node in self.cluster.nodelist():
-            self.assertEquals(0, len(node.grep_log_for_errors()))
+            self.assertEqual(0, len(node.grep_log_for_errors()))
 
     def counter_batch_accepts_counter_mutations_test(self):
         """ Test that counter batch accepts counter mutations """
@@ -63,7 +63,7 @@ class TestBatch(Tester):
             INSERT INTO users (id, firstname, lastname) VALUES (1, 'Will', 'Turner')
             APPLY BATCH
         """)
-        assert_all(session, "SELECT * FROM users", [[1, u'Will', u'Turner'], [0, u'Jack', u'Sparrow']])
+        assert_all(session, "SELECT * FROM users", [[1, 'Will', 'Turner'], [0, 'Jack', 'Sparrow']])
 
     @since('3.0')
     def logged_batch_gcgs_below_threshold_single_table_test(self):
@@ -85,7 +85,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        self.assertEquals(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        self.assertEqual(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
 
     @since('3.0')
     def logged_batch_gcgs_below_threshold_multi_table_test(self):
@@ -112,7 +112,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        self.assertEquals(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        self.assertEqual(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
 
     @since('3.0')
     def unlogged_batch_gcgs_below_threshold_should_not_print_warning_test(self):
@@ -128,7 +128,7 @@ class TestBatch(Tester):
         node1 = self.cluster.nodelist()[0]
         warning = node1.grep_log("setting a too low gc_grace_seconds on tables involved in an atomic batch")
         debug(warning)
-        self.assertEquals(0, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        self.assertEqual(0, len(warning), "Cannot find the gc_grace_seconds warning message.")
 
     def logged_batch_rejects_counter_mutations_test(self):
         """ Test that logged batch rejects counter mutations """
@@ -152,7 +152,7 @@ class TestBatch(Tester):
             INSERT INTO users (id, firstname, lastname) VALUES (2, 'Elizabeth', 'Swann')
             APPLY BATCH
         """)
-        assert_all(session, "SELECT * FROM users", [[0, u'Jack', u'Sparrow'], [2, u'Elizabeth', u'Swann']])
+        assert_all(session, "SELECT * FROM users", [[0, 'Jack', 'Sparrow'], [2, 'Elizabeth', 'Swann']])
 
     def unlogged_batch_rejects_counter_mutations_test(self):
         """ Test that unlogged batch rejects counter mutations """
@@ -192,7 +192,7 @@ class TestBatch(Tester):
         session.execute(query)
 
         self.cluster.nodelist()[-1].start(wait_for_binary_proto=True, wait_other_notice=True)
-        assert_all(session, "SELECT * FROM users", [[1, u'Will', u'Turner'], [0, u'Jack', u'Sparrow']],
+        assert_all(session, "SELECT * FROM users", [[1, 'Will', 'Turner'], [0, 'Jack', 'Sparrow']],
                    cl=ConsistencyLevel.ALL)
 
     def acknowledged_by_batchlog_not_set_when_batchlog_write_fails_test(self):
@@ -365,7 +365,7 @@ class TestBatch(Tester):
         session.execute(query)
         rows = session.execute("SELECT id, firstname, lastname FROM users")
         res = sorted(rows)
-        self.assertEquals([[0, 'Jack', 'Sparrow'], [1, 'Will', 'Turner']], [list(res[0]), list(res[1])])
+        self.assertEqual([[0, 'Jack', 'Sparrow'], [1, 'Will', 'Turner']], [list(res[0]), list(res[1])])
 
     def _batchlog_replay_compatibility_test(self, coordinator_idx, current_nodes, previous_version, previous_nodes, protocol_version):
         session = self.prepare_mixed(coordinator_idx, current_nodes, previous_version, previous_nodes,
@@ -480,7 +480,7 @@ class TestBatch(Tester):
         self.prepare(previous_nodes + current_nodes, compression, previous_version, protocol_version=protocol_version, install_byteman=install_byteman)
 
         # then upgrade the current nodes to the current version but not the previous nodes
-        for i in xrange(current_nodes):
+        for i in range(current_nodes):
             node = self.cluster.nodelist()[i]
             self.upgrade_node(node)
 

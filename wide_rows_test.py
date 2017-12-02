@@ -42,7 +42,7 @@ class TestWideRows(Tester):
         # Create a large timeline for each of a group of users:
         for user in ('ryan', 'cathy', 'mallen', 'joaquin', 'erin', 'ham'):
             debug("Writing values for: %s" % user)
-            for day in xrange(5000):
+            for day in range(5000):
                 date_str = (date + datetime.timedelta(day)).strftime("%Y-%m-%d")
                 client = random.choice(clients)
                 msg = random.choice(status_messages)

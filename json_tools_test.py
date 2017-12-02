@@ -41,8 +41,8 @@ class TestJson(Tester):
         res = session.execute("SELECT * FROM Test. users")
 
         self.assertItemsEqual(rows_to_list(res),
-                              [[u'frodo', 1985, u'male', u'pass@', u'CA'],
-                               [u'sam', 1980, u'male', u'@pass', u'NY']])
+                              [['frodo', 1985, 'male', 'pass@', 'CA'],
+                               ['sam', 1980, 'male', '@pass', 'NY']])
 
         debug("Flushing and stopping cluster...")
         node1.flush()
@@ -96,6 +96,6 @@ class TestJson(Tester):
         debug("data: " + str(res))
 
         self.assertItemsEqual(rows_to_list(res),
-                              [[u'frodo', 1985, u'male', u'pass@', u'CA'],
-                               [u'sam', 1980, u'male', u'@pass', u'NY'],
-                               [u'gandalf', 1955, u'male', u'p@$$', u'WA']])
+                              [['frodo', 1985, 'male', 'pass@', 'CA'],
+                               ['sam', 1980, 'male', '@pass', 'NY'],
+                               ['gandalf', 1955, 'male', 'p@$$', 'WA']])

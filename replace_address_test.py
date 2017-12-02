@@ -176,11 +176,11 @@ class BaseReplaceAddressTest(Tester):
                                               .format(self.replaced_node.address(),
                                                       self.replacement_node.address()))
         if (previous_log_size is not None):
-            self.assertEquals(len(logs), previous_log_size)
+            self.assertEqual(len(logs), previous_log_size)
 
         moved_tokens = set([l[1].group(1) for l in logs])
         debug("number of moved tokens: {}".format(len(moved_tokens)))
-        self.assertEquals(len(moved_tokens), num_tokens)
+        self.assertEqual(len(moved_tokens), num_tokens)
 
         return len(logs)
 

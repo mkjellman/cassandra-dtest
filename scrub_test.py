@@ -169,7 +169,7 @@ class TestHelper(Tester):
         After finding the number of existing sstables, increase all of the
         generations by that amount.
         """
-        for table_or_index, table_sstables in sstables.items():
+        for table_or_index, table_sstables in list(sstables.items()):
             increment_by = len(set(parse.search('{}-{increment_by}-{suffix}.{file_extention}', s).named['increment_by'] for s in table_sstables))
             sstables[table_or_index] = [self.increment_generation_by(s, increment_by) for s in table_sstables]
 

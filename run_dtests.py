@@ -20,7 +20,7 @@ example:
     ./run_dtests.py --nose-options -v --vnodes false repair_tests/repair_test.py:TestRepair.token_range_repair_test_with_cf
 
 """
-from __future__ import print_function
+
 
 import subprocess
 import sys
@@ -159,7 +159,7 @@ def product_of_values(d):
     # transform, e.g., {'a': [1, 2, 3], 'b': [4, 5, 6]} into
     # [[('a', 1), ('a', 2), ('a', 3)],
     #  [('b', 4), ('b', 5), ('b', 6)]]
-    tuple_list = [[(k, v) for v in v_list] for k, v_list in d.items()]
+    tuple_list = [[(k, v) for v in v_list] for k, v_list in list(d.items())]
 
     # return the cartesian product of the flattened dict
     return tuple(dict(result) for result in product(*tuple_list))

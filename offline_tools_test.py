@@ -88,7 +88,7 @@ class TestOfflineTools(Tester):
 
     def get_levels(self, data):
         (out, err, rc) = data
-        return map(int, re.findall("SSTable Level: ([0-9])", out))
+        return list(map(int, re.findall("SSTable Level: ([0-9])", out)))
 
     def wait_for_compactions(self, node):
         pattern = re.compile("pending tasks: 0")
@@ -245,10 +245,9 @@ class TestOfflineTools(Tester):
         # STDOUT of the sstableverify command consists of multiple lines which may contain
         # Java-normalized paths. To later compare these with Python-normalized paths, we
         # map over each line of out and replace Java-normalized paths with Python equivalents.
-        outlines = map(lambda line: re.sub("(?<=path=').*(?=')",
+        outlines = [re.sub("(?<=path=').*(?=')",
                                            lambda match: os.path.normcase(match.group(0)),
-                                           line),
-                       out.splitlines())
+                                           line) for line in out.splitlines()]
 
         # check output is correct for each sstable
         sstables = self._get_final_sstables(node1, "keyspace1", "standard1")
@@ -448,7 +447,7 @@ class TestOfflineTools(Tester):
         file names no longer contain tmp in their names (CASSANDRA-7066).
         """
         # Get all sstable data files
-        allsstables = map(os.path.normcase, node.get_sstables(ks, table))
+        allsstables = list(map(os.path.normcase, node.get_sstables(ks, table)))
 
         # Remove any temporary files
         tool_bin = node.get_tool('sstableutil')
@@ -457,7 +456,7 @@ class TestOfflineTools(Tester):
             env = common.make_cassandra_env(node.get_install_cassandra_root(), node.get_node_cassandra_root())
             p = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (stdout, stderr) = p.communicate()
-            tmpsstables = map(os.path.normcase, stdout.splitlines())
+            tmpsstables = list(map(os.path.normcase, stdout.splitlines()))
 
             ret = list(set(allsstables) - set(tmpsstables))
         else:

@@ -49,14 +49,14 @@ class TestAuth(Tester):
             ks_name='system_auth',
             max_schema_agreement_wait=30  # 3x the default of 10
         )
-        self.assertEquals(1, auth_metadata.replication_strategy.replication_factor)
+        self.assertEqual(1, auth_metadata.replication_strategy.replication_factor)
 
         session.execute("""
             ALTER KEYSPACE system_auth
                 WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};
         """)
 
-        self.assertEquals(3, auth_metadata.replication_strategy.replication_factor)
+        self.assertEqual(3, auth_metadata.replication_strategy.replication_factor)
 
         # Run repair to workaround read repair issues caused by CASSANDRA-10655
         debug("Repairing before altering RF")
@@ -79,7 +79,7 @@ class TestAuth(Tester):
                 cluster=self.patient_exclusive_cql_connection(node, user='cassandra', password='cassandra').cluster,
                 ks_name='system_auth'
             )
-            self.assertEquals(3, exclusive_auth_metadata.replication_strategy.replication_factor)
+            self.assertEqual(3, exclusive_auth_metadata.replication_strategy.replication_factor)
 
     def login_test(self):
         """
@@ -94,11 +94,11 @@ class TestAuth(Tester):
         try:
             self.get_session(user='cassandra', password='badpassword')
         except NoHostAvailable as e:
-            self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
+            self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
         try:
             self.get_session(user='doesntexist', password='doesntmatter')
         except NoHostAvailable as e:
-            self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
+            self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
 
     # from 2.2 role creation is granted by CREATE_ROLE permissions, not superuser status
     @since('1.2', max_version='2.1.x')
@@ -213,7 +213,7 @@ class TestAuth(Tester):
         try:
             self.get_session(user='bob', password='12345')
         except NoHostAvailable as e:
-            self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
+            self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
 
     def user_cant_drop_themselves_test(self):
         """
@@ -631,7 +631,7 @@ class TestAuth(Tester):
 
         cassandra.execute("GRANT SELECT ON ks.cf TO cathy")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEquals(0, len(rows))
+        self.assertEqual(0, len(rows))
 
         assert_unauthorized(cathy, "INSERT INTO ks.cf (id, val) VALUES (0, 0)", "User cathy has no MODIFY permission on <table ks.cf> or any of its parents")
 
@@ -645,11 +645,11 @@ class TestAuth(Tester):
         cathy.execute("INSERT INTO ks.cf (id, val) VALUES (0, 0)")
         cathy.execute("UPDATE ks.cf SET val = 1 WHERE id = 1")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEquals(2, len(rows))
+        self.assertEqual(2, len(rows))
 
         cathy.execute("DELETE FROM ks.cf WHERE id = 1")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEquals(1, len(rows))
+        self.assertEqual(1, len(rows))
 
         rows = list(cathy.execute("TRUNCATE ks.cf"))
         self.assertItemsEqual(rows, [])
@@ -771,7 +771,7 @@ class TestAuth(Tester):
         cathy = self.get_session(user='cathy', password='12345')
         cathy.execute("INSERT INTO ks.cf (id, val) VALUES (0, 0)")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEquals(1, len(rows))
+        self.assertEqual(1, len(rows))
 
         # drop and recreate the user, make sure permissions are gone
         cassandra.execute("DROP USER cathy")
@@ -1048,7 +1048,7 @@ class TestAuth(Tester):
             try:
                 self.get_session(user='cassandra', password='wrong_password')
             except NoHostAvailable as e:
-                self.assertIsInstance(e.errors.values()[0], AuthenticationFailed)
+                self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
 
             self.get_session(user='cassandra', password='cassandra')
 

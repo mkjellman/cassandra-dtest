@@ -25,10 +25,10 @@ class TestUserTypes(Tester):
     def assertUnauthorized(self, session, query, message):
         with self.assertRaises(Unauthorized) as cm:
             session.execute(query)
-        self.assertRegexpMatches(cm.exception.message, message)
+        self.assertRegex(cm.exception.message, message)
 
     def assertNoTypes(self, session):
-        for keyspace in session.cluster.metadata.keyspaces.values():
+        for keyspace in list(session.cluster.metadata.keyspaces.values()):
             self.assertEqual(0, len(keyspace.user_types))
 
     def test_type_dropping(self):
@@ -285,12 +285,12 @@ class TestUserTypes(Tester):
         rows = list(session.execute(stmt))
 
         primary_item, other_items, other_containers = rows[0]
-        self.assertEqual(listify(primary_item), [u'test', u'test2'])
-        self.assertEqual(listify(other_items), [u'stuff', [u'one', u'two']])
-        self.assertEqual(listify(other_containers), [[u'stuff2', [u'one_other', u'two_other']], [u'stuff3', [u'one_2_other', u'two_2_other']], [u'stuff4', [u'one_3_other', u'two_3_other']]])
+        self.assertEqual(listify(primary_item), ['test', 'test2'])
+        self.assertEqual(listify(other_items), ['stuff', ['one', 'two']])
+        self.assertEqual(listify(other_containers), [['stuff2', ['one_other', 'two_other']], ['stuff3', ['one_2_other', 'two_2_other']], ['stuff4', ['one_3_other', 'two_3_other']]])
 
         #  Generate some repetitive data and check it for it's contents:
-        for x in xrange(50):
+        for x in range(50):
 
             # Create row:
             _id = uuid.uuid4()
@@ -323,7 +323,7 @@ class TestUserTypes(Tester):
             rows = list(session.execute(stmt))
 
             items = rows[0][0]
-            self.assertEqual(listify(items), [[u'stuff3', [u'one_2_other', u'two_2_other']], [u'stuff4', [u'one_3_other', u'two_3_other']]])
+            self.assertEqual(listify(items), [['stuff3', ['one_2_other', 'two_2_other']], ['stuff4', ['one_3_other', 'two_3_other']]])
 
     def test_type_as_part_of_pkey(self):
         """Tests user types as part of a composite pkey"""
@@ -382,8 +382,8 @@ class TestUserTypes(Tester):
         rows = session.execute(stmt)
 
         row_uuid, first_name, like = rows[0]
-        self.assertEqual(first_name, u'Nero')
-        self.assertEqual(like, u'arson')
+        self.assertEqual(first_name, 'Nero')
+        self.assertEqual(like, 'arson')
 
     def test_type_secondary_indexing(self):
         """
@@ -461,8 +461,8 @@ class TestUserTypes(Tester):
         row_uuid, first_name, like = rows[0]
 
         self.assertEqual(str(row_uuid), str(_id))
-        self.assertEqual(first_name, u'Nero')
-        self.assertEqual(like, u'arson')
+        self.assertEqual(first_name, 'Nero')
+        self.assertEqual(like, 'arson')
 
         # rename a field in the type and make sure the index still works
         stmt = """
@@ -479,8 +479,8 @@ class TestUserTypes(Tester):
         row_uuid, first_name, like = rows[0]
 
         self.assertEqual(str(row_uuid), str(_id))
-        self.assertEqual(first_name, u'Nero')
-        self.assertEqual(like, u'arson')
+        self.assertEqual(first_name, 'Nero')
+        self.assertEqual(like, 'arson')
 
         # add another row to be sure the index is still adding new data
         _id = uuid.uuid4()
@@ -500,8 +500,8 @@ class TestUserTypes(Tester):
         row_uuid, first_name, like = rows[0]
 
         self.assertEqual(str(row_uuid), str(_id))
-        self.assertEqual(first_name, u'Abraham')
-        self.assertEqual(like, u'preserving unions')
+        self.assertEqual(first_name, 'Abraham')
+        self.assertEqual(like, 'preserving unions')
 
     def test_type_keyspace_permission_isolation(self):
         """
@@ -609,10 +609,10 @@ class TestUserTypes(Tester):
         session.execute("INSERT INTO bucket (id, my_item) VALUES (1, {sub_one: 'test'})")
 
         rows = list(session.execute("SELECT my_item FROM bucket WHERE id=0"))
-        self.assertEqual(listify(rows[0]), [[u'test', None]])
+        self.assertEqual(listify(rows[0]), [['test', None]])
 
         rows = list(session.execute("SELECT my_item FROM bucket WHERE id=1"))
-        self.assertEqual(listify(rows[0]), [[u'test', None]])
+        self.assertEqual(listify(rows[0]), [['test', None]])
 
     def test_no_counters_in_user_types(self):
         # CASSANDRA-7672
@@ -665,7 +665,7 @@ class TestUserTypes(Tester):
 
         # create a bit of data and expect a natural order based on clustering user types
 
-        ids = range(1, 10)
+        ids = list(range(1, 10))
 
         for _id in ids:
             session.execute("INSERT INTO letters (id, letterpair) VALUES ({}, {{first:'a', second:'z'}})".format(_id))
@@ -678,7 +678,7 @@ class TestUserTypes(Tester):
         for _id in ids:
             res = list(session.execute("SELECT letterpair FROM letters where id = {}".format(_id)))
 
-            self.assertEqual(listify(res), [[[u'a', u'z']], [[u'c', u'a']], [[u'c', u'f']], [[u'c', u'z']], [[u'd', u'e']], [[u'z', u'a']]])
+            self.assertEqual(listify(res), [[['a', 'z']], [['c', 'a']], [['c', 'f']], [['c', 'z']], [['d', 'e']], [['z', 'a']]])
 
     @since('3.6')
     def udt_subfield_test(self):

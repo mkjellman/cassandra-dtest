@@ -108,7 +108,7 @@ class TestCounters(Tester):
         # fast node 2 updates the list of nodes that are alive, it will just have a partial view on the cluster
         # and thus will raise an 'UnavailableException' exception.
         nb_attempts = 50000
-        for i in xrange(0, nb_attempts):
+        for i in range(0, nb_attempts):
             # Change the name of the counter for the sake of randomization
             q = SimpleStatement(
                 query_string="UPDATE ks.cf SET c = c + 1 WHERE key = 'counter_%d'" % i,
@@ -131,19 +131,19 @@ class TestCounters(Tester):
         nb_increment = 50
         nb_counter = 10
 
-        for i in xrange(0, nb_increment):
-            for c in xrange(0, nb_counter):
+        for i in range(0, nb_increment):
+            for c in range(0, nb_counter):
                 session = sessions[(i + c) % len(nodes)]
                 query = SimpleStatement("UPDATE cf SET c = c + 1 WHERE key = 'counter%i'" % c, consistency_level=ConsistencyLevel.QUORUM)
                 session.execute(query)
 
             session = sessions[i % len(nodes)]
-            keys = ",".join(["'counter%i'" % c for c in xrange(0, nb_counter)])
+            keys = ",".join(["'counter%i'" % c for c in range(0, nb_counter)])
             query = SimpleStatement("SELECT key, c FROM cf WHERE key IN (%s)" % keys, consistency_level=ConsistencyLevel.QUORUM)
             res = list(session.execute(query))
 
             assert_length_equal(res, nb_counter)
-            for c in xrange(0, nb_counter):
+            for c in range(0, nb_counter):
                 self.assertEqual(len(res[c]), 2, "Expecting key and counter for counter {}, got {}".format(c, str(res[c])))
                 self.assertEqual(res[c][1], i + 1, "Expecting counter {} = {}, got {}".format(c, i + 1, res[c][0]))
 
@@ -169,7 +169,7 @@ class TestCounters(Tester):
         session.execute(query)
         time.sleep(2)
 
-        keys = range(0, 4)
+        keys = list(range(0, 4))
         updates = 50
 
         def make_updates():
@@ -234,7 +234,7 @@ class TestCounters(Tester):
 
         counters = []
         # establish 50 counters (2x25 rows)
-        for i in xrange(25):
+        for i in range(25):
             _id = str(uuid.uuid4())
             counters.append(
                 {_id: {'counter_one': 1, 'counter_two': 1}}
@@ -247,9 +247,9 @@ class TestCounters(Tester):
             session.execute(query)
 
         # increment a bunch of counters with CL.ONE
-        for i in xrange(10000):
+        for i in range(10000):
             counter = counters[random.randint(0, len(counters) - 1)]
-            counter_id = counter.keys()[0]
+            counter_id = list(counter.keys())[0]
 
             query = SimpleStatement("""
                 UPDATE counter_table
@@ -281,7 +281,7 @@ class TestCounters(Tester):
 
         # let's verify the counts are correct, using CL.ALL
         for counter_dict in counters:
-            counter_id = counter_dict.keys()[0]
+            counter_id = list(counter_dict.keys())[0]
 
             query = SimpleStatement("""
                 SELECT counter_one, counter_two
@@ -320,13 +320,13 @@ class TestCounters(Tester):
 
             expected_counts[_id] = i
 
-        for k, v in expected_counts.items():
+        for k, v in list(expected_counts.items()):
             session.execute("""
                 UPDATE counter_table set counter_one = counter_one + {v}
                 WHERE id='foo' and myuuid = {k}
                 """.format(k=k, v=v))
 
-        for k, v in expected_counts.items():
+        for k, v in list(expected_counts.items()):
             count = list(session.execute("""
                 SELECT counter_one FROM counter_table
                 WHERE id = 'foo' and myuuid = {k}

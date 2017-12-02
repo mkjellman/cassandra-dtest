@@ -108,38 +108,38 @@ class TestGlobalRowKeyCache(Tester):
             rows = list(session.execute("SELECT * FROM %s" % (cf,)))
 
             # one row gets deleted each validation round
-            self.assertEquals(100 - (validation_round + 1), len(rows))
+            self.assertEqual(100 - (validation_round + 1), len(rows))
 
             # adjust enumeration start to account for row deletions
             for i, row in enumerate(sorted(rows), start=(validation_round + 1)):
-                self.assertEquals(i, row.k)
-                self.assertEquals(i, row.v1)
+                self.assertEqual(i, row.k)
+                self.assertEqual(i, row.v1)
 
                 # updated rows will have different values
                 expected_value = validation_round if i < num_updates else i
-                self.assertEquals(expected_value, row.v2)
+                self.assertEqual(expected_value, row.v2)
 
         # check values of counter tables
         rows = list(session.execute("SELECT * FROM test_counter"))
-        self.assertEquals(100, len(rows))
+        self.assertEqual(100, len(rows))
         for i, row in enumerate(sorted(rows)):
-            self.assertEquals(i, row.k)
+            self.assertEqual(i, row.k)
 
             # updated rows will get incremented once each round
             expected_value = i
             if i < num_updates:
                 expected_value += validation_round + 1
 
-            self.assertEquals(expected_value, row.v1)
+            self.assertEqual(expected_value, row.v1)
 
         rows = list(session.execute("SELECT * FROM test_counter_clustering"))
-        self.assertEquals(100, len(rows))
+        self.assertEqual(100, len(rows))
         for i, row in enumerate(sorted(rows)):
-            self.assertEquals(i, row.k)
-            self.assertEquals(i, row.v1)
+            self.assertEqual(i, row.k)
+            self.assertEqual(i, row.v1)
 
             expected_value = i
             if i < num_updates:
                 expected_value += validation_round + 1
 
-            self.assertEquals(expected_value, row.v2)
+            self.assertEqual(expected_value, row.v2)

@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 import errno
 import os
@@ -6,7 +6,7 @@ import shutil
 import time
 import uuid
 from collections import namedtuple
-from itertools import izip as zip
+
 from itertools import repeat
 
 from cassandra import WriteFailure
@@ -64,7 +64,7 @@ def _get_16_uuid_insert_stmt(ks_name, table_name):
 
 def _get_create_table_statement(ks_name, table_name, column_spec, options=None):
     if options:
-        options_pairs = ('{k}={v}'.format(k=k, v=v) for (k, v) in options.iteritems())
+        options_pairs = ('{k}={v}'.format(k=k, v=v) for (k, v) in options.items())
         options_string = 'WITH ' + ' AND '.join(options_pairs)
     else:
         options_string = ''

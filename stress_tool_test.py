@@ -1,4 +1,4 @@
-from __future__ import division
+
 
 from dtest import Tester
 from tools.data import rows_to_list

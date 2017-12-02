@@ -156,7 +156,7 @@ def build_upgrade_pairs():
     valid_upgrade_pairs = []
     manifest = OVERRIDE_MANIFEST or MANIFEST
 
-    for origin_meta, destination_metas in manifest.items():
+    for origin_meta, destination_metas in list(manifest.items()):
         for destination_meta in destination_metas:
             if not (origin_meta and destination_meta):  # None means we don't care about that version, which means we don't care about iterations involving it either
                 debug("skipping class creation as a version is undefined (this is normal), versions: {} and {}".format(origin_meta, destination_meta))

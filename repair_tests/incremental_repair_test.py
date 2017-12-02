@@ -41,7 +41,7 @@ class TestIncRepair(Tester):
         out = node.run_sstablemetadata(keyspace=keyspace).stdout
 
         def matches(pattern):
-            return filter(None, [pattern.match(l) for l in out.split('\n')])
+            return [_f for _f in [pattern.match(l) for l in out.split('\n')] if _f]
         names = [m.group(1) for m in matches(_sstable_name)]
         repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
 
@@ -368,7 +368,7 @@ class TestIncRepair(Tester):
 
         debug("insert data")
 
-        insert_c1c2(session, keys=range(1, 50), consistency=ConsistencyLevel.ALL)
+        insert_c1c2(session, keys=list(range(1, 50)), consistency=ConsistencyLevel.ALL)
         node1.flush()
 
         debug("bringing down node 3")
@@ -376,7 +376,7 @@ class TestIncRepair(Tester):
         node3.stop(gently=False)
 
         debug("inserting additional data into node 1 and 2")
-        insert_c1c2(session, keys=range(50, 100), consistency=ConsistencyLevel.TWO)
+        insert_c1c2(session, keys=list(range(50, 100)), consistency=ConsistencyLevel.TWO)
         node1.flush()
         node2.flush()
 
@@ -397,7 +397,7 @@ class TestIncRepair(Tester):
         node2.stop(gently=False)
 
         debug("inserting data in nodes 1 and 3")
-        insert_c1c2(session, keys=range(100, 150), consistency=ConsistencyLevel.TWO)
+        insert_c1c2(session, keys=list(range(100, 150)), consistency=ConsistencyLevel.TWO)
         node1.flush()
         node3.flush()
 
@@ -546,7 +546,7 @@ class TestIncRepair(Tester):
         cluster = self.cluster
         cluster.populate(2).start(wait_for_binary_proto=True)
         node1, node2 = cluster.nodelist()
-        for x in xrange(0, 10):
+        for x in range(0, 10):
             node1.stress(['write', 'n=100k', 'no-warmup', '-rate', 'threads=10', '-schema', 'compaction(strategy=LeveledCompactionStrategy,sstable_size_in_mb=10)', 'replication(factor=2)'])
             cluster.flush()
             cluster.wait_for_compactions()
@@ -600,18 +600,18 @@ class TestIncRepair(Tester):
         # take a long time and don't print anything by default, which can result
         # in the test being timed out after 20 minutes.  These print statements
         # prevent it from being timed out.
-        print "compacting node1"
+        print("compacting node1")
         node1.compact()
-        print "compacting node2"
+        print("compacting node2")
         node2.compact()
-        print "compacting node3"
+        print("compacting node3")
         node3.compact()
 
         # wait some time to be sure the load size is propagated between nodes
         debug("Waiting for load size info to be propagated between nodes")
         time.sleep(45)
 
-        load_size_in_kb = float(sum(map(lambda n: n.data_size(), [node1, node2, node3])))
+        load_size_in_kb = float(sum([n.data_size() for n in [node1, node2, node3]]))
         load_size = load_size_in_kb / 1024 / 1024
         debug("Total Load size: {}GB".format(load_size))
 

@@ -194,7 +194,7 @@ class TestCommitLog(Tester):
 
         debug("Insert data")
         num_rows = 1024  # maximum number of mutations replayed at once by the commit log
-        for i in xrange(num_rows):
+        for i in range(num_rows):
             session.execute("INSERT INTO Test.mytable (a, b, c) VALUES (0, {i}, {i})".format(i=i))
 
         node1.stop(gently=False)
@@ -251,7 +251,7 @@ class TestCommitLog(Tester):
         session = self.patient_cql_connection(node1)
         res = session.execute("SELECT * FROM Test. users")
         self.assertItemsEqual(rows_to_list(res),
-                              [[u'gandalf', 1955, u'male', u'p@$$', u'WA']])
+                              [['gandalf', 1955, 'male', 'p@$$', 'WA']])
 
         debug("Stop node abruptly")
         node1.stop(gently=False)
@@ -281,7 +281,7 @@ class TestCommitLog(Tester):
         session = self.patient_cql_connection(node1)
         res = session.execute("SELECT * FROM Test. users")
         self.assertItemsEqual(rows_to_list(res),
-                              [[u'gandalf', 1955, u'male', u'p@$$', u'WA']])
+                              [['gandalf', 1955, 'male', 'p@$$', 'WA']])
 
     def default_segment_size_test(self):
         """

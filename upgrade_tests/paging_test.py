@@ -15,15 +15,15 @@ from tools.data import rows_to_list
 from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.decorators import since
 from tools.paging import PageAssertionMixin, PageFetcher
-from upgrade_base import UpgradeTester
-from upgrade_manifest import build_upgrade_pairs
+from .upgrade_base import UpgradeTester
+from .upgrade_manifest import build_upgrade_pairs
 
 
 class BasePagingTester(UpgradeTester):
 
     def prepare(self, *args, **kwargs):
         start_on, upgrade_to = self.UPGRADE_PATH.starting_meta, self.UPGRADE_PATH.upgrade_meta
-        if 'protocol_version' not in kwargs.keys():
+        if 'protocol_version' not in list(kwargs.keys()):
             # Due to CASSANDRA-10880, we need to use proto v3 (instead of v4) when it's a mixed cluster of 2.2.x and 3.0.x nodes.
             if start_on.family in ('2.1.x', '2.2.x') and upgrade_to.family == '3.0.x':
                 debug("Protocol version set to v3, due to 2.1.x/2.2.x and 3.0.x mixed version cluster.")
@@ -75,7 +75,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
                 |4 |and more testing|
                 |5 |and more testing|
                 """
-            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': unicode})
+            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test", fetch_size=100, consistency_level=CL.ALL)
@@ -106,7 +106,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
                 |8 |and more testing|
                 |9 |and more testing|
                 """
-            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': unicode})
+            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test", fetch_size=5, consistency_level=CL.ALL)
@@ -136,7 +136,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
                 |4 |and more testing|
                 |5 |and more testing|
                 """
-            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': unicode})
+            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test", fetch_size=5, consistency_level=CL.ALL)
@@ -168,7 +168,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
                    | id     |value   |
               *5001| [uuid] |testing |
                 """
-            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': random_txt, 'value': unicode})
+            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': random_txt, 'value': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test", consistency_level=CL.ALL)
@@ -221,7 +221,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
                 |1 |j    |
                 """
 
-            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': unicode})
+            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test where id = 1 order by value asc", fetch_size=5, consistency_level=CL.ALL)
@@ -236,7 +236,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
             self.assertEqual(pf.all_data(), expected_data)
 
             # make sure we don't allow paging over multiple partitions with order because that's weird
-            with self.assertRaisesRegexp(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
+            with self.assertRaisesRegex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
                 stmt = SimpleStatement("select * from paging_test where id in (1,2) order by value asc", consistency_level=CL.ALL)
                 cursor.execute(stmt)
 
@@ -274,7 +274,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
                 |1 |j    |j     |j     |
                 """
 
-            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': unicode, 'value2': unicode})
+            expected_data = create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': str, 'value2': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test where id = 1 order by value asc", fetch_size=3, consistency_level=CL.ALL)
@@ -282,7 +282,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
 
             pf = PageFetcher(future).request_all()
 
-            print "pages:", pf.num_results_all()
+            print("pages:", pf.num_results_all())
             self.assertEqual(pf.pagecount(), 4)
             self.assertEqual(pf.num_results_all(), [3, 3, 3, 1])
 
@@ -307,7 +307,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, value text, PRIMARY KEY (id, value) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -407,7 +407,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
                 |8 |and more testing|
                 |9 |and more testing|
                 """
-            create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': unicode})
+            create_rows(data, cursor, 'paging_test', cl=CL.ALL, format_funcs={'id': int, 'value': str})
 
             future = cursor.execute_async(
                 SimpleStatement("select * from paging_test where value = 'and more testing' ALLOW FILTERING", fetch_size=4, consistency_level=CL.ALL)
@@ -431,7 +431,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
                     |7 |and more testing|
                     |8 |and more testing|
                     |9 |and more testing|
-                    """, format_funcs={'id': int, 'value': unicode}
+                    """, format_funcs={'id': int, 'value': str}
                 )
             )
 
@@ -539,7 +539,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, value text, PRIMARY KEY (id, value) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -570,7 +570,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, value text, PRIMARY KEY (id, value) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -600,7 +600,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE INDEX ON paging_test(mybool)")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         def bool_from_str_int(text):
             return bool(int(text))
@@ -628,7 +628,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             pf = PageFetcher(future).request_all()
 
             # the query only searched for True rows, so let's pare down the expectations for comparison
-            expected_data = filter(lambda x: x.get('mybool') is True, all_data)
+            expected_data = [x for x in all_data if x.get('mybool') is True]
 
             self.assertEqual(pf.pagecount(), 2)
             self.assertEqual(pf.num_results_all(), [400, 200])
@@ -710,8 +710,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99" % selector))
                     self.assertEqual(16, len(results))
                     self.assertEqual([99] * 16, [r.a for r in results])
-                    self.assertEqual(range(16), [r.b for r in results])
-                    self.assertEqual(range(16), [r.c for r in results])
+                    self.assertEqual(list(range(16)), [r.b for r in results])
+                    self.assertEqual(list(range(16)), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 16, [r.s1 for r in results])
                     if "s2" in selector:
@@ -726,8 +726,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 ORDER BY b DESC" % selector))
                     self.assertEqual(16, len(results))
                     self.assertEqual([99] * 16, [r.a for r in results])
-                    self.assertEqual(list(reversed(range(16))), [r.b for r in results])
-                    self.assertEqual(list(reversed(range(16))), [r.c for r in results])
+                    self.assertEqual(list(reversed(list(range(16)))), [r.b for r in results])
+                    self.assertEqual(list(reversed(list(range(16)))), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 16, [r.s1 for r in results])
                     if "s2" in selector:
@@ -774,8 +774,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 AND b > 3" % selector))
                     self.assertEqual(12, len(results))
                     self.assertEqual([99] * 12, [r.a for r in results])
-                    self.assertEqual(range(4, 16), [r.b for r in results])
-                    self.assertEqual(range(4, 16), [r.c for r in results])
+                    self.assertEqual(list(range(4, 16)), [r.b for r in results])
+                    self.assertEqual(list(range(4, 16)), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 12, [r.s1 for r in results])
                     if "s2" in selector:
@@ -790,8 +790,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 ORDER BY b DESC" % selector))
                     self.assertEqual(12, len(results))
                     self.assertEqual([99] * 12, [r.a for r in results])
-                    self.assertEqual(list(reversed(range(4, 16))), [r.b for r in results])
-                    self.assertEqual(list(reversed(range(4, 16))), [r.c for r in results])
+                    self.assertEqual(list(reversed(list(range(4, 16)))), [r.b for r in results])
+                    self.assertEqual(list(reversed(list(range(4, 16)))), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 12, [r.s1 for r in results])
                     if "s2" in selector:
@@ -806,8 +806,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 AND b < 14" % selector))
                     self.assertEqual(14, len(results))
                     self.assertEqual([99] * 14, [r.a for r in results])
-                    self.assertEqual(range(14), [r.b for r in results])
-                    self.assertEqual(range(14), [r.c for r in results])
+                    self.assertEqual(list(range(14)), [r.b for r in results])
+                    self.assertEqual(list(range(14)), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 14, [r.s1 for r in results])
                     if "s2" in selector:
@@ -822,8 +822,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 AND b < 14 ORDER BY b DESC" % selector))
                     self.assertEqual(14, len(results))
                     self.assertEqual([99] * 14, [r.a for r in results])
-                    self.assertEqual(list(reversed(range(14))), [r.b for r in results])
-                    self.assertEqual(list(reversed(range(14))), [r.c for r in results])
+                    self.assertEqual(list(reversed(list(range(14)))), [r.b for r in results])
+                    self.assertEqual(list(reversed(list(range(14)))), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 14, [r.s1 for r in results])
                     if "s2" in selector:
@@ -838,8 +838,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 AND b < 14" % selector))
                     self.assertEqual(10, len(results))
                     self.assertEqual([99] * 10, [r.a for r in results])
-                    self.assertEqual(range(4, 14), [r.b for r in results])
-                    self.assertEqual(range(4, 14), [r.c for r in results])
+                    self.assertEqual(list(range(4, 14)), [r.b for r in results])
+                    self.assertEqual(list(range(4, 14)), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 10, [r.s1 for r in results])
                     if "s2" in selector:
@@ -854,8 +854,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     results = list(cursor.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 AND b < 14 ORDER BY b DESC" % selector))
                     self.assertEqual(10, len(results))
                     self.assertEqual([99] * 10, [r.a for r in results])
-                    self.assertEqual(list(reversed(range(4, 14))), [r.b for r in results])
-                    self.assertEqual(list(reversed(range(4, 14))), [r.c for r in results])
+                    self.assertEqual(list(reversed(list(range(4, 14)))), [r.b for r in results])
+                    self.assertEqual(list(reversed(list(range(4, 14)))), [r.c for r in results])
                     if "s1" in selector:
                         self.assertEqual([17] * 10, [r.s1 for r in results])
                     if "s2" in selector:
@@ -868,7 +868,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE INDEX ON paging_test(mybool)")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         def bool_from_str_int(text):
             return bool(int(text))
@@ -896,7 +896,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             pf = PageFetcher(future).request_all()
 
             # the query only searched for True rows, so let's pare down the expectations for comparison
-            expected_data = filter(lambda x: x.get('mybool') is True, all_data)
+            expected_data = [x for x in all_data if x.get('mybool') is True]
 
             self.assertEqual(pf.pagecount(), 2)
             self.assertEqual(pf.num_results_all(), [400, 200])
@@ -913,7 +913,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, mytext text, PRIMARY KEY (id, mytext) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -949,7 +949,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, mytext text, PRIMARY KEY (id, mytext) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -978,7 +978,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
             self.assertEqual(pf.num_results_all(), [500, 500])
 
             # add the new row to the expected data and then do a compare
-            expected_data.append({u'id': 2, u'mytext': u'foo'})
+            expected_data.append({'id': 2, 'mytext': 'foo'})
             self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
     def test_row_TTL_expiry_during_paging(self):
@@ -986,7 +986,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, mytext text, PRIMARY KEY (id, mytext) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -1038,7 +1038,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
             """)
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -1084,7 +1084,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
             for row in data[1000:1500]:
                 _id, mytext = row['id'], row['mytext']
                 page3expected.append(
-                    {u'id': _id, u'mytext': mytext, u'somevalue': None, u'anothervalue': None}
+                    {'id': _id, 'mytext': mytext, 'somevalue': None, 'anothervalue': None}
                 )
 
             time.sleep(15)
@@ -1107,7 +1107,7 @@ class TestPagingQueryIsolation(BasePagingTester, PageAssertionMixin):
         cursor.execute("CREATE TABLE paging_test ( id int, mytext text, PRIMARY KEY (id, mytext) )")
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory):
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -1196,7 +1196,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
     def setup_data(self, cursor):
 
         def random_txt(text):
-            return unicode(uuid.uuid4())
+            return str(uuid.uuid4())
 
         data = """
              | id | mytext   | col1 | col2 | col3 |
@@ -1242,7 +1242,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
 
         for i in range(pf.pagecount()):
             page_data = pf.page_data(i + 1)
-            self.assertEquals(page_data, expected_pages_data[i])
+            self.assertEqual(page_data, expected_pages_data[i])
 
     def test_single_partition_deletions(self):
         """Test single partition deletions """
@@ -1490,7 +1490,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
             self.setup_data(cursor)
 
             # Add more data
-            values = map(lambda i: uuid.uuid4(), range(3000))
+            values = [uuid.uuid4() for i in range(3000)]
             for value in values:
                 cursor.execute(SimpleStatement(
                     "insert into paging_test (id, mytext, col1) values (1, '{}', null) ".format(

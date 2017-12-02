@@ -14,8 +14,8 @@ from thrift_bindings.v22.Cassandra import (Column, ColumnDef,
 from thrift_tests import _i64, get_thrift_client
 from tools.assertions import assert_length_equal
 from tools.decorators import since
-from upgrade_base import UpgradeTester
-from upgrade_manifest import build_upgrade_pairs
+from .upgrade_base import UpgradeTester
+from .upgrade_manifest import build_upgrade_pairs
 
 
 def _create_dense_super_cf(name):
@@ -34,7 +34,7 @@ def _create_sparse_super_cf(name):
                            comparator_type='AsciiType',
                            subcomparator_type='AsciiType')
 
-def _validate_sparse_cql(cursor, cf='sparse_super_1', column1=u'column1', col1=u'col1', col2=u'col2', key='key'):
+def _validate_sparse_cql(cursor, cf='sparse_super_1', column1='column1', col1='col1', col2='col2', key='key'):
     cursor.execute('use ks')
 
     assert_equal(list(cursor.execute("SELECT * FROM {}".format(cf))),
@@ -68,7 +68,7 @@ def _validate_sparse_thrift(client, cf='sparse_super_1'):
         assert_equal(cosc.super_column.columns[2].value, _i64(100))
 
 
-def _validate_dense_cql(cursor, cf='dense_super_1', key=u'key', column1=u'column1', column2=u'column2', value=u'value'):
+def _validate_dense_cql(cursor, cf='dense_super_1', key='key', column1='column1', column2='column2', value='value'):
     cursor.execute('use ks')
 
     assert_equal(list(cursor.execute("SELECT * FROM {}".format(cf))),
@@ -96,8 +96,8 @@ def _validate_dense_thrift(client, cf='dense_super_1'):
     assert_equal(result[0].super_column.name, 'key1')
     assert_equal(result[1].super_column.name, 'key2')
 
-    print(result[0])
-    print(result[1])
+    print((result[0]))
+    print((result[1]))
     for cosc in result:
         assert_equal(cosc.super_column.columns[0].name, _i64(100))
         assert_equal(cosc.super_column.columns[0].value, 'value1')
@@ -158,7 +158,7 @@ class UpgradeSuperColumnsThrough(Tester):
 
         client.system_add_column_family(_create_dense_super_cf('dense_super_1'))
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('dense_super_1', 'key{}'.format(i)), Column(_i64(100), 'value1', 0), ConsistencyLevel.ONE)
             client.insert('k2', ColumnParent('dense_super_1', 'key{}'.format(i)), Column(_i64(200), 'value2', 0), ConsistencyLevel.ONE)
 
@@ -191,7 +191,7 @@ class UpgradeSuperColumnsThrough(Tester):
 
         client.system_add_column_family(_create_dense_super_cf('dense_super_1'))
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('dense_super_1', 'key{}'.format(i)), Column(_i64(100), 'value1', 0), ConsistencyLevel.ONE)
             client.insert('k2', ColumnParent('dense_super_1', 'key{}'.format(i)), Column(_i64(200), 'value2', 0), ConsistencyLevel.ONE)
 
@@ -233,7 +233,7 @@ class UpgradeSuperColumnsThrough(Tester):
         cf = _create_sparse_super_cf('sparse_super_2')
         client.system_add_column_family(cf)
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('sparse_super_2', 'key{}'.format(i)), Column("value1", _i64(100), 0), ConsistencyLevel.ONE)
             client.insert('k1', ColumnParent('sparse_super_2', 'key{}'.format(i)), Column("col1", _i64(200), 0), ConsistencyLevel.ONE)
             client.insert('k1', ColumnParent('sparse_super_2', 'key{}'.format(i)), Column("col2", _i64(300), 0), ConsistencyLevel.ONE)
@@ -287,7 +287,7 @@ class TestThrift(UpgradeTester):
 
         client.system_add_column_family(_create_dense_super_cf('dense_super_1'))
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('dense_super_1', 'key{}'.format(i)), Column(_i64(100), 'value1', 0), ConsistencyLevel.ONE)
             client.insert('k2', ColumnParent('dense_super_1', 'key{}'.format(i)), Column(_i64(200), 'value2', 0), ConsistencyLevel.ONE)
 
@@ -315,7 +315,7 @@ class TestThrift(UpgradeTester):
 
         client.system_add_column_family(_create_dense_super_cf('dense_super_2'))
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('dense_super_2', 'key{}'.format(i)), Column(_i64(100), 'value1', 0), ConsistencyLevel.ONE)
             client.insert('k2', ColumnParent('dense_super_2', 'key{}'.format(i)), Column(_i64(200), 'value2', 0), ConsistencyLevel.ONE)
 
@@ -324,13 +324,13 @@ class TestThrift(UpgradeTester):
         cursor.execute("ALTER TABLE ks.dense_super_2 RENAME column2 TO renamed_column2")
         cursor.execute("ALTER TABLE ks.dense_super_2 RENAME value TO renamed_value")
 
-        _validate_dense_cql(cursor, cf='dense_super_2', key=u'renamed_key', column1=u'renamed_column1', column2=u'renamed_column2', value=u'renamed_value')
+        _validate_dense_cql(cursor, cf='dense_super_2', key='renamed_key', column1='renamed_column1', column2='renamed_column2', value='renamed_value')
         _validate_dense_thrift(client, cf='dense_super_2')
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
-            _validate_dense_cql(cursor, cf='dense_super_2', key=u'renamed_key', column1=u'renamed_column1', column2=u'renamed_column2', value=u'renamed_value')
+            _validate_dense_cql(cursor, cf='dense_super_2', key='renamed_key', column1='renamed_column1', column2='renamed_column2', value='renamed_value')
             _validate_dense_thrift(client, cf='dense_super_2')
 
     def sparse_supercolumn_test_with_renames(self):
@@ -352,7 +352,7 @@ class TestThrift(UpgradeTester):
         cursor.execute("ALTER TABLE ks.sparse_super_1 RENAME key TO renamed_key")
         cursor.execute("ALTER TABLE ks.sparse_super_1 RENAME column1 TO renamed_column1")
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('sparse_super_1', 'key{}'.format(i)), Column("value1", _i64(100), 0), ConsistencyLevel.ONE)
             client.insert('k1', ColumnParent('sparse_super_1', 'key{}'.format(i)), Column("col1", _i64(200), 0), ConsistencyLevel.ONE)
             client.insert('k1', ColumnParent('sparse_super_1', 'key{}'.format(i)), Column("col2", _i64(300), 0), ConsistencyLevel.ONE)
@@ -362,12 +362,12 @@ class TestThrift(UpgradeTester):
             client.insert('k2', ColumnParent('sparse_super_1', 'key{}'.format(i)), Column("col2", _i64(300), 0), ConsistencyLevel.ONE)
 
         _validate_sparse_thrift(client)
-        _validate_sparse_cql(cursor, column1=u'renamed_column1', key=u'renamed_key')
+        _validate_sparse_cql(cursor, column1='renamed_column1', key='renamed_key')
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
-            _validate_sparse_cql(cursor, column1=u'renamed_column1', key=u'renamed_key')
+            _validate_sparse_cql(cursor, column1='renamed_column1', key='renamed_key')
             _validate_sparse_thrift(client)
 
     def sparse_supercolumn_test(self):
@@ -386,7 +386,7 @@ class TestThrift(UpgradeTester):
         cf = _create_sparse_super_cf('sparse_super_2')
         client.system_add_column_family(cf)
 
-        for i in xrange(1, 3):
+        for i in range(1, 3):
             client.insert('k1', ColumnParent('sparse_super_2', 'key{}'.format(i)), Column("value1", _i64(100), 0), ConsistencyLevel.ONE)
             client.insert('k1', ColumnParent('sparse_super_2', 'key{}'.format(i)), Column("col1", _i64(200), 0), ConsistencyLevel.ONE)
             client.insert('k1', ColumnParent('sparse_super_2', 'key{}'.format(i)), Column("col2", _i64(300), 0), ConsistencyLevel.ONE)

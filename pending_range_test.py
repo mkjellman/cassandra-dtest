@@ -35,7 +35,7 @@ class TestPendingRangeMovements(Tester):
         lwt_query = SimpleStatement("UPDATE users SET email = 'janedoe@abc.com' WHERE login = 'jdoe3' IF email = 'jdoe@abc.com'")
 
         # Show we can execute LWT no problem
-        for i in xrange(1000):
+        for i in range(1000):
             session.execute(lwt_query)
 
         token = '-634023222112864484'
@@ -62,8 +62,8 @@ class TestPendingRangeMovements(Tester):
         # Verify other nodes believe this is Down/Moving
         out, _, _ = node2.nodetool('ring')
         debug("Nodetool Ring output: {}".format(out))
-        self.assertRegexpMatches(out, '127\.0\.0\.1.*?Down.*?Moving')
+        self.assertRegex(out, '127\.0\.0\.1.*?Down.*?Moving')
 
         # Check we can still execute LWT
-        for i in xrange(1000):
+        for i in range(1000):
             session.execute(lwt_query)

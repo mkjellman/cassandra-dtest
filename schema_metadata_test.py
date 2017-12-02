@@ -32,7 +32,7 @@ def verify_durable_writes_keyspace(created_on_version, current_version, keyspace
         "durable_writes_true": True,
         "durable_writes_false": False
     }
-    for keyspace, is_durable in expected.iteritems():
+    for keyspace, is_durable in expected.items():
         keyspace_name = _cql_name_builder(table_name_prefix, keyspace)
         meta = session.cluster.metadata.keyspaces[keyspace_name]
         assert_equal(is_durable, meta.durable_writes,
@@ -281,8 +281,8 @@ def verify_uda(created_on_version, current_version, keyspace, session, table_nam
     function_name = _cql_name_builder(table_name_prefix, "test_uda_function")
     aggregate_name = _cql_name_builder(table_name_prefix, "test_uda_aggregate")
 
-    assert_in(function_name + "(int,int)", session.cluster.metadata.keyspaces[keyspace].functions.keys())
-    assert_in(aggregate_name + "(int)", session.cluster.metadata.keyspaces[keyspace].aggregates.keys())
+    assert_in(function_name + "(int,int)", list(session.cluster.metadata.keyspaces[keyspace].functions.keys()))
+    assert_in(aggregate_name + "(int)", list(session.cluster.metadata.keyspaces[keyspace].aggregates.keys()))
 
     aggr_meta = session.cluster.metadata.keyspaces[keyspace].aggregates[aggregate_name + "(int)"]
     assert_equal(function_name, aggr_meta.state_func)
@@ -303,7 +303,7 @@ def verify_udf(created_on_version, current_version, keyspace, session, table_nam
     if created_on_version < '2.2':
         return
     function_name = _cql_name_builder(table_name_prefix, "test_udf")
-    assert_in(function_name + "(double)", session.cluster.metadata.keyspaces[keyspace].functions.keys())
+    assert_in(function_name + "(double)", list(session.cluster.metadata.keyspaces[keyspace].functions.keys()))
     meta = session.cluster.metadata.keyspaces[keyspace].functions[function_name + "(double)"]
     assert_equal('java', meta.language)
     assert_equal('double', meta.return_type)

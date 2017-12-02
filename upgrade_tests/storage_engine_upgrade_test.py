@@ -68,7 +68,7 @@ class TestStorageEngineUpgrade(Tester):
 
             temp_files = self.glob_data_dirs(os.path.join('*', "tmp", "*.dat"))
             debug("temp files: " + str(temp_files))
-            self.assertEquals(0, len(temp_files), "Temporary files were not cleaned up.")
+            self.assertEqual(0, len(temp_files), "Temporary files were not cleaned up.")
 
         cursor = self.patient_cql_connection(node1)
         if login_keyspace:

@@ -16,7 +16,7 @@ from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.query import BatchStatement, BatchType
 from ccmlib import common
 
-from cqlsh_tools import monkeypatch_driver, unmonkeypatch_driver
+from .cqlsh_tools import monkeypatch_driver, unmonkeypatch_driver
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_all, assert_none
 from tools.data import create_c1c2_table, insert_c1c2, rows_to_list
@@ -183,11 +183,11 @@ class TestCqlsh(Tester):
         session = self.patient_cql_connection(node)
 
         def verify_varcharmap(map_name, expected, encode_value=False):
-            rows = list(session.execute((u"SELECT %s FROM testks.varcharmaptable WHERE varcharkey= '᚛᚛ᚉᚑᚅᚔᚉᚉᚔᚋ ᚔᚈᚔ ᚍᚂᚐᚅᚑ ᚅᚔᚋᚌᚓᚅᚐ᚜';" % map_name).encode("utf-8")))
+            rows = list(session.execute(("SELECT %s FROM testks.varcharmaptable WHERE varcharkey= '᚛᚛ᚉᚑᚅᚔᚉᚉᚔᚋ ᚔᚈᚔ ᚍᚂᚐᚅᚑ ᚅᚔᚋᚌᚓᚅᚐ᚜';" % map_name).encode("utf-8")))
             if encode_value:
-                got = {k.encode("utf-8"): v.encode("utf-8") for k, v in rows[0][0].iteritems()}
+                got = {k.encode("utf-8"): v.encode("utf-8") for k, v in rows[0][0].items()}
             else:
-                got = {k.encode("utf-8"): v for k, v in rows[0][0].iteritems()}
+                got = {k.encode("utf-8"): v for k, v in rows[0][0].items()}
             self.assertEqual(got, expected)
 
         verify_varcharmap('varcharasciimap', {
@@ -297,9 +297,9 @@ class TestCqlsh(Tester):
 
         output, err = self.run_cqlsh(node, 'use testks; SELECT * FROM varcharmaptable', ['--encoding=utf-8'])
 
-        self.assertEquals(output.count('Можам да јадам стакло, а не ме штета.'), 16)
-        self.assertEquals(output.count(' ⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑'), 16)
-        self.assertEquals(output.count('᚛᚛ᚉᚑᚅᚔᚉᚉᚔᚋ ᚔᚈᚔ ᚍᚂᚐᚅᚑ ᚅᚔᚋᚌᚓᚅᚐ᚜'), 2)
+        self.assertEqual(output.count('Можам да јадам стакло, а не ме штета.'), 16)
+        self.assertEqual(output.count(' ⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑'), 16)
+        self.assertEqual(output.count('᚛᚛ᚉᚑᚅᚔᚉᚉᚔᚋ ᚔᚈᚔ ᚍᚂᚐᚅᚑ ᚅᚔᚋᚌᚓᚅᚐ᚜'), 2)
 
     def test_eat_glass(self):
 
@@ -308,7 +308,7 @@ class TestCqlsh(Tester):
 
         node1, = self.cluster.nodelist()
 
-        node1.run_cqlsh(cmds=u"""create KEYSPACE testks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+        node1.run_cqlsh(cmds="""create KEYSPACE testks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 use testks;
 
 CREATE TABLE varcharmaptable (
@@ -445,10 +445,10 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
 
         node1, = self.cluster.nodelist()
 
-        output, err, _ = node1.run_cqlsh(cmds=u"ä;".encode('utf8'))
+        output, err, _ = node1.run_cqlsh(cmds="ä;".encode('utf8'))
         err = err.decode('utf8')
-        self.assertIn(u'Invalid syntax', err)
-        self.assertIn(u'ä', err)
+        self.assertIn('Invalid syntax', err)
+        self.assertIn('ä', err)
 
     @since('2.2')
     def test_unicode_invalid_request_error(self):
@@ -461,12 +461,12 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
 
         node1, = self.cluster.nodelist()
 
-        cmd = u'''create keyspace "ä" WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'};'''
+        cmd = '''create keyspace "ä" WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'};'''
         cmd = cmd.encode('utf8')
         output, err, _ = node1.run_cqlsh(cmds=cmd, cqlsh_options=["--debug"])
 
         err = err.decode('utf8')
-        self.assertIn(u'"ä" is not a valid keyspace name', err)
+        self.assertIn('"ä" is not a valid keyspace name', err)
 
     def test_with_empty_values(self):
         """
@@ -477,7 +477,7 @@ UPDATE varcharmaptable SET varcharvarintmap['Vitrum edere possum, mihi non nocet
 
         node1, = self.cluster.nodelist()
 
-        node1.run_cqlsh(cmds=u"""create keyspace  CASSANDRA_7196 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1} ;
+        node1.run_cqlsh(cmds="""create keyspace  CASSANDRA_7196 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1} ;
 
 use CASSANDRA_7196;
 
@@ -1095,7 +1095,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         # session
         with open(self.tempfile.name, 'r') as csvfile:
             csvreader = csv.reader(csvfile)
-            result_list = [map(str, cql_row) for cql_row in results]
+            result_list = [list(map(str, cql_row)) for cql_row in results]
             self.assertItemsEqual(result_list, csvreader)
 
         # import the CSV file with COPY FROM
@@ -1433,7 +1433,7 @@ Tracing session:""")
         batch_without_warning = BatchStatement(batch_type=BatchType.UNLOGGED)
         batch_with_warning = BatchStatement(batch_type=BatchType.UNLOGGED)
 
-        for i in xrange(max_partitions_per_batch + 1):
+        for i in range(max_partitions_per_batch + 1):
             batch_with_warning.add(prepared, (i,))
             if i < max_partitions_per_batch:
                 batch_without_warning.add(prepared, (i,))
@@ -1446,8 +1446,8 @@ Tracing session:""")
         fut.result()  # wait for batch to complete before checking warnings
         debug(fut.warnings)
         self.assertIsNotNone(fut.warnings)
-        self.assertEquals(1, len(fut.warnings))
-        self.assertEquals("Unlogged batch covering {} partitions detected against table [client_warnings.test]. "
+        self.assertEqual(1, len(fut.warnings))
+        self.assertEqual("Unlogged batch covering {} partitions detected against table [client_warnings.test]. "
                           .format(max_partitions_per_batch + 1) +
                           "You should use a logged batch for atomicity, or asynchronous writes for performance.",
                           fut.warnings[0])
@@ -1725,7 +1725,7 @@ class CqlshSmokeTest(Tester):
             INSERT INTO ks.test (key) VALUES ('Cassandra:TheMovie');
             """)
         assert_all(self.session, "SELECT key FROM test",
-                   [[u'Cassandra:TheMovie']])
+                   [['Cassandra:TheMovie']])
 
     def test_select(self):
         create_ks(self.session, 'ks', 1)
@@ -1733,7 +1733,7 @@ class CqlshSmokeTest(Tester):
 
         self.session.execute("INSERT INTO ks.test (key, c, v) VALUES ('a', 'a', 'a')")
         assert_all(self.session, "SELECT key, c, v FROM test",
-                   [[u'a', u'a', u'a']])
+                   [['a', 'a', 'a']])
 
         out, err, _ = self.node1.run_cqlsh("SELECT key, c, v FROM ks.test")
         out_lines = [x.strip() for x in out.split("\n")]
@@ -1748,16 +1748,16 @@ class CqlshSmokeTest(Tester):
         create_cf(self.session, 'test')
 
         self.node1.run_cqlsh("INSERT INTO ks.test (key, c, v) VALUES ('a', 'a', 'a')")
-        assert_all(self.session, "SELECT key, c, v FROM test", [[u"a", u"a", u"a"]])
+        assert_all(self.session, "SELECT key, c, v FROM test", [["a", "a", "a"]])
 
     def test_update(self):
         create_ks(self.session, 'ks', 1)
         create_cf(self.session, 'test')
 
         self.session.execute("INSERT INTO test (key, c, v) VALUES ('a', 'a', 'a')")
-        assert_all(self.session, "SELECT key, c, v FROM test", [[u"a", u"a", u"a"]])
+        assert_all(self.session, "SELECT key, c, v FROM test", [["a", "a", "a"]])
         self.node1.run_cqlsh("UPDATE ks.test SET v = 'b' WHERE key = 'a' AND c = 'a'")
-        assert_all(self.session, "SELECT key, c, v FROM test", [[u"a", u"a", u"b"]])
+        assert_all(self.session, "SELECT key, c, v FROM test", [["a", "a", "b"]])
 
     def test_delete(self):
         create_ks(self.session, 'ks', 1)
@@ -1769,12 +1769,12 @@ class CqlshSmokeTest(Tester):
         self.session.execute("INSERT INTO test (key) VALUES ('d')")
         self.session.execute("INSERT INTO test (key) VALUES ('e')")
         assert_all(self.session, 'SELECT key from test',
-                   [[u'a'], [u'c'], [u'e'], [u'd'], [u'b']])
+                   [['a'], ['c'], ['e'], ['d'], ['b']])
 
         self.node1.run_cqlsh("DELETE FROM ks.test WHERE key = 'c'")
 
         assert_all(self.session, 'SELECT key from test',
-                   [[u'a'], [u'e'], [u'd'], [u'b']])
+                   [['a'], ['e'], ['d'], ['b']])
 
     def test_batch(self):
         create_ks(self.session, 'ks', 1)
@@ -1790,27 +1790,27 @@ class CqlshSmokeTest(Tester):
             ''')
         # make sure everything inserted is actually there
         assert_all(self.session, 'SELECT key FROM ks.test',
-                   [[u'eggs'], [u'spam'], [u'sausage']])
+                   [['eggs'], ['spam'], ['sausage']])
 
     def test_create_keyspace(self):
-        self.assertNotIn(u'created', self.get_keyspace_names())
+        self.assertNotIn('created', self.get_keyspace_names())
 
         self.node1.run_cqlsh("CREATE KEYSPACE created WITH replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }")
-        self.assertIn(u'created', self.get_keyspace_names())
+        self.assertIn('created', self.get_keyspace_names())
 
     def test_drop_keyspace(self):
         create_ks(self.session, 'ks', 1)
-        self.assertIn(u'ks', self.get_keyspace_names())
+        self.assertIn('ks', self.get_keyspace_names())
 
         self.node1.run_cqlsh('DROP KEYSPACE ks')
 
-        self.assertNotIn(u'ks', self.get_keyspace_names())
+        self.assertNotIn('ks', self.get_keyspace_names())
 
     def test_create_table(self):
         create_ks(self.session, 'ks', 1)
 
         self.node1.run_cqlsh('CREATE TABLE ks.test (i int PRIMARY KEY);')
-        self.assertEquals(self.get_tables_in_keyspace('ks'), [u'test'])
+        self.assertEqual(self.get_tables_in_keyspace('ks'), ['test'])
 
     def test_drop_table(self):
         create_ks(self.session, 'ks', 1)
@@ -1833,7 +1833,7 @@ class CqlshSmokeTest(Tester):
         self.session.execute("INSERT INTO test (key) VALUES ('d')")
         self.session.execute("INSERT INTO test (key) VALUES ('e')")
         assert_all(self.session, 'SELECT key from test',
-                   [[u'a'], [u'c'], [u'e'], [u'd'], [u'b']])
+                   [['a'], ['c'], ['e'], ['d'], ['b']])
 
         self.node1.run_cqlsh('TRUNCATE ks.test;')
         self.assertEqual([], rows_to_list(self.session.execute('SELECT * from test')))
@@ -1846,10 +1846,10 @@ class CqlshSmokeTest(Tester):
         def get_ks_columns():
             table = self.session.cluster.metadata.keyspaces['ks'].tables['test']
 
-            return [[table.name, column.name, column.cql_type] for column in table.columns.values()]
+            return [[table.name, column.name, column.cql_type] for column in list(table.columns.values())]
 
-        old_column_spec = [u'test', u'i',
-                           u'ascii']
+        old_column_spec = ['test', 'i',
+                           'ascii']
         self.assertIn(old_column_spec, get_ks_columns())
 
         self.node1.run_cqlsh('ALTER TABLE ks.test ALTER i TYPE text;')
@@ -1857,8 +1857,8 @@ class CqlshSmokeTest(Tester):
 
         new_columns = get_ks_columns()
         self.assertNotIn(old_column_spec, new_columns)
-        self.assertIn([u'test', u'i',
-                       u'text'],
+        self.assertIn(['test', 'i',
+                       'text'],
                       new_columns)
 
     def test_use_keyspace(self):
@@ -1930,11 +1930,11 @@ class CqlshSmokeTest(Tester):
 
     def get_keyspace_names(self):
         self.session.cluster.refresh_schema_metadata()
-        return [ks.name for ks in self.session.cluster.metadata.keyspaces.values()]
+        return [ks.name for ks in list(self.session.cluster.metadata.keyspaces.values())]
 
     def get_tables_in_keyspace(self, keyspace):
         self.session.cluster.refresh_schema_metadata()
-        return [table.name for table in self.session.cluster.metadata.keyspaces[keyspace].tables.values()]
+        return [table.name for table in list(self.session.cluster.metadata.keyspaces[keyspace].tables.values())]
 
 
 class CqlLoginTest(Tester):

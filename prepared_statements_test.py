@@ -16,7 +16,7 @@ class TestPreparedStatements(Tester):
         """
 
         self.cluster.populate(1).start()
-        node = self.cluster.nodes.values()[0]
+        node = list(self.cluster.nodes.values())[0]
 
         session = self.patient_cql_connection(node)
         session.execute("""
@@ -33,14 +33,14 @@ class TestPreparedStatements(Tester):
             session.execute(insert_statement, (i, 0))
 
         query_statement = session.prepare("SELECT * FROM mytable WHERE b=?")
-        print "Number of matching rows:", len(list(session.execute(query_statement, (0,))))
+        print("Number of matching rows:", len(list(session.execute(query_statement, (0,)))))
 
         session.execute("DROP INDEX bindex")
 
         try:
-            print "Executing prepared statement with dropped index..."
+            print("Executing prepared statement with dropped index...")
             session.execute(query_statement, (0,))
         except InvalidRequest as ir:
-            print ir
+            print(ir)
         except Exception:
             raise

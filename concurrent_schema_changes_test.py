@@ -180,7 +180,7 @@ class TestConcurrentSchemaChanges(Tester):
 
         session.cluster.refresh_schema_metadata()
         table_meta = session.cluster.metadata.keyspaces["lots_o_alters"].tables
-        column_ct = sum([len(table.columns) for table in table_meta.values()])
+        column_ct = sum([len(table.columns) for table in list(table_meta.values())])
 
         # primary key + alters
         self.assertEqual(510, column_ct)

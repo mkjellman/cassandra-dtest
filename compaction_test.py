@@ -117,7 +117,7 @@ class TestCompaction(Tester):
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
 
-        for x in xrange(0, 5):
+        for x in range(0, 5):
             node1.stress(['write', 'n=100K', "no-warmup", "cl=ONE", "-rate",
                           "threads=300", "-schema", "replication(factor=1)",
                           "compaction({},enabled=false)".format(strategy_string)])
@@ -347,7 +347,7 @@ class TestCompaction(Tester):
 
         ret = list(session.execute("SELECT properties from ks.large where userid = 'user'"))
         assert_length_equal(ret, 1)
-        self.assertEqual(200, len(ret[0][0].keys()))
+        self.assertEqual(200, len(list(ret[0][0].keys())))
 
         node.flush()
 
@@ -358,7 +358,7 @@ class TestCompaction(Tester):
 
         ret = list(session.execute("SELECT properties from ks.large where userid = 'user'"))
         assert_length_equal(ret, 1)
-        self.assertEqual(200, len(ret[0][0].keys()))
+        self.assertEqual(200, len(list(ret[0][0].keys())))
 
     def disable_autocompaction_nodetool_test(self):
         """
@@ -503,7 +503,7 @@ class TestCompaction(Tester):
         node1.nodetool('compact --user-defined {}'.format(sstable_files))
 
         sstable_files = node1.get_sstable_data_files('keyspace1', 'standard1')
-        self.assertEquals(len(node1.data_directories()), len(sstable_files),
+        self.assertEqual(len(node1.data_directories()), len(sstable_files),
                           'Expected one sstable data file per node directory but got {}'.format(sstable_files))
 
     @since('3.10')

@@ -75,7 +75,7 @@ class TestDiskBalance(Tester):
         create_c1c2_table(self, session)
         insert_c1c2(session, n=10000)
         node.flush()
-        for k in xrange(0, 10000):
+        for k in range(0, 10000):
             query_c1c2(session, k)
 
         node.compact()
@@ -83,12 +83,12 @@ class TestDiskBalance(Tester):
         with JolokiaAgent(node) as jmx:
             jmx.execute_method(mbean, 'markUnwritable', [os.path.join(node.get_path(), 'data0')])
 
-        for k in xrange(0, 10000):
+        for k in range(0, 10000):
             query_c1c2(session, k)
 
         node.nodetool('relocatesstables')
 
-        for k in xrange(0, 10000):
+        for k in range(0, 10000):
             query_c1c2(session, k)
 
     def alter_replication_factor_test(self):

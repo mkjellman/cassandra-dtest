@@ -1,7 +1,7 @@
 import json
 import os
 import subprocess
-from urllib2 import urlopen
+from urllib.request import urlopen
 
 import ccmlib.common as common
 
@@ -50,7 +50,7 @@ def make_mbean(package, type, **kwargs):
     rv = 'org.apache.cassandra.%s:type=%s' % (package, type)
     if kwargs:
         rv += ',' + ','.join('{k}={v}'.format(k=k, v=v)
-                             for k, v in kwargs.iteritems())
+                             for k, v in kwargs.items())
     return rv
 
 
@@ -204,9 +204,9 @@ class JolokiaAgent(object):
         try:
             subprocess.check_output(args, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exc:
-            print "Failed to start jolokia agent (command was: %s): %s" % (' '.join(args), exc)
-            print "Exit status was: %d" % (exc.returncode,)
-            print "Output was: %s" % (exc.output,)
+            print("Failed to start jolokia agent (command was: %s): %s" % (' '.join(args), exc))
+            print("Exit status was: %d" % (exc.returncode,))
+            print("Output was: %s" % (exc.output,))
             raise
 
     def stop(self):
@@ -220,9 +220,9 @@ class JolokiaAgent(object):
         try:
             subprocess.check_output(args, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as exc:
-            print "Failed to stop jolokia agent (command was: %s): %s" % (' '.join(args), exc)
-            print "Exit status was: %d" % (exc.returncode,)
-            print "Output was: %s" % (exc.output,)
+            print("Failed to stop jolokia agent (command was: %s): %s" % (' '.join(args), exc))
+            print("Exit status was: %d" % (exc.returncode,))
+            print("Output was: %s" % (exc.output,))
             raise
 
     def _query(self, body, verbose=True):
@@ -237,9 +237,9 @@ class JolokiaAgent(object):
         if response['status'] != 200:
             stacktrace = response.get('stacktrace')
             if stacktrace and verbose:
-                print "Stacktrace from Jolokia error follows:"
+                print("Stacktrace from Jolokia error follows:")
                 for line in stacktrace.splitlines():
-                    print line
+                    print(line)
             raise Exception("Jolokia agent returned non-200 status: %s" % (response,))
         return response
 

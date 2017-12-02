@@ -596,17 +596,17 @@ class MiscellaneousCQLTester(CQLTester):
         """
         session = self.prepare()
         # this should fail as normal, not with a ProtocolException
-        assert_invalid(session, u"insert into invalid_string_literals (k, a) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
+        assert_invalid(session, "insert into invalid_string_literals (k, a) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
 
         session = self.patient_cql_connection(self.cluster.nodelist()[0], keyspace='ks')
         session.execute("create table invalid_string_literals (k int primary key, a ascii, b text)")
 
         # this should still fail with an InvalidRequest
-        assert_invalid(session, u"insert into invalid_string_literals (k, c) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
+        assert_invalid(session, "insert into invalid_string_literals (k, c) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
         # but since the protocol requires strings to be valid UTF-8, the error
         # response to this is a ProtocolException, not an error about the
         # nonexistent column
-        with self.assertRaisesRegexp(ProtocolException, 'Cannot decode string as UTF8'):
+        with self.assertRaisesRegex(ProtocolException, 'Cannot decode string as UTF8'):
             session.execute("insert into invalid_string_literals (k, c) VALUES (0, '\xc2\x01')")
 
     def prepared_statement_invalidation_test(self):
@@ -706,17 +706,17 @@ class MiscellaneousCQLTester(CQLTester):
         cluster = self.cluster
 
         session.execute("CREATE TABLE very_wide_table (pk int PRIMARY KEY, " +
-                        ",".join(map(lambda i: "c_{} int".format(i), range(width))) +
+                        ",".join(["c_{} int".format(i) for i in range(width)]) +
                         ")")
 
         session.execute("INSERT INTO very_wide_table (pk, " +
-                        ",".join(map(lambda i: "c_{}".format(i), range(width))) +
+                        ",".join(["c_{}".format(i) for i in range(width)]) +
                         ") VALUES (100," +
-                        ",".join(map(lambda i: str(i), range(width))) +
+                        ",".join([str(i) for i in range(width)]) +
                         ")")
 
         assert_all(session, "SELECT " +
-                   ",".join(map(lambda i: "c_{}".format(i), range(width))) +
+                   ",".join(["c_{}".format(i) for i in range(width)]) +
                    " FROM very_wide_table", [[i for i in range(width)]])
 
     @since("3.11", max_version="3.X")
@@ -870,7 +870,7 @@ class AbortedQueryTester(CQLTester):
             );
         """)
 
-        for i, j in itertools.product(range(10), range(500)):
+        for i, j in itertools.product(list(range(10)), list(range(500))):
             session.execute("INSERT INTO test2 (id, col, val) VALUES ({}, {}, 'foo')".format(i, j))
 
         # use debug logs because at info level no-spam logger has unpredictable results
@@ -1129,7 +1129,7 @@ class SlowQueryTester(CQLTester):
             );
         """)
 
-        for i, j in itertools.product(range(100), range(10)):
+        for i, j in itertools.product(list(range(100)), list(range(10))):
             session.execute("INSERT INTO test2 (id, col, val) VALUES ({}, {}, 'foo')".format(i, j))
 
         # only check debug logs because at INFO level the no-spam logger has unpredictable results

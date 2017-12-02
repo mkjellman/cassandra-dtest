@@ -119,7 +119,7 @@ class TestPaxos(Tester):
                         try:
                             res = self.session.execute(self.query, (prev + 1, prev, self.wid))
                             if verbose:
-                                print "[%3d] CAS %3d -> %3d (res: %s)" % (self.wid, prev, prev + 1, str(res))
+                                print("[%3d] CAS %3d -> %3d (res: %s)" % (self.wid, prev, prev + 1, str(res)))
                             if res[0][0] is True:
                                 done = True
                                 prev = prev + 1
@@ -131,17 +131,17 @@ class TestPaxos(Tester):
                                 prev = res[0][3]
                                 if res[0][2] is not None:
                                     if verbose:
-                                        print "[%3d] Update was inserted on previous try (res = %s)" % (self.wid, str(res))
+                                        print("[%3d] Update was inserted on previous try (res = %s)" % (self.wid, str(res)))
                                     done = True
                         except WriteTimeout as e:
                             if verbose:
-                                print "[%3d] TIMEOUT (%s)" % (self.wid, str(e))
+                                print("[%3d] TIMEOUT (%s)" % (self.wid, str(e)))
                             # This means a timeout: just retry, if it happens that our update was indeed persisted,
                             # we'll figure it out on the next run.
                             self.retries = self.retries + 1
                         except Exception as e:
                             if verbose:
-                                print "[%3d] ERROR: %s" % (self.wid, str(e))
+                                print("[%3d] ERROR: %s" % (self.wid, str(e)))
                             self.errors = self.errors + 1
                             done = True
                     i = i + 1
@@ -177,7 +177,7 @@ class TestPaxos(Tester):
 
         if verbose:
             runtime = time.time() - start
-            print "runtime:", runtime
+            print("runtime:", runtime)
 
         query = SimpleStatement("SELECT v FROM test WHERE k = 0", consistency_level=ConsistencyLevel.ALL)
         rows = session.execute(query)

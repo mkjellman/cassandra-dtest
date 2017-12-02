@@ -30,7 +30,7 @@ def switch_jdks(major_version_int):
 
 
 @skipIf(sys.platform == 'win32', 'Skip upgrade tests on Windows')
-class UpgradeTester(Tester):
+class UpgradeTester(Tester, metaclass=ABCMeta):
     """
     When run in 'normal' upgrade mode without specifying any version to run,
     this will test different upgrade paths depending on what version of C* you
@@ -38,8 +38,6 @@ class UpgradeTester(Tester):
     When run on 3.0, this will test the upgrade path to trunk. When run on
     versions above 3.0, this will test the upgrade path from 3.0 to HEAD.
     """
-    # make this an abc so we can get all subclasses with __subclasses__()
-    __metaclass__ = ABCMeta
     NODES, RF, __test__, CL, UPGRADE_PATH = 2, 1, False, None, None
 
     # known non-critical bug during teardown:

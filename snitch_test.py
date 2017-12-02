@@ -85,7 +85,7 @@ class TestGossipingPropertyFileSnitch(Tester):
         # read data from node2 just to make sure data and connectivity is OK
         session = self.patient_exclusive_cql_connection(node2)
         new_rows = list(session.execute("SELECT * FROM {}".format(stress_table)))
-        self.assertEquals(original_rows, new_rows)
+        self.assertEqual(original_rows, new_rows)
 
         out, err, _ = node1.nodetool('gossipinfo')
         self.assertEqual(0, len(err), err)

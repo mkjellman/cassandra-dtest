@@ -57,7 +57,7 @@ class UpgradeSuperColumnsThrough(Tester):
         session.execute("CREATE KEYSPACE ks WITH replication = {'class': 'SimpleStrategy','replication_factor': '1' };")
         session.execute("CREATE TABLE ks.compact_table (pk int PRIMARY KEY, col1 int, col2 int) WITH COMPACT STORAGE")
 
-        for i in xrange(1, 5):
+        for i in range(1, 5):
             session.execute("INSERT INTO ks.compact_table (pk, col1, col2) VALUES ({i}, {i}, {i})".format(i=i))
 
         self.upgrade_to_version(VERSION_TRUNK, wait=False)
@@ -98,7 +98,7 @@ class UpgradeSuperColumnsThrough(Tester):
         session.execute("CREATE KEYSPACE ks WITH replication = {'class': 'SimpleStrategy','replication_factor': '1' };")
         session.execute("CREATE TABLE ks.compact_table (pk int PRIMARY KEY, col1 int, col2 int) WITH COMPACT STORAGE")
 
-        for i in xrange(1, 5):
+        for i in range(1, 5):
             session.execute("INSERT INTO ks.compact_table (pk, col1, col2) VALUES ({i}, {i}, {i})".format(i=i))
 
         session.execute("ALTER TABLE ks.compact_table DROP COMPACT STORAGE")
@@ -107,7 +107,7 @@ class UpgradeSuperColumnsThrough(Tester):
 
         session = self.patient_cql_connection(node, row_factory=dict_factory)
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE pk = 1")),
-                     [{u'col2': 1, u'pk': 1, u'column1': None, u'value': None, u'col1': 1}])
+                     [{'col2': 1, 'pk': 1, 'column1': None, 'value': None, 'col1': 1}])
 
     def force_readd_compact_storage_test(self):
         cluster = self.prepare(cassandra_version=VERSION_311)
@@ -117,7 +117,7 @@ class UpgradeSuperColumnsThrough(Tester):
         session.execute("CREATE KEYSPACE ks WITH replication = {'class': 'SimpleStrategy','replication_factor': '1' };")
         session.execute("CREATE TABLE ks.compact_table (pk int PRIMARY KEY, col1 int, col2 int) WITH COMPACT STORAGE")
 
-        for i in xrange(1, 5):
+        for i in range(1, 5):
             session.execute("INSERT INTO ks.compact_table (pk, col1, col2) VALUES ({i}, {i}, {i})".format(i=i))
 
         session.execute("ALTER TABLE ks.compact_table DROP COMPACT STORAGE")
@@ -128,7 +128,7 @@ class UpgradeSuperColumnsThrough(Tester):
         session.execute("update system_schema.tables set flags={} where keyspace_name='ks' and table_name='compact_table';")
 
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE pk = 1")),
-                     [{u'col2': 1, u'pk': 1, u'column1': None, u'value': None, u'col1': 1}])
+                     [{'col2': 1, 'pk': 1, 'column1': None, 'value': None, 'col1': 1}])
 
         self.allow_log_errors = True
 
@@ -137,7 +137,7 @@ class UpgradeSuperColumnsThrough(Tester):
         try:
             node.start(wait_other_notice=False, wait_for_binary_proto=False, verbose=False)
         except (NodeError):
-            print "error"  # ignore
+            print("error")  # ignore
         time.sleep(5)
         # After restart, it won't start
         errors = len(node.grep_log("Compact Tables are not allowed in Cassandra starting with 4.0 version"))
@@ -152,25 +152,25 @@ class UpgradeSuperColumnsThrough(Tester):
         session.execute("CREATE TABLE ks.compact_table (pk ascii PRIMARY KEY, col1 ascii) WITH COMPACT STORAGE")
         session.execute("CREATE INDEX ON ks.compact_table(col1)")
 
-        for i in xrange(1, 10):
+        for i in range(1, 10):
             session.execute("INSERT INTO ks.compact_table (pk, col1) VALUES ('{pk}', '{col1}')".format(pk=i, col1=i * 10))
 
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE col1 = '50'")),
-                     [{u'pk': '5', u'col1': '50'}])
+                     [{'pk': '5', 'col1': '50'}])
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE pk = '5'")),
-                     [{u'pk': '5', u'col1': '50'}])
+                     [{'pk': '5', 'col1': '50'}])
         session.execute("ALTER TABLE ks.compact_table DROP COMPACT STORAGE")
 
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE col1 = '50'")),
-                     [{u'col1': '50', u'column1': None, u'pk': '5', u'value': None}])
+                     [{'col1': '50', 'column1': None, 'pk': '5', 'value': None}])
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE pk = '5'")),
-                     [{u'col1': '50', u'column1': None, u'pk': '5', u'value': None}])
+                     [{'col1': '50', 'column1': None, 'pk': '5', 'value': None}])
 
         self.upgrade_to_version(VERSION_TRUNK, wait=True)
 
         session = self.patient_cql_connection(node, row_factory=dict_factory)
 
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE col1 = '50'")),
-                     [{u'col1': '50', u'column1': None, u'pk': '5', u'value': None}])
+                     [{'col1': '50', 'column1': None, 'pk': '5', 'value': None}])
         assert_equal(list(session.execute("SELECT * FROM ks.compact_table WHERE pk = '5'")),
-                     [{u'col1': '50', u'column1': None, u'pk': '5', u'value': None}])
+                     [{'col1': '50', 'column1': None, 'pk': '5', 'value': None}])

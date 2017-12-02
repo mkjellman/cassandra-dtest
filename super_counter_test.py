@@ -42,8 +42,8 @@ class TestSuperCounterClusterRestart(Tester):
         # let the sediment settle to to the bottom before drinking...
         time.sleep(2)
 
-        for subcol in xrange(NUM_SUBCOLS):
-            for add in xrange(NUM_ADDS):
+        for subcol in range(NUM_SUBCOLS):
+            for add in range(NUM_ADDS):
                 column_parent = ColumnParent(column_family='cf',
                                              super_column='subcol_%d' % subcol)
                 counter_column = CounterColumn('col_0', 1)
@@ -65,7 +65,7 @@ class TestSuperCounterClusterRestart(Tester):
 
         from_db = []
 
-        for i in xrange(NUM_SUBCOLS):
+        for i in range(NUM_SUBCOLS):
             column_path = ColumnPath(column_family='cf', column='col_0',
                                      super_column='subcol_%d' % i)
             column_or_super_column = thrift_conn.get('row_0', column_path,
@@ -75,7 +75,7 @@ class TestSuperCounterClusterRestart(Tester):
             from_db.append(val)
         debug("")
 
-        expected = [NUM_ADDS for i in xrange(NUM_SUBCOLS)]
+        expected = [NUM_ADDS for i in range(NUM_SUBCOLS)]
 
         if from_db != expected:
             raise Exception("Expected a bunch of the same values out of the db. Got this: " + str(from_db))

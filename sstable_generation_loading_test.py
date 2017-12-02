@@ -70,7 +70,7 @@ class BaseSStableLoaderTest(Tester):
         self.load_sstable_with_configuration(ks='"Keyspace1"', create_schema=create_schema_with_mv)
 
     def copy_sstables(self, cluster, node):
-        for x in xrange(0, cluster.data_dir_count):
+        for x in range(0, cluster.data_dir_count):
             data_dir = os.path.join(node.get_path(), 'data{0}'.format(x))
             copy_root = os.path.join(node.get_path(), 'data{0}_copy'.format(x))
             for ddir in os.listdir(data_dir):
@@ -84,7 +84,7 @@ class BaseSStableLoaderTest(Tester):
         sstableloader = os.path.join(cdir, 'bin', ccmcommon.platform_binary('sstableloader'))
         env = ccmcommon.make_cassandra_env(cdir, node.get_path())
         host = node.address()
-        for x in xrange(0, cluster.data_dir_count):
+        for x in range(0, cluster.data_dir_count):
             sstablecopy_dir = os.path.join(node.get_path(), 'data{0}_copy'.format(x), ks.strip('"'))
             for cf_dir in os.listdir(sstablecopy_dir):
                 full_cf_dir = os.path.join(sstablecopy_dir, cf_dir)
@@ -187,13 +187,13 @@ class BaseSStableLoaderTest(Tester):
 
         # check that RewindableDataInputStreamPlus spill files are properly cleaned up
         if self.upgrade_from:
-            for x in xrange(0, cluster.data_dir_count):
+            for x in range(0, cluster.data_dir_count):
                 data_dir = os.path.join(node1.get_path(), 'data{0}'.format(x))
                 for ddir in os.listdir(data_dir):
                     keyspace_dir = os.path.join(data_dir, ddir)
                     temp_files = self.glob_data_dirs(os.path.join(keyspace_dir, '*', "tmp", "*.dat"))
                     debug("temp files: " + str(temp_files))
-                    self.assertEquals(0, len(temp_files), "Temporary files were not cleaned up.")
+                    self.assertEqual(0, len(temp_files), "Temporary files were not cleaned up.")
 
 
 class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
@@ -227,7 +227,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         create_cf(session, 'cf', compression="Deflate")
 
         # make unique column names, and values that are incompressible
-        for col in xrange(10):
+        for col in range(10):
             col_name = str(col)
             col_val = os.urandom(5000)
             col_val = col_val.encode('hex')

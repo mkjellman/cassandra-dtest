@@ -1,4 +1,4 @@
-import Queue
+import queue
 import sys
 import threading
 import time
@@ -73,7 +73,7 @@ class TestHelper(Tester):
                 :return: the data center corresponding to this node
                 """
                 dc = 0
-                for i in xrange(1, len(nodes)):
+                for i in range(1, len(nodes)):
                     if idx < sum(nodes[:i]):
                         break
                     dc += 1
@@ -101,7 +101,7 @@ class TestHelper(Tester):
         if self._is_local(cl):
             return num_nodes_alive[current] >= self._required_nodes(cl, rf_factors, current)
         elif cl == ConsistencyLevel.EACH_QUORUM:
-            for i in xrange(0, len(rf_factors)):
+            for i in range(0, len(rf_factors)):
                 if num_nodes_alive[i] < self._required_nodes(cl, rf_factors, i):
                     return False
             return True
@@ -255,7 +255,7 @@ class TestAvailability(TestHelper):
         rf = self.rf
 
         num_alive = nodes
-        for node in xrange(nodes):
+        for node in range(nodes):
             debug('Testing node {} in single dc with {} nodes alive'.format(node, num_alive))
             session = self.patient_exclusive_cql_connection(cluster.nodelist()[node], self.ksname)
             for combination in combinations:
@@ -274,11 +274,11 @@ class TestAvailability(TestHelper):
         rf = self.rf
 
         nodes_alive = deepcopy(nodes)
-        rf_factors = rf.values()
+        rf_factors = list(rf.values())
 
-        for i in xrange(0, len(nodes)):  # for each dc
+        for i in range(0, len(nodes)):  # for each dc
             self.log('Testing dc {} with rf {} and {} nodes alive'.format(i, rf_factors[i], nodes_alive))
-            for n in xrange(nodes[i]):  # for each node in this dc
+            for n in range(nodes[i]):  # for each node in this dc
                 self.log('Testing node {} in dc {} with {} nodes alive'.format(n, i, nodes_alive))
                 node = n + sum(nodes[:i])
                 session = self.patient_exclusive_cql_connection(cluster.nodelist()[node], self.ksname)
@@ -300,13 +300,13 @@ class TestAvailability(TestHelper):
         age = 30
 
         if self._should_succeed(write_cl, rf_factors, num_nodes_alive, dc_idx):
-            for n in xrange(start, end):
+            for n in range(start, end):
                 self.insert_user(session, n, age, write_cl, serial_cl)
         else:
             assert_unavailable(self.insert_user, session, end, age, write_cl, serial_cl)
 
         if self._should_succeed(read_cl, rf_factors, num_nodes_alive, dc_idx):
-            for n in xrange(start, end):
+            for n in range(start, end):
                 self.query_user(session, n, age, read_cl, check_ret)
         else:
             assert_unavailable(self.query_user, session, end, age, read_cl, check_ret)
@@ -464,7 +464,7 @@ class TestAccuracy(TestHelper):
                                      " required {} but got {} - [{}, {}]"
                                      .format(expected_consistency.num_write_nodes, num, n, val))
 
-            for n in xrange(start, end):
+            for n in range(start, end):
                 age = 30
                 for s in range(0, len(sessions)):
                     outer.insert_user(sessions[s], n, age, write_cl, serial_cl)
@@ -504,7 +504,7 @@ class TestAccuracy(TestHelper):
                                      " counter value of {} at key {}, instead got these values: {}"
                                      .format(expected_consistency.num_write_nodes, val, n, results))
 
-            for n in xrange(start, end):
+            for n in range(start, end):
                 c = 1
                 for s in range(0, len(sessions)):
                     outer.update_counter(sessions[s], n, write_cl, serial_cl)
@@ -534,15 +534,15 @@ class TestAccuracy(TestHelper):
 
         self._start_cluster(save_sessions=True, requires_local_reads=requires_local_reads)
 
-        input_queue = Queue.Queue()
-        exceptions_queue = Queue.Queue()
+        input_queue = queue.Queue()
+        exceptions_queue = queue.Queue()
 
         def run():
             while not input_queue.empty():
                 try:
                     v = TestAccuracy.Validation(self, self.sessions, nodes, rf_factors, *input_queue.get(block=False))
                     valid_fcn(v)
-                except Queue.Empty:
+                except queue.Empty:
                     pass
                 except:
                     exceptions_queue.put(sys.exc_info())
@@ -563,11 +563,11 @@ class TestAccuracy(TestHelper):
         self.log("Waiting for workers to complete")
         while exceptions_queue.empty():
             time.sleep(0.1)
-            if len(filter(lambda t: t.isAlive(), threads)) == 0:
+            if len([t for t in threads if t.isAlive()]) == 0:
                 break
 
         if not exceptions_queue.empty():
-            _, exceptions, tracebacks = zip(*exceptions_queue.queue)
+            _, exceptions, tracebacks = list(zip(*exceptions_queue.queue))
             raise MultiError(exceptions=exceptions, tracebacks=tracebacks)
 
     @attr("resource-intensive")
@@ -654,7 +654,7 @@ class TestAccuracy(TestHelper):
         ]
 
         self.log("Testing multiple dcs, users")
-        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, self.nodes, self.rf.values(), combinations),
+        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, self.nodes, list(self.rf.values()), combinations),
 
     @attr("resource-intensive")
     @since("3.0")
@@ -673,7 +673,7 @@ class TestAccuracy(TestHelper):
         ]
 
         self.log("Testing multiple dcs, users, each quorum reads")
-        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, self.nodes, self.rf.values(), combinations)
+        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, self.nodes, list(self.rf.values()), combinations)
 
     def test_simple_strategy_counters(self):
         """
@@ -750,7 +750,7 @@ class TestAccuracy(TestHelper):
         ]
 
         self.log("Testing multiple dcs, counters")
-        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_counters, self.nodes, self.rf.values(), combinations),
+        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_counters, self.nodes, list(self.rf.values()), combinations),
 
     @attr("resource-intensive")
     @since("3.0")
@@ -769,7 +769,7 @@ class TestAccuracy(TestHelper):
         ]
 
         self.log("Testing multiple dcs, counters, each quorum reads")
-        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_counters, self.nodes, self.rf.values(), combinations),
+        self._run_test_function_in_parallel(TestAccuracy.Validation.validate_counters, self.nodes, list(self.rf.values()), combinations),
 
 
 class TestConsistency(Tester):
@@ -1196,13 +1196,13 @@ class TestConsistency(Tester):
         reversed_key = 'reversed'
 
         # Repeat this test 10 times to make it more easy to spot a null pointer exception caused by a race, see CASSANDRA-9460
-        for k in xrange(10):
+        for k in range(10):
             # insert 9 columns in two rows
             insert_columns(self, session, normal_key, 9)
             insert_columns(self, session, reversed_key, 9)
 
             # Delete 3 first columns (and 3 last columns, for the reversed version) with a different node dead each time
-            for node, column_number_to_delete in zip(range(1, 4), range(3)):
+            for node, column_number_to_delete in zip(list(range(1, 4)), list(range(3))):
                 self.stop_node(node)
                 self.delete(node, normal_key, column_number_to_delete)
                 self.delete(node, reversed_key, 8 - column_number_to_delete)
@@ -1218,7 +1218,7 @@ class TestConsistency(Tester):
             assert_length_equal(res, 3)
 
             # value 0, 1 and 2 have been deleted
-            for i in xrange(1, 4):
+            for i in range(1, 4):
                 self.assertEqual('value{}'.format(i + 2), res[i - 1][1])
 
             # Query 3 firsts columns in reverse order
@@ -1231,7 +1231,7 @@ class TestConsistency(Tester):
             assert_length_equal(res, 3)
 
             # value 6, 7 and 8 have been deleted
-            for i in xrange(0, 3):
+            for i in range(0, 3):
                 self.assertEqual('value{}'.format(5 - i), res[i][1])
 
             session.execute('TRUNCATE cf')
@@ -1333,14 +1333,14 @@ class TestConsistency(Tester):
         node2.start(wait_for_binary_proto=True, wait_other_notice=True)
 
         # query everything to cause RR
-        for n in xrange(0, 10000):
+        for n in range(0, 10000):
             query_c1c2(session, n, ConsistencyLevel.QUORUM)
 
         node1.stop(wait_other_notice=True)
 
         # Check node2 for all the keys that should have been repaired
         session = self.patient_cql_connection(node2, keyspace='ks')
-        for n in xrange(0, 10000):
+        for n in range(0, 10000):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     def quorum_available_during_failure_test(self):
@@ -1368,7 +1368,7 @@ class TestConsistency(Tester):
         node1.stop(wait_other_notice=True)
 
         debug("Reading back data.")
-        for n in xrange(100):
+        for n in range(100):
             query_c1c2(session, n, CL)
 
     def stop_node(self, node_number):

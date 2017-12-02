@@ -25,7 +25,7 @@ class TestLargeColumn(Tester):
         output, err, _ = node.nodetool("gcstats")
         debug(output)
         output = output.split("\n")
-        self.assertRegexpMatches(output[0].strip(), 'Interval')
+        self.assertRegex(output[0].strip(), 'Interval')
         fields = output[1].split()
         self.assertGreaterEqual(len(fields), 6, "Expected output from nodetool gcstats has at least six fields. However, fields is: {}".format(fields))
         for field in fields:

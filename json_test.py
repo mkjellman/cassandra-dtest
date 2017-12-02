@@ -136,7 +136,7 @@ def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=No
         """
         Run cqlsh commands expecting error output, and print error output.
         """
-        print(cqlsh_err(cmds))
+        print((cqlsh_err(cmds)))
 
     def cql(query):
         """

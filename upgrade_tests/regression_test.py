@@ -9,8 +9,8 @@ from nose.tools import assert_not_in
 from dtest import RUN_STATIC_UPGRADE_MATRIX, debug
 from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean)
-from upgrade_base import UpgradeTester
-from upgrade_manifest import build_upgrade_pairs
+from .upgrade_base import UpgradeTester
+from .upgrade_manifest import build_upgrade_pairs
 
 import glob
 import os
@@ -80,7 +80,7 @@ class TestForRegressions(UpgradeTester):
         session = self.prepare(jolokia=True)
         session.execute("CREATE KEYSPACE test13294 WITH replication={'class':'SimpleStrategy', 'replication_factor': 2};")
         session.execute("CREATE TABLE test13294.t (id int PRIMARY KEY, d int) WITH compaction = {'class': 'SizeTieredCompactionStrategy','enabled':'false'}")
-        for x in xrange(0, 5):
+        for x in range(0, 5):
             session.execute("INSERT INTO test13294.t (id, d) VALUES (%d, %d)" % (x, x))
             cluster.flush()
 
@@ -113,7 +113,7 @@ class TestForRegressions(UpgradeTester):
                 sstables_after = self.get_all_sstables(node1)
                 # since autocompaction is disabled and we compact a single sstable above
                 # the number of sstables after should be the same as before.
-                self.assertEquals(len(sstables_before), len(sstables_after))
+                self.assertEqual(len(sstables_before), len(sstables_after))
                 checked = True
         self.assertTrue(checked)
 
@@ -163,7 +163,7 @@ class TestForRegressions(UpgradeTester):
 
     def get_all_sstables(self, node):
         # note that node.get_sstables(...) only returns current version sstables
-        keyspace_dirs = [os.path.join(node.get_path(), "data{0}".format(x), "test13294") for x in xrange(0, node.cluster.data_dir_count)]
+        keyspace_dirs = [os.path.join(node.get_path(), "data{0}".format(x), "test13294") for x in range(0, node.cluster.data_dir_count)]
         files = []
         for d in keyspace_dirs:
             for f in glob.glob(d + "/*/*Data*"):

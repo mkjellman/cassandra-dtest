@@ -62,9 +62,9 @@ class ThriftHSHATest(Tester):
 
         pools = []
         connected_thrift_clients = make_mbean('metrics', type='Client', name='connectedThriftClients')
-        for i in xrange(10):
+        for i in range(10):
             debug("Creating connection pools..")
-            for x in xrange(3):
+            for x in range(3):
                 pools.append(make_connection())
             debug("Disabling/Enabling thrift iteration #{i}".format(i=i))
             node1.nodetool('disablethrift')

@@ -174,7 +174,7 @@ class SSTableUtilTest(Tester):
             debug(stdout)
 
         match = ks + os.sep + table + '-'
-        ret = sorted(filter(lambda s: match in s, stdout.splitlines()))
+        ret = sorted([s for s in stdout.splitlines() if match in s])
         debug("Got {} files of type {}".format(len(ret), type))
         return ret
 

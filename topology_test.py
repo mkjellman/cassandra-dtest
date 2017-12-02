@@ -187,7 +187,7 @@ class TestTopology(Tester):
         node2.watch_log_for('DECOMMISSIONED', from_mark=mark)
         session = self.patient_cql_connection(node1)
         session.execute('USE ks')
-        for n in xrange(0, 10000):
+        for n in range(0, 10000):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     @since('3.10')
@@ -235,7 +235,7 @@ class TestTopology(Tester):
         node3.stop(gently=False)
         session = self.patient_exclusive_cql_connection(node1)
         session.execute('USE ks')
-        for i in xrange(0, 10000):
+        for i in range(0, 10000):
             query_c1c2(session, i, ConsistencyLevel.ONE)
         node1.stop(gently=False)
         node3.start()
@@ -244,7 +244,7 @@ class TestTopology(Tester):
         node3.watch_log_for('Starting listening for CQL clients', from_mark=mark)
         session = self.patient_exclusive_cql_connection(node3)
         session.execute('USE ks')
-        for i in xrange(0, 10000):
+        for i in range(0, 10000):
             query_c1c2(session, i, ConsistencyLevel.ONE)
 
     @no_vnodes()
@@ -281,7 +281,7 @@ class TestTopology(Tester):
         cluster.cleanup()
 
         # Check we can get all the keys
-        for n in xrange(0, 30000):
+        for n in range(0, 30000):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
         # Now the load should be basically even
@@ -317,7 +317,7 @@ class TestTopology(Tester):
         time.sleep(.5)
 
         # Check we can get all the keys
-        for n in xrange(0, 30000):
+        for n in range(0, 30000):
             query_c1c2(session, n, ConsistencyLevel.QUORUM)
 
         sizes = [node.data_size() for node in cluster.nodelist() if node.is_running()]
@@ -350,7 +350,7 @@ class TestTopology(Tester):
         cluster.cleanup()
 
         # Check we can get all the keys
-        for n in xrange(0, 10000):
+        for n in range(0, 10000):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     @since('3.0')

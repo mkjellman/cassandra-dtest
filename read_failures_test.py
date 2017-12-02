@@ -33,7 +33,7 @@ class TestReadFailures(Tester):
         )
         self.cluster.populate(3)
         self.cluster.start(wait_for_binary_proto=True)
-        self.nodes = self.cluster.nodes.values()
+        self.nodes = list(self.cluster.nodes.values())
 
         session = self.patient_exclusive_cql_connection(self.nodes[0], protocol_version=self.protocol_version)
 
@@ -74,7 +74,7 @@ class TestReadFailures(Tester):
         self.assertIsNotNone(exception)
         self.assertIsNotNone(exception.error_code_map)
         expected_code_found = False
-        for error_code in exception.error_code_map.values():
+        for error_code in list(exception.error_code_map.values()):
             if error_code == expected_code:
                 expected_code_found = True
                 break

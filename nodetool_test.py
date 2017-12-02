@@ -81,7 +81,7 @@ class TestNodetool(Tester):
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             self.assertEqual(0, len(err), err)
             debug(out)
-            self.assertRegexpMatches(out, r'.* \d+ ms')
+            self.assertRegex(out, r'.* \d+ ms')
 
         # set all of the timeouts to 123
         for timeout_type in types:
@@ -93,7 +93,7 @@ class TestNodetool(Tester):
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             self.assertEqual(0, len(err), err)
             debug(out)
-            self.assertRegexpMatches(out, r'.* 123 ms')
+            self.assertRegex(out, r'.* 123 ms')
 
     def test_meaningless_notice_in_status(self):
         """
@@ -137,7 +137,7 @@ class TestNodetool(Tester):
         # With a keyspace without the same replication factor, we should get the notice
         out, err, _ = node.nodetool('status')
         self.assertEqual(0, len(err), err)
-        self.assertRegexpMatches(out, notice_message)
+        self.assertRegex(out, notice_message)
 
     @since('4.0')
     def test_set_get_batchlog_replay_throttle(self):

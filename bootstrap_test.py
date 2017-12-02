@@ -223,7 +223,7 @@ class TestBootstrap(BaseBootstrapTest):
 
         session = self.patient_exclusive_cql_connection(node4)
         new_rows = list(session.execute("SELECT * FROM %s" % (stress_table,)))
-        self.assertEquals(original_rows, new_rows)
+        self.assertEqual(original_rows, new_rows)
 
     def consistent_range_movement_true_with_replica_down_should_fail_test(self):
         self._bootstrap_test_with_replica_down(True)
@@ -403,7 +403,7 @@ class TestBootstrap(BaseBootstrapTest):
         node1.cleanup()
 
         current_rows = list(session.execute("SELECT * FROM %s" % stress_table))
-        self.assertEquals(original_rows, current_rows)
+        self.assertEqual(original_rows, current_rows)
 
     def local_quorum_bootstrap_test(self):
         """
@@ -490,7 +490,7 @@ class TestBootstrap(BaseBootstrapTest):
         node4.start(wait_for_binary_proto=True)
 
         session = self.patient_cql_connection(node4)
-        self.assertEquals(original_rows, list(session.execute("SELECT * FROM {}".format(stress_table,))))
+        self.assertEqual(original_rows, list(session.execute("SELECT * FROM {}".format(stress_table,))))
 
         # Stop the new node and wipe its data
         node4.stop(gently=gently)
@@ -523,7 +523,7 @@ class TestBootstrap(BaseBootstrapTest):
         node4.start(wait_for_binary_proto=True, wait_other_notice=True)
 
         session = self.patient_cql_connection(node4)
-        self.assertEquals(original_rows, list(session.execute("SELECT * FROM {}".format(stress_table,))))
+        self.assertEqual(original_rows, list(session.execute("SELECT * FROM {}".format(stress_table,))))
 
         # Decommission the new node and wipe its data
         node4.decommission()
@@ -660,7 +660,7 @@ class TestBootstrap(BaseBootstrapTest):
         # Repeat the select count(*) query, to help catch
         # bugs like 9484, where count(*) fails at higher
         # data loads.
-        for _ in xrange(5):
+        for _ in range(5):
             assert_one(session, "SELECT count(*) from keyspace1.standard1", [500000], cl=ConsistencyLevel.ONE)
 
     def test_cleanup(self):
@@ -673,7 +673,7 @@ class TestBootstrap(BaseBootstrapTest):
         cluster.populate(1)
         cluster.start(wait_for_binary_proto=True)
         node1, = cluster.nodelist()
-        for x in xrange(0, 5):
+        for x in range(0, 5):
             node1.stress(['write', 'n=100k', 'no-warmup', '-schema', 'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)', 'replication(factor=1)', '-rate', 'threads=10'])
             node1.flush()
         node2 = new_node(cluster)

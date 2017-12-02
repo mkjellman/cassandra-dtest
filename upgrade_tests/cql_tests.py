@@ -30,8 +30,8 @@ from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_none, assert_one, assert_row_count)
 from tools.data import rows_to_list
 from tools.decorators import since
-from upgrade_base import UpgradeTester
-from upgrade_manifest import build_upgrade_pairs
+from .upgrade_base import UpgradeTester
+from .upgrade_manifest import build_upgrade_pairs
 
 
 class TestCQL(UpgradeTester):
@@ -315,7 +315,7 @@ class TestCQL(UpgradeTester):
             cursor.execute("TRUNCATE clicks")
 
             # Inserts
-            for id in xrange(0, 100):
+            for id in range(0, 100):
                 for tld in ['com', 'org', 'net']:
                     cursor.execute("INSERT INTO clicks (userid, url, time) VALUES ({}, 'http://foo.{}', 42)".format(id, tld))
 
@@ -342,7 +342,7 @@ class TestCQL(UpgradeTester):
             cursor.execute("TRUNCATE clicks")
 
             # Inserts
-            for id in xrange(0, 100):
+            for id in range(0, 100):
                 for tld in ['com', 'org', 'net']:
                     cursor.execute("INSERT INTO clicks (userid, url, time) VALUES ({}, 'http://foo.{}', 42)".format(id, tld))
 
@@ -399,7 +399,7 @@ class TestCQL(UpgradeTester):
             cursor.execute("TRUNCATE clicks")
 
             # Inserts
-            for id in xrange(0, 100):
+            for id in range(0, 100):
                 for tld in ['com', 'org', 'net']:
                     cursor.execute("INSERT INTO clicks (userid, url, day, month, year) VALUES ({}, 'http://foo.{}', 1, 'jan', 2012)".format(id, tld))
 
@@ -622,7 +622,7 @@ class TestCQL(UpgradeTester):
             for x in range(0, 10):
                 cursor.execute("INSERT INTO test1 (k, c, v) VALUES (0, {}, {})".format(x, x))
 
-            assert_all(cursor, "SELECT v FROM test1 WHERE k = 0 ORDER BY c DESC", [[x] for x in reversed(range(10))])
+            assert_all(cursor, "SELECT v FROM test1 WHERE k = 0 ORDER BY c DESC", [[x] for x in reversed(list(range(10)))])
 
             # Inserts
             for x in range(0, 4):
@@ -634,7 +634,7 @@ class TestCQL(UpgradeTester):
             assert_invalid(cursor, "SELECT v FROM test2 WHERE k = 0 ORDER BY c2 DESC")
             assert_invalid(cursor, "SELECT v FROM test2 WHERE k = 0 ORDER BY k DESC")
 
-            assert_all(cursor, "SELECT v FROM test2 WHERE k = 0 ORDER BY c1 DESC", [[x] for x in reversed(range(8))])
+            assert_all(cursor, "SELECT v FROM test2 WHERE k = 0 ORDER BY c1 DESC", [[x] for x in reversed(list(range(8)))])
 
             assert_all(cursor, "SELECT v FROM test2 WHERE k = 0 ORDER BY c1", [[x] for x in range(8)])
 
@@ -1042,11 +1042,11 @@ class TestCQL(UpgradeTester):
             assert_length_equal(res, 2)
 
             for r in res:
-                self.assertIsInstance(r[2], (int, long))
+                self.assertIsInstance(r[2], (int, int))
                 if r[0] == 1:
                     self.assertIsNone(r[3], res)
                 else:
-                    self.assertIsInstance(r[3], (int, long))
+                    self.assertIsInstance(r[3], (int, int))
 
             # wrap writetime(), ttl() in other functions (test for CASSANDRA-8451)
             res = list(cursor.execute("SELECT k, c, blobAsBigint(bigintAsBlob(writetime(c))), ttl(c) FROM test"))
@@ -1054,22 +1054,22 @@ class TestCQL(UpgradeTester):
             assert_length_equal(res, 2)
 
             for r in res:
-                self.assertIsInstance(r[2], (int, long))
+                self.assertIsInstance(r[2], (int, int))
                 if r[0] == 1:
                     self.assertIsNone(r[3], res)
                 else:
-                    self.assertIsInstance(r[3], (int, long))
+                    self.assertIsInstance(r[3], (int, int))
 
             res = list(cursor.execute("SELECT k, c, writetime(c), blobAsInt(intAsBlob(ttl(c))) FROM test"))
 
             assert_length_equal(res, 2)
 
             for r in res:
-                self.assertIsInstance(r[2], (int, long))
+                self.assertIsInstance(r[2], (int, int))
                 if r[0] == 1:
                     self.assertIsNone(r[3], res)
                 else:
-                    self.assertIsInstance(r[3], (int, long))
+                    self.assertIsInstance(r[3], (int, int))
 
             assert_invalid(cursor, "SELECT k, c, writetime(k) FROM test")
 
@@ -1172,27 +1172,27 @@ class TestCQL(UpgradeTester):
             col1 = 2
             col2 = 2
             cpr = col1 * col2
-            for i in xrange(0, rows):
-                for j in xrange(0, col1):
-                    for k in xrange(0, col2):
+            for i in range(0, rows):
+                for j in range(0, col1):
+                    for k in range(0, col2):
                         n = (i * cpr) + (j * col2) + k
                         cursor.execute("INSERT INTO test1 (k, c1, c2, v1, v2) VALUES ({}, {}, {}, {}, {})".format(i, j, k, n, n))
 
-            for i in xrange(0, rows):
+            for i in range(0, rows):
 
-                assert_all(cursor, "SELECT v1, v2 FROM test1 where k = %d" % i, [[x, x] for x in xrange(i * cpr, (i + 1) * cpr)])
+                assert_all(cursor, "SELECT v1, v2 FROM test1 where k = %d" % i, [[x, x] for x in range(i * cpr, (i + 1) * cpr)])
 
-            for i in xrange(0, rows):
+            for i in range(0, rows):
                 cursor.execute("DELETE FROM test1 WHERE k = %d AND c1 = 0" % i)
 
-            for i in xrange(0, rows):
-                assert_all(cursor, "SELECT v1, v2 FROM test1 WHERE k = %d" % i, [[x, x] for x in xrange(i * cpr + col1, (i + 1) * cpr)])
+            for i in range(0, rows):
+                assert_all(cursor, "SELECT v1, v2 FROM test1 WHERE k = %d" % i, [[x, x] for x in range(i * cpr + col1, (i + 1) * cpr)])
 
             self.cluster.flush()
             time.sleep(0.2)
 
-            for i in xrange(0, rows):
-                assert_all(cursor, "SELECT v1, v2 FROM test1 WHERE k = %d" % i, [[x, x] for x in xrange(i * cpr + col1, (i + 1) * cpr)])
+            for i in range(0, rows):
+                assert_all(cursor, "SELECT v1, v2 FROM test1 WHERE k = %d" % i, [[x, x] for x in range(i * cpr + col1, (i + 1) * cpr)])
 
     def range_tombstones_compaction_test(self):
         """ Test deletion by 'composite prefix' (range tombstones) with compaction """
@@ -1223,7 +1223,7 @@ class TestCQL(UpgradeTester):
             self.cluster.flush()
             self.cluster.compact()
 
-            assert_all(cursor, "SELECT v1 FROM test1 WHERE k = 0", [['{}{}'.format(c1, c2)] for c1 in xrange(0, 4) for c2 in xrange(0, 2) if c1 != 1])
+            assert_all(cursor, "SELECT v1 FROM test1 WHERE k = 0", [['{}{}'.format(c1, c2)] for c1 in range(0, 4) for c2 in range(0, 2) if c1 != 1])
 
     def delete_row_test(self):
         """ Test deletion of rows """
@@ -1450,7 +1450,7 @@ class TestCQL(UpgradeTester):
             cursor.execute("INSERT INTO test (a, b, c, d, e, f) VALUES (1, 1, 1, 1, 3, '3');")
             cursor.execute("INSERT INTO test (a, b, c, d, e, f) VALUES (1, 1, 1, 1, 5, '5');")
 
-            assert_all(cursor, "SELECT a, b, c, d, e, f FROM test WHERE a = 1 AND b = 1 AND c = 1 AND d = 1 AND e >= 2;", [[1, 1, 1, 1, 2, u'2'], [1, 1, 1, 1, 3, u'3'], [1, 1, 1, 1, 5, u'5']])
+            assert_all(cursor, "SELECT a, b, c, d, e, f FROM test WHERE a = 1 AND b = 1 AND c = 1 AND d = 1 AND e >= 2;", [[1, 1, 1, 1, 2, '2'], [1, 1, 1, 1, 3, '3'], [1, 1, 1, 1, 5, '5']])
 
     def composite_row_key_test(self):
         cursor = self.prepare()
@@ -1591,7 +1591,7 @@ class TestCQL(UpgradeTester):
                 self.assertEqual(6, len(row), row)
                 cols = OrderedDict([(cosc.column.name, cosc.column.value) for cosc in row])
                 debug(cols)
-                self.assertEqual(['a', 'b', 'c', 'd', 'e', 'static1'], cols.keys())
+                self.assertEqual(['a', 'b', 'c', 'd', 'e', 'static1'], list(cols.keys()))
                 self.assertEqual('val0', cols['a'])
                 self.assertEqual('val4', cols['e'])
                 self.assertEqual(struct.pack('>i', 1), cols['static1'])
@@ -1607,7 +1607,7 @@ class TestCQL(UpgradeTester):
                 self.assertEqual(3, len(row), row)
                 cols = OrderedDict([(cosc.column.name, cosc.column.value) for cosc in row])
                 debug(cols)
-                self.assertEqual(['a', 'e', 'static1'], cols.keys())
+                self.assertEqual(['a', 'e', 'static1'], list(cols.keys()))
                 self.assertEqual('val0', cols['a'])
                 self.assertEqual('val4', cols['e'])
                 self.assertEqual(struct.pack('>i', 1), cols['static1'])
@@ -2418,7 +2418,7 @@ class TestCQL(UpgradeTester):
             for i in range(0, nb_keys):
                 cursor.execute("INSERT INTO test(k, v) VALUES ({}, {})".format(i, i))
 
-            for i in random.sample(xrange(nb_keys), nb_deletes):
+            for i in random.sample(range(nb_keys), nb_deletes):
                 cursor.execute("DELETE FROM test WHERE k = {}".format(i))
 
             res = list(cursor.execute("SELECT * FROM test LIMIT {}".format(nb_keys / 2)))
@@ -2714,13 +2714,13 @@ class TestCQL(UpgradeTester):
 
         execute_concurrent_with_args(cursor,
                                      cursor.prepare("INSERT INTO t1 (a, b) VALUES (?, ?)"),
-                                     [(i, i) for i in xrange(100)])
+                                     [(i, i) for i in range(100)])
         self.cluster.flush()
 
         def check_read_all(cursor):
             read_count = 0
             # first read each row separately - obviously, we should be able to retrieve all 100
-            for i in xrange(100):
+            for i in range(100):
                 res = cursor.execute("SELECT * FROM t1 WHERE a = {a}".format(a=i))
                 read_count += len(rows_to_list(res))
             debug("Querying for individual keys retrieved {c} results".format(c=read_count))
@@ -3347,7 +3347,7 @@ class TestCQL(UpgradeTester):
             cursor.execute("TRUNCATE compact")
             cursor.execute("TRUNCATE wide")
 
-            for i in xrange(0, 3):
+            for i in range(0, 3):
                 cursor.execute('INSERT INTO regular (pk0, pk1, ck0, val) VALUES (%d, %d, 0, 0)' % (i, i))
                 cursor.execute('INSERT INTO regular (pk0, pk1, ck0, val) VALUES (%d, %d, 1, 1)' % (i, i))
 
@@ -3355,14 +3355,14 @@ class TestCQL(UpgradeTester):
 
             assert_all(cursor, 'SELECT DISTINCT pk0, pk1 FROM regular LIMIT 3', [[0, 0], [1, 1], [2, 2]])
 
-            for i in xrange(0, 3):
+            for i in range(0, 3):
                 cursor.execute('INSERT INTO compact (pk0, pk1, val) VALUES (%d, %d, %d)' % (i, i, i))
 
             assert_all(cursor, 'SELECT DISTINCT pk0, pk1 FROM compact LIMIT 1', [[0, 0]])
 
             assert_all(cursor, 'SELECT DISTINCT pk0, pk1 FROM compact LIMIT 3', [[0, 0], [1, 1], [2, 2]])
 
-            for i in xrange(0, 3):
+            for i in range(0, 3):
                 cursor.execute("INSERT INTO wide (pk, name, val) VALUES (%d, 'name0', 0)" % i)
                 cursor.execute("INSERT INTO wide (pk, name, val) VALUES (%d, 'name1', 1)" % i)
 
@@ -4091,14 +4091,14 @@ class TestCQL(UpgradeTester):
 
             cursor.default_fetch_size = 7
             rows = list(cursor.execute("SELECT DISTINCT k, s FROM test"))
-            self.assertEqual(range(10), sorted([r[0] for r in rows]))
-            self.assertEqual(range(10), sorted([r[1] for r in rows]))
+            self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
+            self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
 
-            keys = ",".join(map(str, range(10)))
+            keys = ",".join(map(str, list(range(10))))
 
             rows = list(cursor.execute("SELECT DISTINCT k, s FROM test WHERE k IN ({})".format(keys)))
-            self.assertEqual(range(10), [r[0] for r in rows])
-            self.assertEqual(range(10), [r[1] for r in rows])
+            self.assertEqual(list(range(10)), [r[0] for r in rows])
+            self.assertEqual(list(range(10)), [r[1] for r in rows])
 
             # additional testing for CASSANRA-8087
             for i in range(10):
@@ -4109,31 +4109,31 @@ class TestCQL(UpgradeTester):
             for fetch_size in (None, 2, 5, 7, 10, 24, 25, 26, 1000):
                 cursor.default_fetch_size = fetch_size
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2"))
-                self.assertEqual(range(10), sorted([r[0] for r in rows]))
-                self.assertEqual(range(10), sorted([r[1] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
 
                 rows = list(cursor.execute("SELECT DISTINCT k, s2 FROM test2"))
-                self.assertEqual(range(10), sorted([r[0] for r in rows]))
-                self.assertEqual(range(1, 11), sorted([r[1] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
+                self.assertEqual(list(range(1, 11)), sorted([r[1] for r in rows]))
 
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2 LIMIT 10"))
-                self.assertEqual(range(10), sorted([r[0] for r in rows]))
-                self.assertEqual(range(10), sorted([r[1] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
 
-                keys = ",".join(map(str, range(10)))
+                keys = ",".join(map(str, list(range(10))))
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2 WHERE k IN (%s)" % (keys,)))
-                self.assertEqual(range(10), [r[0] for r in rows])
-                self.assertEqual(range(10), [r[1] for r in rows])
+                self.assertEqual(list(range(10)), [r[0] for r in rows])
+                self.assertEqual(list(range(10)), [r[1] for r in rows])
 
-                keys = ",".join(map(str, range(10)))
+                keys = ",".join(map(str, list(range(10))))
                 rows = list(cursor.execute("SELECT DISTINCT k, s2 FROM test2 WHERE k IN (%s)" % (keys,)))
-                self.assertEqual(range(10), [r[0] for r in rows])
-                self.assertEqual(range(1, 11), [r[1] for r in rows])
+                self.assertEqual(list(range(10)), [r[0] for r in rows])
+                self.assertEqual(list(range(1, 11)), [r[1] for r in rows])
 
-                keys = ",".join(map(str, range(10)))
+                keys = ",".join(map(str, list(range(10))))
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2 WHERE k IN (%s) LIMIT 10" % (keys,)))
-                self.assertEqual(range(10), sorted([r[0] for r in rows]))
-                self.assertEqual(range(10), sorted([r[1] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
+                self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
 
     def select_count_paging_test(self):
         """
@@ -5076,7 +5076,7 @@ class TestCQL(UpgradeTester):
             debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             cursor.execute("TRUNCATE invalid_string_literals")
 
-            assert_invalid(cursor, u"insert into ks.invalid_string_literals (k, a) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
+            assert_invalid(cursor, "insert into ks.invalid_string_literals (k, a) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
 
             # since the protocol requires strings to be valid UTF-8, the error response to this is a ProtocolError
             try:

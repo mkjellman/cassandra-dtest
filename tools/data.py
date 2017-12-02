@@ -5,7 +5,7 @@ from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.query import SimpleStatement
 from nose.tools import assert_equal, assert_true
 
-import assertions
+from . import assertions
 from dtest import debug, create_cf, DtestTimeoutError
 from tools.funcutils import get_rate_limited_function
 
@@ -39,7 +39,7 @@ def query_c1c2(session, key, consistency=ConsistencyLevel.QUORUM, tolerate_missi
 
 
 def insert_columns(tester, session, key, columns_count, consistency=ConsistencyLevel.QUORUM, offset=0):
-    upds = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%06d\'" % (i, key, i) for i in xrange(offset * columns_count, columns_count * (offset + 1))]
+    upds = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%06d\'" % (i, key, i) for i in range(offset * columns_count, columns_count * (offset + 1))]
     query = 'BEGIN BATCH %s; APPLY BATCH' % '; '.join(upds)
     simple_query = SimpleStatement(query, consistency_level=consistency)
     session.execute(simple_query)
@@ -49,7 +49,7 @@ def query_columns(tester, session, key, columns_count, consistency=ConsistencyLe
     query = SimpleStatement('SELECT c, v FROM cf WHERE key=\'k%s\' AND c >= \'c%06d\' AND c <= \'c%06d\'' % (key, offset, columns_count + offset - 1), consistency_level=consistency)
     res = list(session.execute(query))
     assertions.assert_length_equal(res, columns_count)
-    for i in xrange(0, columns_count):
+    for i in range(0, columns_count):
         assert_equal(res[i][1], 'value{}'.format(i + offset))
 
 
@@ -74,20 +74,20 @@ def putget(cluster, session, cl=ConsistencyLevel.QUORUM):
 
 
 def _put_with_overwrite(cluster, session, nb_keys, cl=ConsistencyLevel.QUORUM):
-    for k in xrange(0, nb_keys):
-        kvs = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%02d\'" % (i, k, i) for i in xrange(0, 100)]
+    for k in range(0, nb_keys):
+        kvs = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%02d\'" % (i, k, i) for i in range(0, 100)]
         query = SimpleStatement('BEGIN BATCH %s APPLY BATCH' % '; '.join(kvs), consistency_level=cl)
         session.execute(query)
         time.sleep(.01)
     cluster.flush()
-    for k in xrange(0, nb_keys):
-        kvs = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%02d\'" % (i * 4, k, i * 2) for i in xrange(0, 50)]
+    for k in range(0, nb_keys):
+        kvs = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%02d\'" % (i * 4, k, i * 2) for i in range(0, 50)]
         query = SimpleStatement('BEGIN BATCH %s APPLY BATCH' % '; '.join(kvs), consistency_level=cl)
         session.execute(query)
         time.sleep(.01)
     cluster.flush()
-    for k in xrange(0, nb_keys):
-        kvs = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%02d\'" % (i * 20, k, i * 5) for i in xrange(0, 20)]
+    for k in range(0, nb_keys):
+        kvs = ["UPDATE cf SET v=\'value%d\' WHERE key=\'k%s\' AND c=\'c%02d\'" % (i * 20, k, i * 5) for i in range(0, 20)]
         query = SimpleStatement('BEGIN BATCH %s APPLY BATCH' % '; '.join(kvs), consistency_level=cl)
         session.execute(query)
         time.sleep(.01)
@@ -96,7 +96,7 @@ def _put_with_overwrite(cluster, session, nb_keys, cl=ConsistencyLevel.QUORUM):
 
 def _validate_row(cluster, res):
     assertions.assert_length_equal(res, 100)
-    for i in xrange(0, 100):
+    for i in range(0, 100):
         if i % 5 == 0:
             assert_equal(res[i][2], 'value{}'.format(i * 4), 'for {}, expecting value{}, got {}'.format(i, i * 4, res[i][2]))
         elif i % 2 == 0:
@@ -116,7 +116,7 @@ def range_putget(cluster, session, cl=ConsistencyLevel.QUORUM):
     rows = [result for result in paged_results]
 
     assertions.assert_length_equal(rows, keys * 100)
-    for k in xrange(0, keys):
+    for k in range(0, keys):
         res = rows[:100]
         del rows[:100]
         _validate_row(cluster, res)

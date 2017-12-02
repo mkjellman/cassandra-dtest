@@ -12,10 +12,9 @@ docopt
 enum34
 flaky
 mock
-nose
-nose-test-select
+pytest
 parse
 pep8
 psutil
-pycassa
+# pycassa
 thrift==0.9.3

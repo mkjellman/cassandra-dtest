@@ -226,7 +226,7 @@ class TestReadRepair(Tester):
     def pprint_trace(self, trace):
         """Pretty print a trace"""
         if PRINT_DEBUG:
-            print("-" * 40)
+            print(("-" * 40))
             for t in trace.events:
-                print("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name))
-            print("-" * 40)
+                print(("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name)))
+            print(("-" * 40))

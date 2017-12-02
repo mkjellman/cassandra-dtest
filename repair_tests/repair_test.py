@@ -64,7 +64,7 @@ class BaseRepairTest(Tester):
             missings = []
         stopped_nodes = []
 
-        for node in self.cluster.nodes.values():
+        for node in list(self.cluster.nodes.values()):
             if node.is_running() and node is not node_to_check:
                 stopped_nodes.append(node)
                 node.stop(wait_other_notice=True)
@@ -79,7 +79,7 @@ class BaseRepairTest(Tester):
         for k in missings:
             query = SimpleStatement("SELECT c1, c2 FROM cf WHERE key='k{}'".format(k), consistency_level=ConsistencyLevel.ONE)
             res = list(session.execute(query))
-            self.assertEqual(len(filter(lambda x: len(x) != 0, res)), 0, res)
+            self.assertEqual(len([x for x in res if len(x) != 0]), 0, res)
 
         if restart:
             for node in stopped_nodes:
@@ -107,7 +107,7 @@ class BaseRepairTest(Tester):
         node3.stop(wait_other_notice=True)
         insert_c1c2(session, keys=(1000, ), consistency=ConsistencyLevel.TWO)
         node3.start(wait_other_notice=True, wait_for_binary_proto=True)
-        insert_c1c2(session, keys=range(1001, 2001), consistency=ConsistencyLevel.ALL)
+        insert_c1c2(session, keys=list(range(1001, 2001)), consistency=ConsistencyLevel.ALL)
 
         cluster.flush()
 
@@ -203,7 +203,7 @@ class TestRepair(BaseRepairTest):
             global nodetool_error
             try:
                 node1.nodetool('repair keyspace1 standard2')
-            except Exception, e:
+            except Exception as e:
                 nodetool_error = e
 
         # Launch in a external thread so it does not hang process
@@ -276,7 +276,7 @@ class TestRepair(BaseRepairTest):
         out = node.run_sstablemetadata(keyspace=keyspace).stdout
 
         def matches(pattern):
-            return filter(None, [pattern.match(l) for l in out.split('\n')])
+            return [_f for _f in [pattern.match(l) for l in out.split('\n')] if _f]
 
         names = [m.group(1) for m in matches(_sstable_name)]
         repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
@@ -309,7 +309,7 @@ class TestRepair(BaseRepairTest):
         node1.nodetool("repair keyspace1 standard1")
         meta = self._get_repaired_data(node1, 'keyspace1')
         repaired = set([m for m in meta if m.repaired > 0])
-        self.assertEquals(len(repaired), len(meta))
+        self.assertEqual(len(repaired), len(meta))
 
         # stop node2, stress and start full repair to find out how synced ranges affect repairedAt values
         node2.stop(wait_other_notice=True)
@@ -320,7 +320,7 @@ class TestRepair(BaseRepairTest):
         meta = self._get_repaired_data(node1, 'keyspace1')
         repairedAfterFull = set([m for m in meta if m.repaired > 0])
         # already repaired sstables must remain untouched
-        self.assertEquals(repaired.intersection(repairedAfterFull), repaired)
+        self.assertEqual(repaired.intersection(repairedAfterFull), repaired)
 
     @since('2.2.1', '4')
     def anticompaction_after_normal_repair_test(self):
@@ -484,18 +484,18 @@ class TestRepair(BaseRepairTest):
         node2.stop(wait_other_notice=True)
         for cf in ['cf1', 'cf2']:
             # insert some data
-            for i in xrange(0, 10):
-                for j in xrange(0, 1000):
+            for i in range(0, 10):
+                for j in range(0, 1000):
                     query = SimpleStatement("INSERT INTO {} (key, c1, c2) VALUES ('k{}', 'v{}', 'value')".format(cf, i, j), consistency_level=ConsistencyLevel.ONE)
                     session.execute(query)
             node1.flush()
             # delete those data, half with row tombstone, and the rest with cell range tombstones
-            for i in xrange(0, 5):
+            for i in range(0, 5):
                 query = SimpleStatement("DELETE FROM {} WHERE key='k{}'".format(cf, i), consistency_level=ConsistencyLevel.ONE)
                 session.execute(query)
             node1.flush()
-            for i in xrange(5, 10):
-                for j in xrange(0, 1000):
+            for i in range(5, 10):
+                for j in range(0, 1000):
                     query = SimpleStatement("DELETE FROM {} WHERE key='k{}' AND c1='v{}'".format(cf, i, j), consistency_level=ConsistencyLevel.ONE)
                     session.execute(query)
             node1.flush()
@@ -509,10 +509,10 @@ class TestRepair(BaseRepairTest):
 
         # check no rows will be returned
         for cf in ['cf1', 'cf2']:
-            for i in xrange(0, 10):
+            for i in range(0, 10):
                 query = SimpleStatement("SELECT c1, c2 FROM {} WHERE key='k{}'".format(cf, i), consistency_level=ConsistencyLevel.ALL)
                 res = list(session.execute(query))
-                self.assertEqual(len(filter(lambda x: len(x) != 0, res)), 0, res)
+                self.assertEqual(len([x for x in res if len(x) != 0]), 0, res)
 
         # check log for no repair happened for gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for cf1")
@@ -720,7 +720,7 @@ class TestRepair(BaseRepairTest):
         insert_c1c2(session, keys=(1000, ), consistency=ConsistencyLevel.THREE)
         node2.start(wait_for_binary_proto=True, wait_other_notice=True)
         node1.watch_log_for_alive(node2)
-        insert_c1c2(session, keys=range(1001, 2001), consistency=ConsistencyLevel.ALL)
+        insert_c1c2(session, keys=list(range(1001, 2001)), consistency=ConsistencyLevel.ALL)
 
         cluster.flush()
 
@@ -1075,7 +1075,7 @@ class TestRepair(BaseRepairTest):
         node1, node2 = cluster.nodelist()
         node2.stop(wait_other_notice=True)
         profile_path = os.path.join(os.getcwd(), 'stress_profiles/repair_wide_rows.yaml')
-        print("yaml = " + profile_path)
+        print(("yaml = " + profile_path))
         node1.stress(['user', 'profile=' + profile_path, 'n=50', 'ops(insert=1)', 'no-warmup', '-rate', 'threads=8',
                       '-insert', 'visits=FIXED(100K)', 'revisit=FIXED(100K)'])
         node2.start(wait_for_binary_proto=True)
@@ -1193,7 +1193,7 @@ class TestRepair(BaseRepairTest):
             global nodetool_error
             try:
                 node1.nodetool('repair keyspace1 standard1')
-            except Exception, e:
+            except Exception as e:
                 nodetool_error = e
 
         debug("repair node1")
@@ -1286,7 +1286,7 @@ class TestRepairDataSystemTable(Tester):
         debug('repair tables:')
         debug(self.repair_table_contents(node=self.node1, include_system_keyspaces=False))
         repair_tables_dict = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)._asdict()
-        for table_name, table_contents in repair_tables_dict.items():
+        for table_name, table_contents in list(repair_tables_dict.items()):
             self.assertFalse(table_contents, '{} is non-empty'.format(table_name))
 
     def repair_parent_table_test(self):

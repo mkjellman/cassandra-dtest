@@ -7,7 +7,7 @@ import time
 import uuid
 from collections import defaultdict, namedtuple
 from multiprocessing import Process, Queue
-from Queue import Empty, Full
+from queue import Empty, Full
 from unittest import skipUnless
 
 import psutil
@@ -18,8 +18,8 @@ from six import print_
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
 from tools.misc import generate_ssl_stores, new_node
-from upgrade_base import switch_jdks
-from upgrade_manifest import (build_upgrade_pairs, current_2_0_x,
+from .upgrade_base import switch_jdks
+from .upgrade_manifest import (build_upgrade_pairs, current_2_0_x,
                               current_2_1_x, current_2_2_x, current_3_0_x,
                               indev_2_2_x, indev_3_x)
 
@@ -496,7 +496,7 @@ class UpgradeTester(Tester):
     def _write_values(self, num=100):
         session = self.patient_cql_connection(self.node2, protocol_version=self.protocol_version)
         session.execute("use upgrade")
-        for i in xrange(num):
+        for i in range(num):
             x = len(self.row_values) + 1
             session.execute("UPDATE cf SET v='%d' WHERE k=%d" % (x, x))
             self.row_values.add(x)
@@ -616,7 +616,7 @@ class UpgradeTester(Tester):
         fail_count = 0
 
         for i in range(opcount):
-            key1 = random.choice(self.expected_counts.keys())
+            key1 = random.choice(list(self.expected_counts.keys()))
             key2 = random.randint(1, 10)
             try:
                 query = SimpleStatement(update_counter_query.format(key1=key1, key2=key2), consistency_level=ConsistencyLevel.ALL)
@@ -635,8 +635,8 @@ class UpgradeTester(Tester):
         session = self.patient_cql_connection(self.node2, protocol_version=self.protocol_version)
         session.execute("use upgrade;")
 
-        for key1 in self.expected_counts.keys():
-            for key2 in self.expected_counts[key1].keys():
+        for key1 in list(self.expected_counts.keys()):
+            for key2 in list(self.expected_counts[key1].keys()):
                 expected_value = self.expected_counts[key1][key2]
 
                 query = SimpleStatement("SELECT c from countertable where k1='{key1}' and k2={key2};".format(key1=key1, key2=key2),

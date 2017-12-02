@@ -1,6 +1,6 @@
-from __future__ import with_statement
 
-import ConfigParser
+
+import configparser
 import copy
 import errno
 import glob
@@ -13,7 +13,7 @@ import signal
 import subprocess
 import sys
 import tempfile
-import thread
+import _thread
 import threading
 import time
 import traceback
@@ -57,7 +57,7 @@ LAST_LOG = os.path.join(LOG_SAVED_DIR, "last")
 LAST_TEST_DIR = 'last_test_dir'
 
 DEFAULT_DIR = './'
-config = ConfigParser.RawConfigParser()
+config = configparser.RawConfigParser()
 if len(config.read(os.path.expanduser('~/.cassandra-dtest'))) > 0:
     if config.has_option('main', 'default_dir'):
         DEFAULT_DIR = os.path.expanduser(config.get('main', 'default_dir'))
@@ -89,7 +89,7 @@ DISABLE_VNODES = not CONFIG.vnodes
 
 
 if os.environ.get('DISABLE_VNODES', '').lower() in ('yes', 'true'):
-    print 'DISABLE_VNODES environment variable deprecated. Use `./run_dtests.py --vnodes false` instead.'
+    print('DISABLE_VNODES environment variable deprecated. Use `./run_dtests.py --vnodes false` instead.')
 
 
 CURRENT_TEST = ""
@@ -159,7 +159,7 @@ def find_libjemalloc():
         else:
             return stdout
     except Exception as exc:
-        print "Failed to run script to prelocate libjemalloc ({}): {}".format(script, exc)
+        print("Failed to run script to prelocate libjemalloc ({}): {}".format(script, exc))
         return ""
 
 
@@ -180,13 +180,13 @@ def reset_environment_vars():
 def warning(msg):
     LOG.warning(CURRENT_TEST + ' - ' + msg)
     if PRINT_DEBUG:
-        print "WARN: " + msg
+        print("WARN: " + msg)
 
 
 def debug(msg):
     LOG.debug(CURRENT_TEST + ' - ' + msg)
     if PRINT_DEBUG:
-        print msg
+        print(msg)
 
 
 debug("Python driver version in use: {}".format(cassandra.__version__))
@@ -354,7 +354,7 @@ class Tester(TestCase):
 
         reportable_errordata = OrderedDict()
 
-        for nodename, errors in errordata.items():
+        for nodename, errors in list(errordata.items()):
             filtered_errors = list(self.__filter_errors(['\n'.join(msg) for msg in errors]))
             if len(filtered_errors) is not 0:
                 reportable_errordata[nodename] = filtered_errors
@@ -363,8 +363,8 @@ class Tester(TestCase):
         if not reportable_errordata:
             return
 
-        message = "Errors seen in logs for: {nodes}".format(nodes=", ".join(reportable_errordata.keys()))
-        for nodename, errors in reportable_errordata.items():
+        message = "Errors seen in logs for: {nodes}".format(nodes=", ".join(list(reportable_errordata.keys())))
+        for nodename, errors in list(reportable_errordata.items()):
             for error in errors:
                 message += "\n{nodename}: {error}".format(nodename=nodename, error=error)
 
@@ -377,7 +377,7 @@ class Tester(TestCase):
             self.exit_with_exception = AssertionError("Log error encountered during active log scanning, see stdout")
             # thread.interrupt_main will SIGINT in the main thread, which we can
             # catch to raise an exception with useful information
-            thread.interrupt_main()
+            _thread.interrupt_main()
 
     """
     Finds files matching the glob pattern specified as argument on
@@ -418,7 +418,7 @@ class Tester(TestCase):
         if not os.path.exists(directory):
             os.mkdir(directory)
         logs = [(node.name, node.logfilename(), node.debuglogfilename(), node.gclogfilename(), node.compactionlogfilename())
-                for node in self.cluster.nodes.values()]
+                for node in list(self.cluster.nodes.values())]
         if len(logs) is not 0:
             basedir = str(int(time.time() * 1000)) + '_' + self.id()
             logdir = os.path.join(directory, basedir)
@@ -597,7 +597,7 @@ class Tester(TestCase):
                 if failed or KEEP_LOGS:
                     self.copy_logs(self.cluster)
             except Exception as e:
-                print "Error saving log:", str(e)
+                print("Error saving log:", str(e))
             finally:
                 log_watch_thread = getattr(self, '_log_watch_thread', None)
                 cleanup_cluster(self.cluster, self.test_path, log_watch_thread)
@@ -690,7 +690,7 @@ def create_cf(session, name, key_type="varchar", speculative_retry=None, read_re
 
     additional_columns = ""
     if columns is not None:
-        for k, v in columns.items():
+        for k, v in list(columns.items()):
             additional_columns = "{}, {} {}".format(additional_columns, k, v)
 
     if additional_columns == "":
@@ -720,13 +720,13 @@ def create_cf(session, name, key_type="varchar", speculative_retry=None, read_re
 
 def create_ks(session, name, rf):
     query = 'CREATE KEYSPACE %s WITH replication={%s}'
-    if isinstance(rf, types.IntType):
+    if isinstance(rf, int):
         # we assume simpleStrategy
         session.execute(query % (name, "'class':'SimpleStrategy', 'replication_factor':%d" % rf))
     else:
         assert_greater_equal(len(rf), 0, "At least one datacenter/rf pair is needed")
         # we assume networkTopologyStrategy
-        options = (', ').join(['\'%s\':%d' % (d, r) for d, r in rf.iteritems()])
+        options = (', ').join(['\'%s\':%d' % (d, r) for d, r in rf.items()])
         session.execute(query % (name, "'class':'NetworkTopologyStrategy', %s" % options))
     session.execute('USE {}'.format(name))
 
@@ -774,7 +774,7 @@ def kill_windows_cassandra_procs():
                     pass
                 else:
                     if (pinfo['name'] == 'java.exe' and '-Dcassandra' in pinfo['cmdline']):
-                        print 'Found running cassandra process with pid: ' + str(pinfo['pid']) + '. Killing.'
+                        print('Found running cassandra process with pid: ' + str(pinfo['pid']) + '. Killing.')
                         psutil.Process(pinfo['pid']).kill()
         except ImportError:
             debug("WARN: psutil not installed. Cannot detect and kill "
@@ -1022,7 +1022,7 @@ class ReusableClusterTester(Tester):
                 if failed or KEEP_LOGS:
                     self.copy_logs(self.cluster)
             except Exception as e:
-                print "Error saving log:", str(e)
+                print("Error saving log:", str(e))
             finally:
                 reset_environment_vars()
                 if failed:

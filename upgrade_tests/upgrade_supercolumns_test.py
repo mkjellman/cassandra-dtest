@@ -58,11 +58,11 @@ class TestSCUpgrade(Tester):
         super_col_fam = ColumnFamily(pool, "cols")
         for name in NAMES:
             super_col_value = super_col_fam.get(name)
-            self.assertEqual(OrderedDict([(('attr', u'name'), name)]), super_col_value)
+            self.assertEqual(OrderedDict([(('attr', 'name'), name)]), super_col_value)
 
     def verify_with_cql(self, session):
         session.execute("USE supcols")
-        expected = [[name, 'attr', u'name', name] for name in ['Grace', 'Claire', 'Dave', 'Frank', 'Ed', 'Bob', 'Alice']]
+        expected = [[name, 'attr', 'name', name] for name in ['Grace', 'Claire', 'Dave', 'Frank', 'Ed', 'Bob', 'Alice']]
         assert_all(session, "SELECT * FROM cols", expected)
 
     def _upgrade_super_columns_through_versions_test(self, upgrade_path):

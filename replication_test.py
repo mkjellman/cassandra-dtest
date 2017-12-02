@@ -176,7 +176,7 @@ class ReplicationTest(Tester):
         elif strategy == 'NetworkTopologyStrategy':
             # NetworkTopologyStrategy can be broken down into multiple
             # SimpleStrategies, just once per datacenter:
-            for dc, rf in replication_factor.items():
+            for dc, rf in list(replication_factor.items()):
                 dc_nodes = [n for n in nodes if n.data_center == dc]
                 replicas.extend(self.get_replicas_for_token(
                     token, rf, nodes=dc_nodes))
@@ -191,10 +191,10 @@ class ReplicationTest(Tester):
         Pretty print a trace
         """
         if PRINT_DEBUG:
-            print("-" * 40)
+            print(("-" * 40))
             for t in trace.events:
-                print("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name))
-            print("-" * 40)
+                print(("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name)))
+            print(("-" * 40))
 
     def simple_test(self):
         """
@@ -209,7 +209,7 @@ class ReplicationTest(Tester):
         create_ks(session, 'test', replication_factor)
         session.execute('CREATE TABLE test.test (id int PRIMARY KEY, value text)', trace=False)
 
-        for key, token in murmur3_hashes.items():
+        for key, token in list(murmur3_hashes.items()):
             debug('murmur3 hash key={key},token={token}'.format(key=key, token=token))
             query = SimpleStatement("INSERT INTO test (id, value) VALUES ({}, 'asdf')".format(key), consistency_level=ConsistencyLevel.ALL)
             future = session.execute_async(query, trace=True)
@@ -248,7 +248,7 @@ class ReplicationTest(Tester):
 
         forwarders_used = set()
 
-        for key, token in murmur3_hashes.items():
+        for key, token in list(murmur3_hashes.items()):
             query = SimpleStatement("INSERT INTO test (id, value) VALUES ({}, 'asdf')".format(key), consistency_level=ConsistencyLevel.ALL)
             future = session.execute_async(query, trace=True)
             future.result()
@@ -307,7 +307,7 @@ class SnitchConfigurationUpdateTest(Tester):
         """
         Check a dummy key expecting it to have replication factor as the sum of rf on all dcs.
         """
-        expected_count = sum([int(r) for d, r in rf.iteritems() if d != 'class'])
+        expected_count = sum([int(r) for d, r in rf.items() if d != 'class'])
         for node in nodes:
             cmd = "getendpoints {} {} dummy".format(ks, table)
             out, err, _ = node.nodetool(cmd)
@@ -537,7 +537,7 @@ class SnitchConfigurationUpdateTest(Tester):
 
         session = self.patient_cql_connection(cluster.nodelist()[0])
 
-        options = (', ').join(['\'{}\': {}'.format(d, r) for d, r in rf.iteritems()])
+        options = (', ').join(['\'{}\': {}'.format(d, r) for d, r in rf.items()])
         session.execute("CREATE KEYSPACE testing WITH replication = {{{}}}".format(options))
         session.execute("CREATE TABLE testing.rf_test (key text PRIMARY KEY, value text)")
 

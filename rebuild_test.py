@@ -48,7 +48,7 @@ class TestRebuild(Tester):
         insert_c1c2(session, n=keys, consistency=ConsistencyLevel.LOCAL_ONE)
 
         # check data
-        for i in xrange(0, keys):
+        for i in range(0, keys):
             query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
         session.shutdown()
 
@@ -118,7 +118,7 @@ class TestRebuild(Tester):
         # manually raise exception from cmd1 thread
         # see http://stackoverflow.com/a/1854263
         if cmd1.thread_exc_info is not None:
-            raise cmd1.thread_exc_info[1], None, cmd1.thread_exc_info[2]
+            raise cmd1.thread_exc_info[1].with_traceback(cmd1.thread_exc_info[2])
 
         # exactly 1 of the two nodetool calls should fail
         # usually it will be the one in the main thread,
@@ -128,7 +128,7 @@ class TestRebuild(Tester):
                          msg='rebuild errors should be 1, but found {}. Concurrent rebuild should not be allowed, but one rebuild command should have succeeded.'.format(self.rebuild_errors))
 
         # check data
-        for i in xrange(0, keys):
+        for i in range(0, keys):
             query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
 
     @since('2.2')
@@ -209,7 +209,7 @@ class TestRebuild(Tester):
         session.execute('USE ks')
         with self.assertRaises(AssertionError, msg='Unexpected: COMPLETE'):
             debug('Checking data is complete -> '),
-            for i in xrange(0, 20000):
+            for i in range(0, 20000):
                 query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
         debug('Expected: INCOMPLETE')
 
@@ -221,7 +221,7 @@ class TestRebuild(Tester):
         node3.watch_log_for('All sessions completed')
         node3.watch_log_for('Skipping streaming those ranges.')
         debug('Checking data is complete -> '),
-        for i in xrange(0, 20000):
+        for i in range(0, 20000):
             query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
         debug('Expected: COMPLETE')
 
@@ -283,11 +283,11 @@ class TestRebuild(Tester):
 
         # check data is sent by stopping node1
         node1.stop()
-        for i in xrange(0, keys):
+        for i in range(0, keys):
             query_c1c2(session, i, ConsistencyLevel.ONE)
         # ks2 should not be streamed
         session.execute('USE ks2')
-        for i in xrange(0, keys):
+        for i in range(0, keys):
             query_c1c2(session, i, ConsistencyLevel.ONE, tolerate_missing=True, must_be_missing=True)
 
     @since('3.10')
@@ -320,7 +320,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with self.assertRaisesRegexp(ToolError, 'is not a range that is owned by this node'):
+        with self.assertRaisesRegex(ToolError, 'is not a range that is owned by this node'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
 
     @since('3.10')
@@ -356,7 +356,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with self.assertRaisesRegexp(ToolError, 'Unable to find sufficient sources for streaming range'):
+        with self.assertRaisesRegex(ToolError, 'Unable to find sufficient sources for streaming range'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
 
     @since('3.10')
@@ -433,9 +433,9 @@ class TestRebuild(Tester):
         # check data is sent by stopping node1, node2
         node1.stop()
         node2.stop()
-        for i in xrange(0, keys):
+        for i in range(0, keys):
             query_c1c2(session, i, ConsistencyLevel.ONE)
         # ks2 should not be streamed
         session.execute('USE ks2')
-        for i in xrange(0, keys):
+        for i in range(0, keys):
             query_c1c2(session, i, ConsistencyLevel.ONE, tolerate_missing=True, must_be_missing=True)

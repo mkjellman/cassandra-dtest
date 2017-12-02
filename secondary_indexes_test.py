@@ -605,7 +605,7 @@ class TestSecondaryIndexes(Tester):
         for node in cluster.nodelist():
             block_until_index_is_built(node, session, 'ks', 'regular_table', 'composites_index')
 
-        insert_args = [(i, i % 2) for i in xrange(100)]
+        insert_args = [(i, i % 2) for i in range(100)]
         execute_concurrent_with_args(session,
                                      session.prepare("INSERT INTO ks.compact_table (a, b) VALUES (?, ?)"),
                                      insert_args)
@@ -1073,7 +1073,7 @@ class TestSecondaryIndexesOnCollections(Tester):
             self.assertEqual(db_email, log_entry['email'])
 
             self.assertTrue(shared_uuid in db_uuids)
-            self.assertTrue(log_entry['unshared_uuid2'] in db_uuids.values())
+            self.assertTrue(log_entry['unshared_uuid2'] in list(db_uuids.values()))
 
 
 class TestUpgradeSecondaryIndexes(Tester):

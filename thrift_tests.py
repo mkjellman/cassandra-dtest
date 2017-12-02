@@ -463,7 +463,7 @@ class TestMutations(ThriftTester):
         # Exercise paging
         column_parent = ColumnParent('Standard1')
         # Paging for small columns starts at 1024 columns
-        columns_to_insert = [Column('c%d' % (i,), 'value%d' % (i,), 0) for i in xrange(3, 1026)]
+        columns_to_insert = [Column('c%d' % (i,), 'value%d' % (i,), 0) for i in range(3, 1026)]
         cfmap = {'Standard1': [Mutation(ColumnOrSuperColumn(c)) for c in columns_to_insert]}
         client.batch_mutate({'key1': cfmap}, ConsistencyLevel.ONE)
 
@@ -486,7 +486,7 @@ class TestMutations(ThriftTester):
         parent = ColumnParent('Standard1')
         cl = ConsistencyLevel.ONE
 
-        for i in xrange(0, 3050):
+        for i in range(0, 3050):
             client.insert(key, parent, Column(str(i), '', 0), cl)
 
         # same as page size
@@ -576,12 +576,12 @@ class TestMutations(ThriftTester):
         L = []
 
         # 100 isn't enough to fail reliably if the comparator is borked
-        for i in xrange(500):
+        for i in range(500):
             L.append(uuid.uuid1())
             client.insert('key1', ColumnParent('Super4', 'sc1'), Column(L[-1].bytes, 'value%s' % i, i), ConsistencyLevel.ONE)
         slice = _big_slice('key1', ColumnParent('Super4', 'sc1'))
         assert len(slice) == 500, len(slice)
-        for i in xrange(500):
+        for i in range(500):
             u = slice[i].column
             assert u.value == 'value%s' % i
             assert u.name == L[i].bytes
@@ -620,7 +620,7 @@ class TestMutations(ThriftTester):
 
         column_parent = ColumnParent('StandardLong1')
         sp = SlicePredicate(slice_range=SliceRange('', '', False, 1))
-        for i in xrange(10):
+        for i in range(10):
             parent = ColumnParent('StandardLong1')
 
             client.insert('key1', parent, Column(_i64(i), 'value1', 10 * i), ConsistencyLevel.ONE)
@@ -639,7 +639,7 @@ class TestMutations(ThriftTester):
 
         column_parent = ColumnParent('StandardInteger1')
         sp = SlicePredicate(slice_range=SliceRange('', '', False, 1))
-        for i in xrange(10):
+        for i in range(10):
             parent = ColumnParent('StandardInteger1')
 
             client.insert('key1', parent, Column(_i64(i), 'value1', 10 * i), ConsistencyLevel.ONE)
@@ -1333,7 +1333,7 @@ class TestMutations(ThriftTester):
         _set_keyspace('Keyspace1')
         self.truncate_all('Standard1')
 
-        for key in ['-a', '-b', 'a', 'b'] + [str(i) for i in xrange(100)]:
+        for key in ['-a', '-b', 'a', 'b'] + [str(i) for i in range(100)]:
             client.insert(key, ColumnParent('Standard1'), Column(key, 'v', 0), ConsistencyLevel.ONE)
 
         slices = get_range_slice(client, ColumnParent('Standard1'), SlicePredicate(column_names=['-a', '-a']), '', '', 1000, ConsistencyLevel.ONE)
@@ -1346,7 +1346,7 @@ class TestMutations(ThriftTester):
         _set_keyspace('Keyspace1')
         self.truncate_all('Standard1')
 
-        for key in ['-a', '-b', 'a', 'b'] + [str(i) for i in xrange(100)]:
+        for key in ['-a', '-b', 'a', 'b'] + [str(i) for i in range(100)]:
             client.insert(key, ColumnParent('Standard1'), Column(key, 'v', 0), ConsistencyLevel.ONE)
 
         def check_slices_against_keys(keyList, sliceList):
@@ -1593,15 +1593,15 @@ class TestMutations(ThriftTester):
         _set_keyspace('Keyspace1')
         self.truncate_all('Super1')
 
-        for x in xrange(3):
+        for x in range(3):
             client.insert('key1', ColumnParent('Super1', 'sc2'), Column(_i64(x), 'value', 1), ConsistencyLevel.ONE)
 
         client.remove('key1', ColumnPath('Super1'), 2, ConsistencyLevel.ONE)
 
-        for x in xrange(3):
+        for x in range(3):
             client.insert('key1', ColumnParent('Super1', 'sc2'), Column(_i64(x + 3), 'value', 3), ConsistencyLevel.ONE)
 
-        for n in xrange(1, 4):
+        for n in range(1, 4):
             p = SlicePredicate(slice_range=SliceRange('', '', False, n))
             slice = client.get_slice('key1', ColumnParent('Super1', 'sc2'), p, ConsistencyLevel.ONE)
             assert len(slice) == n, "expected %s results; found %s" % (n, slice)
@@ -1641,7 +1641,7 @@ class TestMutations(ThriftTester):
         # test/conf/cassandra.yaml specifies org.apache.cassandra.dht.ByteOrderedPartitioner
         # which uses BytesToken, so this just tests that the string representation of the token
         # matches a regex pattern for BytesToken.toString().
-        ring = client.describe_token_map().items()
+        ring = list(client.describe_token_map().items())
         if DISABLE_VNODES:
             self.assertEqual(len(ring), 1)
         else:
@@ -2615,7 +2615,7 @@ class TestMutations(ThriftTester):
         session.execute("CREATE TABLE t (k text, s text static, t text, v text, PRIMARY KEY (k, t))")
 
         session.execute("INSERT INTO t (k, s, t, v) VALUES ('k', 's', 't', 'v') USING TIMESTAMP 0")
-        assert_one(session, "SELECT * FROM t", [u'k', 't', 's', 'v'])
+        assert_one(session, "SELECT * FROM t", ['k', 't', 's', 'v'])
 
         # Now submit a range deletion that should include both the row and the static value
 
@@ -2674,6 +2674,6 @@ class TestMutations(ThriftTester):
         session.execute("INSERT INTO test (id, c1, c2, v) VALUES (1, 'asd', 'asd', 0) USING TIMESTAMP 1470761449416613")
 
         ret = list(session.execute('SELECT * FROM test'))
-        self.assertEquals(2, len(ret))
+        self.assertEqual(2, len(ret))
 
         node1.nodetool('flush Keyspace1 test')

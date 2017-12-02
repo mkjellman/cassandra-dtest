@@ -27,7 +27,7 @@ class TestJMX(Tester):
         node1.flush()
         node1.stop(gently=False)
 
-        with self.assertRaisesRegexp(ToolError, "ConnectException: 'Connection refused( \(Connection refused\))?'."):
+        with self.assertRaisesRegex(ToolError, "ConnectException: 'Connection refused( \(Connection refused\))?'."):
             node1.nodetool('netstats')
 
         # don't wait; we're testing for when nodetool is called on a node mid-startup
@@ -47,7 +47,7 @@ class TestJMX(Tester):
                 if not isinstance(e, ToolError):
                     raise
                 else:
-                    self.assertRegexpMatches(str(e),
+                    self.assertRegex(str(e),
                                              "ConnectException: 'Connection refused( \(Connection refused\))?'.")
 
         self.assertTrue(running, msg='node1 never started')
@@ -81,7 +81,7 @@ class TestJMX(Tester):
             self.assertGreater(int(mem_size), 10000)
 
             on_disk_size = jmx.read_attribute(disk_size, "Count")
-            self.assertEquals(int(on_disk_size), 0)
+            self.assertEqual(int(on_disk_size), 0)
 
             node1.flush()
 
@@ -141,24 +141,24 @@ class TestJMX(Tester):
                                  missing_metric_message.format("ViewLockAcquireTime", "testtable"))
             self.assertIsNotNone(jmx.read_attribute(mv_memtable_size, "Value"),
                                  missing_metric_message.format("AllMemtablesHeapSize", "testmv"))
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
 
         node.run_cqlsh(cmds="DROP KEYSPACE mvtest;")
         with JolokiaAgent(node) as jmx:
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_memtable_size, attribute="Value", verbose=False)
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_lock_time, attribute="Count", verbose=False)
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_read_time, attribute="Count", verbose=False)
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_memtable_size, attribute="Value", verbose=False)
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
-            self.assertRaisesRegexp(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
 
     def test_compactionstats(self):
@@ -315,7 +315,7 @@ class TestJMXSSL(Tester):
         self.assert_insecure_connection_rejected(node)
 
         # specifying only the truststore containing the server cert should fail
-        with self.assertRaisesRegexp(ToolError, ".*SSLHandshakeException.*"):
+        with self.assertRaisesRegex(ToolError, ".*SSLHandshakeException.*"):
             node.nodetool("info --ssl -Djavax.net.ssl.trustStore={ts} -Djavax.net.ssl.trustStorePassword={ts_pwd}"
                           .format(ts=self.truststore(), ts_pwd=self.truststore_password))
 

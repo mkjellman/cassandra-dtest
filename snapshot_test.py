@@ -58,7 +58,7 @@ class SnapshotTester(Tester):
 
     def restore_snapshot(self, snapshot_dir, node, ks, cf):
         debug("Restoring snapshot....")
-        for x in xrange(0, self.cluster.data_dir_count):
+        for x in range(0, self.cluster.data_dir_count):
             snap_dir = os.path.join(snapshot_dir, str(x), ks, cf)
             if os.path.exists(snap_dir):
                 ip = node.address()
@@ -74,7 +74,7 @@ class SnapshotTester(Tester):
 
     def restore_snapshot_schema(self, snapshot_dir, node, ks, cf):
         debug("Restoring snapshot schema....")
-        for x in xrange(0, self.cluster.data_dir_count):
+        for x in range(0, self.cluster.data_dir_count):
             schema_path = os.path.join(snapshot_dir, str(x), ks, cf, 'schema.cql')
             if os.path.exists(schema_path):
                 node.run_cqlsh(cmds="SOURCE '%s'" % schema_path)
@@ -197,7 +197,7 @@ class TestArchiveCommitlog(SnapshotTester):
         node.nodetool(snapshot_cmd)
         tmpdirs = []
         base_tmpdir = safe_mkdtemp()
-        for x in xrange(0, self.cluster.data_dir_count):
+        for x in range(0, self.cluster.data_dir_count):
             tmpdir = os.path.join(base_tmpdir, str(x))
             os.mkdir(tmpdir)
             # Copy files from the snapshot dir to existing temp dir

@@ -25,14 +25,14 @@ class TestBootstrapConsistency(Tester):
         create_c1c2_table(self, n2session)
 
         debug("Generating some data for all nodes")
-        insert_c1c2(n2session, keys=range(10, 20), consistency=ConsistencyLevel.ALL)
+        insert_c1c2(n2session, keys=list(range(10, 20)), consistency=ConsistencyLevel.ALL)
 
         node1.flush()
         debug("Taking down node1")
         node1.stop(wait_other_notice=True)
 
         debug("Writing data to node2")
-        insert_c1c2(n2session, keys=range(30, 1000), consistency=ConsistencyLevel.ONE)
+        insert_c1c2(n2session, keys=list(range(30, 1000)), consistency=ConsistencyLevel.ONE)
         node2.flush()
 
         debug("Restart node1")
@@ -42,10 +42,10 @@ class TestBootstrapConsistency(Tester):
         node3.move(2)
 
         debug("Checking that no data was lost")
-        for n in xrange(10, 20):
+        for n in range(10, 20):
             query_c1c2(n2session, n, ConsistencyLevel.ALL)
 
-        for n in xrange(30, 1000):
+        for n in range(30, 1000):
             query_c1c2(n2session, n, ConsistencyLevel.ALL)
 
     def consistent_reads_after_bootstrap_test(self):
@@ -65,14 +65,14 @@ class TestBootstrapConsistency(Tester):
         create_c1c2_table(self, n2session)
 
         debug("Generating some data for all nodes")
-        insert_c1c2(n2session, keys=range(10, 20), consistency=ConsistencyLevel.ALL)
+        insert_c1c2(n2session, keys=list(range(10, 20)), consistency=ConsistencyLevel.ALL)
 
         node1.flush()
         debug("Taking down node1")
         node1.stop(wait_other_notice=True)
 
         debug("Writing data to only node2")
-        insert_c1c2(n2session, keys=range(30, 1000), consistency=ConsistencyLevel.ONE)
+        insert_c1c2(n2session, keys=list(range(30, 1000)), consistency=ConsistencyLevel.ONE)
         node2.flush()
 
         debug("Restart node1")
@@ -85,8 +85,8 @@ class TestBootstrapConsistency(Tester):
         n3session = self.patient_cql_connection(node3)
         n3session.execute("USE ks")
         debug("Checking that no data was lost")
-        for n in xrange(10, 20):
+        for n in range(10, 20):
             query_c1c2(n3session, n, ConsistencyLevel.ALL)
 
-        for n in xrange(30, 1000):
+        for n in range(30, 1000):
             query_c1c2(n3session, n, ConsistencyLevel.ALL)

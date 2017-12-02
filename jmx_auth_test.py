@@ -29,21 +29,21 @@ class TestJMXAuth(Tester):
         session.execute("GRANT DESCRIBE ON ALL MBEANS TO jmx_user")
         session.execute("CREATE ROLE test WITH LOGIN=true and PASSWORD='abc123'")
 
-        with self.assertRaisesRegexp(ToolError, self.authentication_fail_message(node, 'baduser')):
+        with self.assertRaisesRegex(ToolError, self.authentication_fail_message(node, 'baduser')):
             node.nodetool('-u baduser -pw abc123 gossipinfo')
 
-        with self.assertRaisesRegexp(ToolError, self.authentication_fail_message(node, 'test')):
+        with self.assertRaisesRegex(ToolError, self.authentication_fail_message(node, 'test')):
             node.nodetool('-u test -pw badpassword gossipinfo')
 
-        with self.assertRaisesRegexp(ToolError, "Required key 'username' is missing"):
+        with self.assertRaisesRegex(ToolError, "Required key 'username' is missing"):
             node.nodetool('gossipinfo')
 
         # role must have LOGIN attribute
-        with self.assertRaisesRegexp(ToolError, 'jmx_user is not permitted to log in'):
+        with self.assertRaisesRegex(ToolError, 'jmx_user is not permitted to log in'):
             node.nodetool('-u jmx_user -pw 321cba gossipinfo')
 
         # test doesn't yet have any privileges on the necessary JMX resources
-        with self.assertRaisesRegexp(ToolError, 'Access Denied'):
+        with self.assertRaisesRegex(ToolError, 'Access Denied'):
             node.nodetool('-u test -pw abc123 gossipinfo')
 
         session.execute("GRANT jmx_user TO test")

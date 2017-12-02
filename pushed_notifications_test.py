@@ -92,7 +92,7 @@ class TestPushedNotifications(Tester):
         self.cluster.populate(3).start(wait_for_binary_proto=True, wait_other_notice=True)
 
         waiters = [NotificationWaiter(self, node, ["TOPOLOGY_CHANGE"])
-                   for node in self.cluster.nodes.values()]
+                   for node in list(self.cluster.nodes.values())]
 
         # The first node sends NEW_NODE for the other 2 nodes during startup, in case they are
         # late due to network delays let's block a bit longer
@@ -101,18 +101,18 @@ class TestPushedNotifications(Tester):
         waiters[0].clear_notifications()
 
         debug("Issuing move command....")
-        node1 = self.cluster.nodes.values()[0]
+        node1 = list(self.cluster.nodes.values())[0]
         node1.move("123")
 
         for waiter in waiters:
             debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(60.0)
-            self.assertEquals(1, len(notifications), notifications)
+            self.assertEqual(1, len(notifications), notifications)
             notification = notifications[0]
             change_type = notification["change_type"]
             address, port = notification["address"]
-            self.assertEquals("MOVED_NODE", change_type)
-            self.assertEquals(get_ip_from_node(node1), address)
+            self.assertEqual("MOVED_NODE", change_type)
+            self.assertEqual(get_ip_from_node(node1), address)
 
     @no_vnodes()
     def move_single_node_localhost_test(self):
@@ -132,7 +132,7 @@ class TestPushedNotifications(Tester):
         cluster.start(wait_for_binary_proto=True, wait_other_notice=True)
 
         waiters = [NotificationWaiter(self, node, ["TOPOLOGY_CHANGE"])
-                   for node in self.cluster.nodes.values()]
+                   for node in list(self.cluster.nodes.values())]
 
         # The first node sends NEW_NODE for the other 2 nodes during startup, in case they are
         # late due to network delays let's block a bit longer
@@ -141,13 +141,13 @@ class TestPushedNotifications(Tester):
         waiters[0].clear_notifications()
 
         debug("Issuing move command....")
-        node1 = self.cluster.nodes.values()[0]
+        node1 = list(self.cluster.nodes.values())[0]
         node1.move("123")
 
         for waiter in waiters:
             debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(30.0)
-            self.assertEquals(1 if waiter.node is node1 else 0, len(notifications), notifications)
+            self.assertEqual(1 if waiter.node is node1 else 0, len(notifications), notifications)
 
     def restart_node_test(self):
         """
@@ -176,16 +176,16 @@ class TestPushedNotifications(Tester):
             node2.start(wait_other_notice=True)
             debug("Waiting for notifications from {}".format(waiter.address))
             notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=expected_notifications)
-            self.assertEquals(expected_notifications, len(notifications), notifications)
+            self.assertEqual(expected_notifications, len(notifications), notifications)
             for notification in notifications:
-                self.assertEquals(get_ip_from_node(node2), notification["address"][0])
-            self.assertEquals("DOWN", notifications[0]["change_type"])
+                self.assertEqual(get_ip_from_node(node2), notification["address"][0])
+            self.assertEqual("DOWN", notifications[0]["change_type"])
             if version >= '2.2':
-                self.assertEquals("UP", notifications[1]["change_type"])
+                self.assertEqual("UP", notifications[1]["change_type"])
             else:
                 # pre 2.2, we'll receive both a NEW_NODE and an UP notification,
                 # but the order is not guaranteed
-                self.assertEquals({"NEW_NODE", "UP"}, set(map(lambda n: n["change_type"], notifications[1:])))
+                self.assertEqual({"NEW_NODE", "UP"}, set([n["change_type"] for n in notifications[1:]]))
 
             waiter.clear_notifications()
 
@@ -216,7 +216,7 @@ class TestPushedNotifications(Tester):
         # check that node1 did not send UP or DOWN notification for node2
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=30.0, num_notifications=2)
-        self.assertEquals(0, len(notifications), notifications)
+        self.assertEqual(0, len(notifications), notifications)
 
     @since("2.2")
     def add_and_remove_node_test(self):
@@ -246,11 +246,11 @@ class TestPushedNotifications(Tester):
         node2.start(wait_other_notice=True)
         debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-        self.assertEquals(2, len(notifications), notifications)
+        self.assertEqual(2, len(notifications), notifications)
         for notification in notifications:
-            self.assertEquals(get_ip_from_node(node2), notification["address"][0])
-            self.assertEquals("NEW_NODE", notifications[0]["change_type"])
-            self.assertEquals("UP", notifications[1]["change_type"])
+            self.assertEqual(get_ip_from_node(node2), notification["address"][0])
+            self.assertEqual("NEW_NODE", notifications[0]["change_type"])
+            self.assertEqual("UP", notifications[1]["change_type"])
 
         debug("Removing second node...")
         waiter.clear_notifications()
@@ -258,11 +258,11 @@ class TestPushedNotifications(Tester):
         node2.stop(gently=False)
         debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-        self.assertEquals(2, len(notifications), notifications)
+        self.assertEqual(2, len(notifications), notifications)
         for notification in notifications:
-            self.assertEquals(get_ip_from_node(node2), notification["address"][0])
-            self.assertEquals("REMOVED_NODE", notifications[0]["change_type"])
-            self.assertEquals("DOWN", notifications[1]["change_type"])
+            self.assertEqual(get_ip_from_node(node2), notification["address"][0])
+            self.assertEqual("REMOVED_NODE", notifications[0]["change_type"])
+            self.assertEqual("DOWN", notifications[1]["change_type"])
 
     def change_rpc_address_to_localhost(self):
         """
@@ -308,15 +308,15 @@ class TestPushedNotifications(Tester):
 
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=8)
-        self.assertEquals(8, len(notifications), notifications)
-        self.assertDictContainsSubset({'change_type': u'CREATED', 'target_type': u'KEYSPACE'}, notifications[0])
-        self.assertDictContainsSubset({'change_type': u'CREATED', 'target_type': u'TABLE', u'table': u't'}, notifications[1])
-        self.assertDictContainsSubset({'change_type': u'UPDATED', 'target_type': u'TABLE', u'table': u't'}, notifications[2])
-        self.assertDictContainsSubset({'change_type': u'CREATED', 'target_type': u'TABLE', u'table': u'mv'}, notifications[3])
-        self.assertDictContainsSubset({'change_type': u'UPDATED', 'target_type': u'TABLE', u'table': u'mv'}, notifications[4])
-        self.assertDictContainsSubset({'change_type': u'DROPPED', 'target_type': u'TABLE', u'table': u'mv'}, notifications[5])
-        self.assertDictContainsSubset({'change_type': u'DROPPED', 'target_type': u'TABLE', u'table': u't'}, notifications[6])
-        self.assertDictContainsSubset({'change_type': u'DROPPED', 'target_type': u'KEYSPACE'}, notifications[7])
+        self.assertEqual(8, len(notifications), notifications)
+        self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'KEYSPACE'}, notifications[0])
+        self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 't'}, notifications[1])
+        self.assertDictContainsSubset({'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 't'}, notifications[2])
+        self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 'mv'}, notifications[3])
+        self.assertDictContainsSubset({'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 'mv'}, notifications[4])
+        self.assertDictContainsSubset({'change_type': 'DROPPED', 'target_type': 'TABLE', 'table': 'mv'}, notifications[5])
+        self.assertDictContainsSubset({'change_type': 'DROPPED', 'target_type': 'TABLE', 'table': 't'}, notifications[6])
+        self.assertDictContainsSubset({'change_type': 'DROPPED', 'target_type': 'KEYSPACE'}, notifications[7])
 
 
 class TestVariousNotifications(Tester):
@@ -356,7 +356,7 @@ class TestVariousNotifications(Tester):
         )
 
         # Add data with tombstones
-        values = map(lambda i: str(i), range(1000))
+        values = [str(i) for i in range(1000)]
         for value in values:
             session.execute(SimpleStatement(
                 "insert into test (id, mytext, col1) values (1, '{}', null) ".format(
@@ -375,7 +375,7 @@ class TestVariousNotifications(Tester):
                 if have_v5_protocol:
                     # at least one replica should have responded with a tombstone error
                     self.assertIsNotNone(exc.error_code_map)
-                    self.assertEqual(0x0001, exc.error_code_map.values()[0])
+                    self.assertEqual(0x0001, list(exc.error_code_map.values())[0])
             except Exception:
                 raise
             else:
@@ -408,7 +408,7 @@ class TestVariousNotifications(Tester):
                 if have_v5_protocol:
                     # at least one replica should have responded with a tombstone error
                     self.assertIsNotNone(exc.error_code_map)
-                    self.assertEqual(0x0001, exc.error_code_map.values()[0])
+                    self.assertEqual(0x0001, list(exc.error_code_map.values())[0])
             except Exception:
                 raise
             else:
