@@ -4,13 +4,18 @@ import os
 import re
 import subprocess
 import sys
+import pytest
+import logging
+
 from distutils.version import LooseVersion
 
 from ccmlib import common
 from ccmlib.common import is_win
 
 from dtest import Tester
-from tools.decorators import since
+
+since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=None):
@@ -136,7 +141,7 @@ def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=No
         """
         Run cqlsh commands expecting error output, and print error output.
         """
-        print(cqlsh_err(cmds))
+        print((cqlsh_err(cmds)))
 
     def cql(query):
         """
@@ -198,7 +203,7 @@ class ToJsonSelectTests(Tester):
     Tests using toJson with a SELECT statement
     """
 
-    def basic_data_types_test(self):
+    def test_basic_data_types(self):
         """
         Create our schema:
 
@@ -270,7 +275,7 @@ class ToJsonSelectTests(Tester):
         run_func_docstring(tester=self, test_func=self.basic_data_types_test)
 
     # yes, it's probably weird to use json for counter changes
-    def counters_test(self):
+    def test_counters(self):
         """
         Add a table with a few counters:
 
@@ -301,7 +306,7 @@ class ToJsonSelectTests(Tester):
         """
         run_func_docstring(tester=self, test_func=self.counters_test)
 
-    def complex_data_types_test(self):
+    def test_complex_data_types(self):
         """
         Build some user types and a schema that uses them:
 
@@ -458,7 +463,7 @@ class FromJsonUpdateTests(Tester):
     Tests using fromJson within UPDATE statements.
     """
 
-    def basic_data_types_test(self):
+    def test_basic_data_types(self):
         """
         Create a table with the primitive types:
 
@@ -524,7 +529,7 @@ class FromJsonUpdateTests(Tester):
         """
         run_func_docstring(tester=self, test_func=self.basic_data_types_test)
 
-    def complex_data_types_test(self):
+    def test_complex_data_types(self):
         """"
         UDT and schema setup:
 
@@ -678,7 +683,7 @@ class FromJsonUpdateTests(Tester):
         """
         run_func_docstring(tester=self, test_func=self.complex_data_types_test)
 
-    def collection_update_test(self):
+    def test_collection_update(self):
         """
         Setup schema, add a row:
 
@@ -759,7 +764,7 @@ class FromJsonSelectTests(Tester):
     Tests using fromJson in conjunction with a SELECT statement
     """
 
-    def selecting_pkey_as_json_test(self):
+    def test_selecting_pkey_as_json(self):
         """
         Schema setup:
 
@@ -795,7 +800,7 @@ class FromJsonSelectTests(Tester):
         """
         run_func_docstring(tester=self, test_func=self.selecting_pkey_as_json_test)
 
-    def select_using_secondary_index_test(self):
+    def test_select_using_secondary_index(self):
         """
         Schema setup and secondary index:
 
@@ -841,7 +846,7 @@ class FromJsonInsertTests(Tester):
     Tests using fromJson within INSERT statements.
     """
 
-    def basic_data_types_test(self):
+    def test_basic_data_types(self):
         """
         Create a table with the primitive types:
 
@@ -904,7 +909,7 @@ class FromJsonInsertTests(Tester):
         """
         run_func_docstring(tester=self, test_func=self.basic_data_types_test)
 
-    def complex_data_types_test(self):
+    def test_complex_data_types(self):
         """
         Build some user types and a schema that uses them:
 
@@ -1064,7 +1069,7 @@ class FromJsonDeleteTests(Tester):
     Tests using fromJson within DELETE statements.
     """
 
-    def delete_using_pkey_json_test(self):
+    def test_delete_using_pkey_json(self):
         """
         Schema setup:
 
@@ -1128,7 +1133,7 @@ class JsonFullRowInsertSelect(Tester):
     Tests for creating full rows from json documents, selecting full rows back as json documents, and related functionality.
     """
 
-    def simple_schema_test(self):
+    def test_simple_schema(self):
         """
         Create schema:
 
@@ -1233,7 +1238,7 @@ class JsonFullRowInsertSelect(Tester):
         """
         run_func_docstring(tester=self, test_func=self.simple_schema_test)
 
-    def pkey_requirement_test(self):
+    def test_pkey_requirement(self):
         """
         Create schema:
 
@@ -1265,7 +1270,7 @@ class JsonFullRowInsertSelect(Tester):
         """
         run_func_docstring(tester=self, test_func=self.pkey_requirement_test)
 
-    def null_value_test(self):
+    def test_null_value(self):
         """
         Create schema:
 
@@ -1308,7 +1313,7 @@ class JsonFullRowInsertSelect(Tester):
         """
         run_func_docstring(tester=self, test_func=self.null_value_test)
 
-    def complex_schema_test(self):
+    def test_complex_schema(self):
         """
         Create some udt's and schema:
 

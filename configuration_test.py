@@ -1,16 +1,19 @@
 import os
-
+import logging
 import parse
+
 from cassandra.concurrent import execute_concurrent_with_args
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
+
+logger = logging.getLogger(__name__)
 
 
 class TestConfiguration(Tester):
 
-    def compression_chunk_length_test(self):
+    def test_compression_chunk_length(self):
         """ Verify the setting of compression chunk_length [#3558]"""
         cluster = self.cluster
 
@@ -20,7 +23,9 @@ class TestConfiguration(Tester):
         create_ks(session, 'ks', 1)
 
         create_table_query = "CREATE TABLE test_table (row varchar, name varchar, value int, PRIMARY KEY (row, name));"
-        alter_chunk_len_query = "ALTER TABLE test_table WITH compression = {{'sstable_compression' : 'SnappyCompressor', 'chunk_length_kb' : {chunk_length}}};"
+        alter_chunk_len_query = "ALTER TABLE test_table WITH " \
+                                "compression = {{'sstable_compression' : 'SnappyCompressor', " \
+                                "'chunk_length_kb' : {chunk_length}}};"
 
         session.execute(create_table_query)
 
@@ -30,7 +35,7 @@ class TestConfiguration(Tester):
         session.execute(alter_chunk_len_query.format(chunk_length=64))
         self._check_chunk_length(session, 64)
 
-    def change_durable_writes_test(self):
+    def test_change_durable_writes(self):
         """
         @jira_ticket CASSANDRA-9560
 
@@ -70,16 +75,14 @@ class TestConfiguration(Tester):
         durable_session.execute("CREATE KEYSPACE ks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1} "
                                 "AND DURABLE_WRITES = true")
         durable_session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
-        debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
+        logger.debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
         write_to_trigger_fsync(durable_session, 'ks', 'tab')
 
-        self.assertGreater(commitlog_size(durable_node), durable_init_size,
-                           msg='This test will not work in this environment; '
-                               'write_to_trigger_fsync does not trigger fsync.')
+        assert commitlog_size(durable_node) > durable_init_size, \
+            "This test will not work in this environment; write_to_trigger_fsync does not trigger fsync."
 
         # get a fresh cluster to work on
-        self.tearDown()
-        self.setUp()
+        self.fixture_dtest_setup.cleanup_and_replace_cluster()
 
         node = new_commitlog_cluster_node()
         init_size = commitlog_size(node)
@@ -91,8 +94,7 @@ class TestConfiguration(Tester):
         session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
         session.execute('ALTER KEYSPACE ks WITH DURABLE_WRITES=true')
         write_to_trigger_fsync(session, 'ks', 'tab')
-        self.assertGreater(commitlog_size(node), init_size,
-                           msg='ALTER KEYSPACE was not respected')
+        assert commitlog_size(node) > init_size, "ALTER KEYSPACE was not respected"
 
     def overlapping_data_folders(self):
         """
@@ -130,12 +132,13 @@ class TestConfiguration(Tester):
             if 'compression' in result:
                 params = result
 
-        self.assertNotEqual(params, '', "Looking for the string 'sstable_compression', but could not find it in {str}".format(str=result))
+        assert not params == '', "Looking for the string 'sstable_compression', but could not find " \
+                                 "it in {str}".format(str=result)
 
         chunk_string = "chunk_length_kb" if self.cluster.version() < '3.0' else "chunk_length_in_kb"
         chunk_length = parse.search("'" + chunk_string + "': '{chunk_length:d}'", result).named['chunk_length']
 
-        self.assertEqual(chunk_length, value, "Expected chunk_length: {}.  We got: {}".format(value, chunk_length))
+        assert chunk_length == value, "Expected chunk_length: {}.  We got: {}".format(value, chunk_length)
 
 
 def write_to_trigger_fsync(session, ks, table):
@@ -146,7 +149,8 @@ def write_to_trigger_fsync(session, ks, table):
     (key int, a int, b int, c int).
     """
     execute_concurrent_with_args(session,
-                                 session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
+                                 session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
+                                                 'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
                                  ((x, x + 1, x + 2, x + 3) for x in range(50000)))
 
 

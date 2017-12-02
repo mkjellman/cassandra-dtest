@@ -1,23 +1,28 @@
 import time
+import pytest
+import logging
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
 from tools.assertions import assert_one
-from dtest import PRINT_DEBUG, Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestReadRepair(Tester):
 
-    def setUp(self):
-        Tester.setUp(self)
-        self.cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
-        self.cluster.populate(3).start(wait_for_binary_proto=True)
+    @pytest.fixture(scope='function', autouse=True)
+    def fixture_set_cluster_settings(self, fixture_dtest_setup):
+        fixture_dtest_setup.cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
+        fixture_dtest_setup.cluster.populate(3).start(wait_for_binary_proto=True)
+
 
     @since('3.0')
-    def alter_rf_and_run_read_repair_test(self):
+    def test_alter_rf_and_run_read_repair(self):
         """
         @jira_ticket CASSANDRA-10655
         @jira_ticket CASSANDRA-10657
@@ -44,13 +49,13 @@ class TestReadRepair(Tester):
 
         # identify the initial replica and trigger a flush to ensure reads come from sstables
         initial_replica, non_replicas = self.identify_initial_placement('alter_rf_test', 't1', 1)
-        debug("At RF=1 replica for data is " + initial_replica.name)
+        logger.debug("At RF=1 replica for data is " + initial_replica.name)
         initial_replica.flush()
 
         # At RF=1, it shouldn't matter which node we query, as the actual data should always come from the
         # initial replica when reading at CL ONE
         for n in self.cluster.nodelist():
-            debug("Checking " + n.name)
+            logger.debug("Checking " + n.name)
             session = self.patient_exclusive_cql_connection(n)
             assert_one(session, "SELECT * FROM alter_rf_test.t1 WHERE k=1", [1, 1, 1], cl=ConsistencyLevel.ONE)
 
@@ -58,17 +63,17 @@ class TestReadRepair(Tester):
         # CL ALL on one of the nodes which doesn't currently have the data, triggering a read repair.
         # The expectation will be that every replicas will have been repaired for that column (but we make no assumptions
         # on the other columns).
-        debug("Changing RF from 1 to 3")
+        logger.debug("Changing RF from 1 to 3")
         session.execute("""ALTER KEYSPACE alter_rf_test
                            WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};""")
 
         if not cl_all:
-            debug("Setting table read repair chance to 1")
+            logger.debug("Setting table read repair chance to 1")
             session.execute("""ALTER TABLE alter_rf_test.t1 WITH read_repair_chance = 1;""")
 
         cl = ConsistencyLevel.ALL if cl_all else ConsistencyLevel.ONE
 
-        debug("Executing SELECT on non-initial replica to trigger read repair " + non_replicas[0].name)
+        logger.debug("Executing SELECT on non-initial replica to trigger read repair " + non_replicas[0].name)
         read_repair_session = self.patient_exclusive_cql_connection(non_replicas[0])
 
         if cl_all:
@@ -80,17 +85,17 @@ class TestReadRepair(Tester):
             session.execute(stmt)
 
         # Check the results of the read repair by querying each replica again at CL ONE
-        debug("Re-running SELECTs at CL ONE to verify read repair")
+        logger.debug("Re-running SELECTs at CL ONE to verify read repair")
         for n in self.cluster.nodelist():
-            debug("Checking " + n.name)
+            logger.debug("Checking " + n.name)
             session = self.patient_exclusive_cql_connection(n)
             res = rows_to_list(session.execute(cl_one_stmt))
             # Column a must be 1 everywhere, and column b must be either 1 or None everywhere
-            self.assertIn(res[0][:2], [[1, 1], [1, None]])
+            assert res[0][:2], [[1, 1], [1 in None]]
 
         # Now query selecting all columns
         query = "SELECT * FROM alter_rf_test.t1 WHERE k=1"
-        debug("Executing SELECT on non-initial replica to trigger read repair " + non_replicas[0].name)
+        logger.debug("Executing SELECT on non-initial replica to trigger read repair " + non_replicas[0].name)
         read_repair_session = self.patient_exclusive_cql_connection(non_replicas[0])
 
         if cl_all:
@@ -102,9 +107,9 @@ class TestReadRepair(Tester):
             session.execute(stmt)
 
         # Check all replica is fully up to date
-        debug("Re-running SELECTs at CL ONE to verify read repair")
+        logger.debug("Re-running SELECTs at CL ONE to verify read repair")
         for n in self.cluster.nodelist():
-            debug("Checking " + n.name)
+            logger.debug("Checking " + n.name)
             session = self.patient_exclusive_cql_connection(n)
             assert_one(session, query, [1, 1, 1], cl=ConsistencyLevel.ONE)
 
@@ -120,12 +125,12 @@ class TestReadRepair(Tester):
             else:
                 non_replicas.append(node)
 
-        self.assertIsNotNone(initial_replica, "Couldn't identify initial replica")
+        assert initial_replica is not None, "Couldn't identify initial replica"
 
         return initial_replica, non_replicas
 
     @since('2.0')
-    def range_slice_query_with_tombstones_test(self):
+    def test_range_slice_query_with_tombstones(self):
         """
         @jira_ticket CASSANDRA-8989
         @jira_ticket CASSANDRA-9502
@@ -174,9 +179,9 @@ class TestReadRepair(Tester):
         for trace_event in trace.events:
             # Step 1, find coordinator node:
             activity = trace_event.description
-            self.assertNotIn("Appending to commitlog", activity)
-            self.assertNotIn("Adding to cf memtable", activity)
-            self.assertNotIn("Acquiring switchLock read lock", activity)
+            assert "Appending to commitlog" not in activity
+            assert "Adding to cf memtable" not in activity
+            assert "Acquiring switchLock read lock" not in activity
 
     @since('3.0')
     def test_gcable_tombstone_resurrection_on_range_slice_query(self):
@@ -221,12 +226,12 @@ class TestReadRepair(Tester):
         self.pprint_trace(trace)
         for trace_event in trace.events:
             activity = trace_event.description
-            self.assertNotIn("Sending READ_REPAIR message", activity)
+            assert "Sending READ_REPAIR message" not in activity
 
     def pprint_trace(self, trace):
         """Pretty print a trace"""
-        if PRINT_DEBUG:
-            print("-" * 40)
+        if logging.root.level == logging.DEBUG:
+            print(("-" * 40))
             for t in trace.events:
-                print("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name))
-            print("-" * 40)
+                print(("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name)))
+            print(("-" * 40))
