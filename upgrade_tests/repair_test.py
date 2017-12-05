@@ -1,5 +1,7 @@
 import time
 
+import pytest
+
 from dtest import debug
 from repair_tests.repair_test import BaseRepairTest
 from tools.decorators import since
@@ -16,7 +18,7 @@ class TestUpgradeRepair(BaseRepairTest):
     __test__ = True
 
     @since('3.0')
-    def repair_after_upgrade_test(self):
+    def test_repair_after_upgrade(self):
         """
         @jira_ticket CASSANDRA-10990
         """

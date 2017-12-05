@@ -8,7 +8,7 @@ from tools.jmxutils import (JolokiaAgent, make_mbean,
 
 class TestDeletion(Tester):
 
-    def gc_test(self):
+    def test_gc(self):
         """
         Test that tombstone purging doesn't bring back deleted data by writing
         2 rows to a table with gc_grace=0, deleting one of those rows, then
@@ -45,7 +45,7 @@ class TestDeletion(Tester):
         self.assertEqual(rows_to_list(session.execute('select * from cf;')),
                          [[2, 1]])
 
-    def tombstone_size_test(self):
+    def test_tombstone_size(self):
         self.cluster.populate(1)
         node1 = self.cluster.nodelist()[0]
 

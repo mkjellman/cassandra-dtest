@@ -19,7 +19,7 @@ class TestDeprecatedRepairAPI(Tester):
     Test if deprecated repair JMX API runs with expected parameters
     """
 
-    def force_repair_async_1_test(self):
+    def test_force_repair_async_1(self):
         """
         test forceRepairAsync(String keyspace, boolean isSequential,
                               Collection<String> dataCenters,
@@ -36,7 +36,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
 
-    def force_repair_async_2_test(self):
+    def test_force_repair_async_2(self):
         """
         test forceRepairAsync(String keyspace, int parallelismDegree,
                               Collection<String> dataCenters,
@@ -53,7 +53,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[]", opt)
 
-    def force_repair_async_3_test(self):
+    def test_force_repair_async_3(self):
         """
         test forceRepairAsync(String keyspace, boolean isSequential,
                               boolean isLocal, boolean primaryRange,
@@ -69,7 +69,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["hosts"], "[]", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
 
-    def force_repair_range_async_1_test(self):
+    def test_force_repair_range_async_1(self):
         """
         test forceRepairRangeAsync(String beginToken, String endToken,
                                    String keyspaceName, boolean isSequential,
@@ -88,7 +88,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
 
-    def force_repair_range_async_2_test(self):
+    def test_force_repair_range_async_2(self):
         """
         test forceRepairRangeAsync(String beginToken, String endToken,
                                    String keyspaceName, int parallelismDegree,
@@ -107,7 +107,7 @@ class TestDeprecatedRepairAPI(Tester):
         self.assertEqual(opt["ranges"], "1", opt)
         self.assertEqual(opt["column_families"], "[cf]", opt)
 
-    def force_repair_range_async_3_test(self):
+    def test_force_repair_range_async_3(self):
         """
         test forceRepairRangeAsync(String beginToken, String endToken,
                                    String keyspaceName, boolean isSequential,

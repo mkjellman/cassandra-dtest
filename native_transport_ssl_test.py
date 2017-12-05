@@ -14,7 +14,7 @@ class NativeTransportSSL(Tester):
     Native transport integration tests, specifically for ssl and port configurations.
     """
 
-    def connect_to_ssl_test(self):
+    def test_connect_to_ssl(self):
         """
         Connecting to SSL enabled native transport port should only be possible using SSL enabled client
         """
@@ -36,7 +36,7 @@ class NativeTransportSSL(Tester):
         session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.test_path, 'ccm_node.cer')})
         self._putget(cluster, session)
 
-    def connect_to_ssl_optional_test(self):
+    def test_connect_to_ssl_optional(self):
         """
         Connecting to SSL optional native transport port must be possible with SSL and non-SSL native clients
         @jira_ticket CASSANDRA-10559
@@ -53,7 +53,7 @@ class NativeTransportSSL(Tester):
         session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.test_path, 'ccm_node.cer')})
         self._putget(cluster, session, ks='ks2')
 
-    def use_custom_port_test(self):
+    def test_use_custom_port(self):
         """
         Connect to non-default native transport port
         """
@@ -72,7 +72,7 @@ class NativeTransportSSL(Tester):
         self._putget(cluster, session)
 
     @since('3.0')
-    def use_custom_ssl_port_test(self):
+    def test_use_custom_ssl_port(self):
         """
         Connect to additional ssl enabled native transport port
         @jira_ticket CASSANDRA-9590

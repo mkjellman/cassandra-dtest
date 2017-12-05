@@ -5,8 +5,10 @@ from dtest import Tester, create_ks, create_cf
 
 class TestCFID(Tester):
 
-    def cfid_test(self):
-        """ Test through adding/dropping cf's that the path to sstables for each cf are unique and formatted correctly """
+    def test_cfid(self):
+        """ Test through adding/dropping cf's that the path to sstables for each cf are unique
+        and formatted correctly
+        """
         cluster = self.cluster
 
         cluster.populate(1).start(wait_other_notice=True)

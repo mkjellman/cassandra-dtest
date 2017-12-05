@@ -4,7 +4,6 @@ import uuid
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
-from nose.tools import assert_equal
 
 from dtest import Tester, create_ks
 
@@ -14,8 +13,7 @@ class DeleteInsertTest(Tester):
     Examines scenarios around deleting data and adding data back with the same key
     """
     # Generate 1000 rows in memory so we can re-use the same ones over again:
-    groups = ['group1', 'group2', 'group3', 'group4']
-    rows = [(str(uuid.uuid1()), x, random.choice(groups)) for x in range(1000)]
+    rows = [(str(uuid.uuid1()), x, random.choice(['group1', 'group2', 'group3', 'group4'])) for x in range(1000)]
 
     def create_ddl(self, session, rf={'dc1': 2, 'dc2': 2}):
         create_ks(session, 'delete_insert_search_test', rf)
@@ -36,7 +34,7 @@ class DeleteInsertTest(Tester):
         for row in rows:
             session.execute("INSERT INTO test (id, val1, group) VALUES (%s, '%s', '%s')" % row)
 
-    def delete_insert_search_test(self):
+    def test_delete_insert_search(self):
         cluster = self.cluster
         cluster.populate([2, 2]).start(wait_for_binary_proto=True)
         node1 = cluster.nodelist()[0]
@@ -63,9 +61,11 @@ class DeleteInsertTest(Tester):
 
             def run(self):
                 session = self.connection
-                query = SimpleStatement("SELECT * FROM delete_insert_search_test.test WHERE group = 'group2'", consistency_level=ConsistencyLevel.LOCAL_QUORUM)
+                query = SimpleStatement("SELECT * FROM delete_insert_search_test.test WHERE group = 'group2'",
+                                        consistency_level=ConsistencyLevel.LOCAL_QUORUM)
                 rows = session.execute(query)
-                assert_equal(len(list(rows)), len(deleted), "Expecting the length of {} to be equal to the length of {}.".format(list(rows), deleted))
+                assert len(list(rows)) == len(deleted), "Expecting the length of {} to be equal to the " \
+                                                        "length of {}.".format(list(rows), deleted)
 
         threads = []
         for x in range(20):

@@ -26,7 +26,7 @@ def _normcase_all(xs):
 @since('3.0')
 class SSTableUtilTest(Tester):
 
-    def compaction_test(self):
+    def test_compaction(self):
         """
         @jira_ticket CASSANDRA-7066
 
@@ -45,7 +45,7 @@ class SSTableUtilTest(Tester):
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
         self.assertEqual(0, len(tmpfiles))
 
-    def abortedcompaction_test(self):
+    def test_abortedcompaction(self):
         """
         @jira_ticket CASSANDRA-7066
         @jira_ticket CASSANDRA-11497
@@ -174,7 +174,7 @@ class SSTableUtilTest(Tester):
             debug(stdout)
 
         match = ks + os.sep + table + '-'
-        ret = sorted([s for s in stdout.splitlines() if match in s])
+        ret = sorted([s for s in stdout.decode("utf-8").splitlines() if match in s])
         debug("Got {} files of type {}".format(len(ret), type))
         return ret
 
@@ -184,9 +184,10 @@ class SSTableUtilTest(Tester):
         """
         ret = []
         for data_dir in node.data_directories():
-            keyspace_dir = os.path.join(data_dir, ks)
+            # note, the /var/folders -> /private/var/folders stuff is to fixup mac compatibility
+            keyspace_dir = os.path.abspath(os.path.join(data_dir, ks)).replace("/var/folders", "/private/var/folders")
             for ext in ('*.db', '*.txt', '*.adler32', '*.crc32'):
-                ret.extend(glob.glob(os.path.join(keyspace_dir, table + '-*', ext)))
+                ret.extend(glob.glob(os.path.abspath(os.path.join(keyspace_dir, table + '-*', ext))))
 
         return sorted(ret)
 

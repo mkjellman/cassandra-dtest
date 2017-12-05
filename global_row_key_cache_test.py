@@ -7,7 +7,7 @@ from dtest import Tester, debug, create_ks
 
 class TestGlobalRowKeyCache(Tester):
 
-    def functional_test(self):
+    def test_functional(self):
         cluster = self.cluster
         cluster.populate(3)
         node1 = cluster.nodelist()[0]

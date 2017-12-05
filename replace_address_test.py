@@ -4,12 +4,13 @@ from itertools import chain
 from shutil import rmtree
 from unittest import skipIf
 
+import pytest
+
 from cassandra import ConsistencyLevel, ReadTimeout, Unavailable
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node
-from nose.plugins.attrib import attr
 
-from dtest import CASSANDRA_VERSION_FROM_BUILD, DISABLE_VNODES, Tester, debug
+from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from tools.assertions import assert_bootstrap_state, assert_all, assert_not_running
 from tools.data import rows_to_list
 from tools.decorators import since
@@ -46,7 +47,7 @@ class BaseReplaceAddressTest(Tester):
 
         self.cluster.seeds.remove(self.replaced_node)
         NUM_TOKENS = os.environ.get('NUM_TOKENS', '256')
-        if DISABLE_VNODES:
+        if not self.dtest_config.use_vnodes:
             self.cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': 1})
         else:
             self.cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': NUM_TOKENS})
@@ -165,7 +166,7 @@ class BaseReplaceAddressTest(Tester):
                                    timeout=60)
 
     def _verify_tokens_migrated_successfully(self, previous_log_size=None):
-        if DISABLE_VNODES:
+        if not self.dtest_config.use_vnodes:
             num_tokens = 1
         else:
             # a little hacky but grep_log returns the whole line...
@@ -230,31 +231,31 @@ class BaseReplaceAddressTest(Tester):
 class TestReplaceAddress(BaseReplaceAddressTest):
     __test__ = True
 
-    @attr('resource-intensive')
-    def replace_stopped_node_test(self):
+    @pytest.mark.resource_intensive
+    def test_replace_stopped_node(self):
         """
         Test that we can replace a node that is not shutdown gracefully.
         """
         self._test_replace_node(gently=False)
 
-    @attr('resource-intensive')
-    def replace_shutdown_node_test(self):
+    @pytest.mark.resource_intensive
+    def test_replace_shutdown_node(self):
         """
         @jira_ticket CASSANDRA-9871
         Test that we can replace a node that is shutdown gracefully.
         """
         self._test_replace_node(gently=True)
 
-    @attr('resource-intensive')
-    def replace_stopped_node_same_address_test(self):
+    @pytest.mark.resource_intensive
+    def test_replace_stopped_node_same_address(self):
         """
         @jira_ticket CASSANDRA-8523
         Test that we can replace a node with the same address correctly
         """
         self._test_replace_node(gently=False, same_address=True)
 
-    @attr('resource-intensive')
-    def replace_first_boot_test(self):
+    @pytest.mark.resource_intensive
+    def test_replace_first_boot(self):
         self._test_replace_node(jvm_option='replace_address_first_boot')
 
     def _test_replace_node(self, gently=False, jvm_option='replace_address', same_address=False):
@@ -287,8 +288,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
         self._verify_data(initial_data)
 
-    @attr('resource-intensive')
-    def replace_active_node_test(self):
+    @pytest.mark.resource_intensive
+    def test_replace_active_node(self):
         self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Exception encountered during startup']
         self._setup(n=3)
         self._do_replace(wait_for_binary_proto=False)
@@ -297,8 +298,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self.replacement_node.watch_log_for("java.lang.UnsupportedOperationException: Cannot replace a live node...")
         assert_not_running(self.replacement_node)
 
-    @attr('resource-intensive')
-    def replace_nonexistent_node_test(self):
+    @pytest.mark.resource_intensive
+    def test_replace_nonexistent_node(self):
         self.ignore_log_patterns = list(self.ignore_log_patterns) + [
             # This is caused by starting a node improperly (replacing active/nonexistent)
             r'Exception encountered during startup',
@@ -312,7 +313,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         assert_not_running(self.replacement_node)
 
     @since('3.6')
-    def fail_without_replace_test(self):
+    def test_fail_without_replace(self):
         """
         When starting a node from a clean slate with the same address as
         an existing down node, the node should error out even when
@@ -344,7 +345,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             mark = node3.mark_log()
 
     @since('3.6')
-    def unsafe_replace_test(self):
+    def test_unsafe_replace(self):
         """
         To handle situations such as failed disk in a JBOD, it may be desirable to
         replace a node without bootstrapping. In such scenarios best practice
@@ -394,7 +395,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
     @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
     @since('2.2')
-    def insert_data_during_replace_same_address_test(self):
+    def test_insert_data_during_replace_same_address(self):
         """
         Test that replacement node with same address DOES NOT receive writes during replacement
         @jira_ticket CASSANDRA-8523
@@ -403,7 +404,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
     @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
     @since('2.2')
-    def insert_data_during_replace_different_address_test(self):
+    def test_insert_data_during_replace_different_address(self):
         """
         Test that replacement node with different address DOES receive writes during replacement
         @jira_ticket CASSANDRA-8523
@@ -411,8 +412,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self._test_insert_data_during_replace(same_address=False)
 
     @since('2.2')
-    @attr('resource-intensive')
-    def resume_failed_replace_test(self):
+    @pytest.mark.resource_intensive
+    def test_resume_failed_replace(self):
         """
         Test resumable bootstrap while replacing node. Feature introduced in
         2.2 with ticket https://issues.apache.org/jira/browse/CASSANDRA-8838
@@ -422,14 +423,14 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self._test_restart_failed_replace(mode='resume')
 
     @since('2.2')
-    @attr('resource-intensive')
-    def restart_failed_replace_with_reset_resume_state_test(self):
+    @pytest.mark.resource_intensive
+    def test_restart_failed_replace_with_reset_resume_state(self):
         """Test replace with resetting bootstrap progress"""
         self._test_restart_failed_replace(mode='reset_resume_state')
 
     @since('2.2')
-    @attr('resource-intensive')
-    def restart_failed_replace_test(self):
+    @pytest.mark.resource_intensive
+    def test_restart_failed_replace(self):
         """
         Test that if a node fails to replace, it can join the cluster even if the data is wiped.
         """
@@ -496,7 +497,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
         self._verify_data(initial_data)
 
-    def replace_with_insufficient_replicas_test(self):
+    def test_replace_with_insufficient_replicas(self):
         """
         Test that replace fails when there are insufficient replicas
         @jira_ticket CASSANDRA-11848
@@ -517,7 +518,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self.replacement_node.watch_log_for("Unable to find sufficient sources for streaming range")
         assert_not_running(self.replacement_node)
 
-    def multi_dc_replace_with_rf1_test(self):
+    def test_multi_dc_replace_with_rf1(self):
         """
         Test that multi-dc replace works when rf=1 on each dc
         """

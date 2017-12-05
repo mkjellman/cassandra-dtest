@@ -5,17 +5,18 @@ from re import findall, compile
 from unittest import skip
 from uuid import UUID, uuid1
 
+import pytest
+
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from cassandra.metadata import Murmur3Token
 from ccmlib.common import is_win
 from ccmlib.node import Node, ToolError
-from nose.plugins.attrib import attr
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_almost_equal, assert_one
 from tools.data import insert_c1c2
-from tools.decorators import since, no_vnodes
+from tools.decorators import since
 from tools.misc import new_node
 
 
@@ -83,7 +84,7 @@ class TestIncRepair(Tester):
         self.assertTrue(all([t.pending_id is None for t in data]), '{}'.format(data))
 
     @since('4.0')
-    def consistent_repair_test(self):
+    def test_consistent_repair(self):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'num_tokens': 1, 'commitlog_sync_period_in_ms': 500})
         cluster.populate(3).start()
@@ -183,7 +184,7 @@ class TestIncRepair(Tester):
         return session_id
 
     @since('4.0')
-    def manual_session_fail_test(self):
+    def test_manual_session_fail(self):
         """ check manual failing of repair sessions via nodetool works properly """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'num_tokens': 1, 'commitlog_sync_period_in_ms': 500})
@@ -220,7 +221,7 @@ class TestIncRepair(Tester):
             self.assertIn("FAILED", line)
 
     @since('4.0')
-    def manual_session_cancel_non_coordinator_failure_test(self):
+    def test_manual_session_cancel_non_coordinator_failure(self):
         """ check manual failing of repair sessions via a node other than the coordinator fails """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'num_tokens': 1, 'commitlog_sync_period_in_ms': 500})
@@ -262,7 +263,7 @@ class TestIncRepair(Tester):
             self.assertIn("REPAIRING", line)
 
     @since('4.0')
-    def manual_session_force_cancel_test(self):
+    def test_manual_session_force_cancel(self):
         """ check manual failing of repair sessions via a non-coordinator works if the --force flag is set """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'num_tokens': 1, 'commitlog_sync_period_in_ms': 500})
@@ -298,7 +299,7 @@ class TestIncRepair(Tester):
             self.assertIn(str(session_id), line)
             self.assertIn("FAILED", line)
 
-    def sstable_marking_test(self):
+    def test_sstable_marking(self):
         """
         * Launch a three node cluster
         * Stop node3
@@ -340,7 +341,7 @@ class TestIncRepair(Tester):
         for out in (node.run_sstablemetadata(keyspace='keyspace1').stdout for node in cluster.nodelist()):
             self.assertNotIn('Repaired at: 0', out)
 
-    def multiple_repair_test(self):
+    def test_multiple_repair(self):
         """
         * Launch a three node cluster
         * Create a keyspace with RF 3 and a table
@@ -417,7 +418,7 @@ class TestIncRepair(Tester):
 
         assert_one(session, "SELECT COUNT(*) FROM ks.cf LIMIT 200", [149])
 
-    def sstable_repairedset_test(self):
+    def test_sstable_repairedset(self):
         """
         * Launch a two node cluster
         * Insert data with stress
@@ -493,7 +494,7 @@ class TestIncRepair(Tester):
 
         self.assertNotIn('Repaired at: 0', '\n'.join([finalOut1, finalOut2]))
 
-    def compaction_test(self):
+    def test_compaction(self):
         """
         Test we can major compact after an incremental repair
         * Launch a three node cluster
@@ -539,7 +540,7 @@ class TestIncRepair(Tester):
             assert_one(session, "select val from tab where key =" + str(x), [1])
 
     @since("2.2")
-    def multiple_full_repairs_lcs_test(self):
+    def test_multiple_full_repairs_lcs(self):
         """
         @jira_ticket CASSANDRA-11172 - repeated full repairs should not cause infinite loop in getNextBackgroundTask
         """
@@ -552,9 +553,9 @@ class TestIncRepair(Tester):
             cluster.wait_for_compactions()
             node1.nodetool("repair -full keyspace1 standard1")
 
-    @attr('long')
+    @pytest.mark.env("long")
     @skip('hangs CI')
-    def multiple_subsequent_repair_test(self):
+    def test_multiple_subsequent_repair(self):
         """
         @jira_ticket CASSANDRA-8366
 
@@ -618,9 +619,9 @@ class TestIncRepair(Tester):
         # There is still some overhead, but it's lot better. We tolerate 25%.
         expected_load_size = 4.5  # In GB
         assert_almost_equal(load_size, expected_load_size, error=0.25)
-
-    @attr('resource-intensive')
-    def sstable_marking_test_not_intersecting_all_ranges(self):
+   
+    @pytest.mark.resource_intensive
+    def test_sstable_marking_not_intersecting_all_ranges(self):
         """
         @jira_ticket CASSANDRA-10299
         * Launch a four node cluster
@@ -657,9 +658,9 @@ class TestIncRepair(Tester):
         for out in (node.run_sstablemetadata(keyspace='keyspace1').stdout for node in cluster.nodelist() if len(node.get_sstables('keyspace1', 'standard1')) > 0):
             self.assertNotIn('Repaired at: 0', out)
 
-    @no_vnodes()
+    @pytest.mark.no_vnodes
     @since('4.0')
-    def move_test(self):
+    def test_move(self):
         """ Test repaired data remains in sync after a move """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'commitlog_sync_period_in_ms': 500})
@@ -693,9 +694,9 @@ class TestIncRepair(Tester):
             result = node.repair(options=['ks', '--validate'])
             self.assertIn("Repaired data is in sync", result.stdout)
 
-    @no_vnodes()
+    @pytest.mark.no_vnodes
     @since('4.0')
-    def decommission_test(self):
+    def test_decommission(self):
         """ Test repaired data remains in sync after a decommission """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'commitlog_sync_period_in_ms': 500})
@@ -729,9 +730,9 @@ class TestIncRepair(Tester):
             result = node.repair(options=['ks', '--validate'])
             self.assertIn("Repaired data is in sync", result.stdout)
 
-    @no_vnodes()
+    @pytest.mark.no_vnodes
     @since('4.0')
-    def bootstrap_test(self):
+    def test_bootstrap(self):
         """ Test repaired data remains in sync after a bootstrap """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'commitlog_sync_period_in_ms': 500})
@@ -768,7 +769,7 @@ class TestIncRepair(Tester):
             self.assertIn("Repaired data is in sync", result.stdout)
 
     @since('4.0')
-    def force_test(self):
+    def test_force(self):
         """ 
         forcing an incremental repair should incrementally repair any nodes 
         that are up, but should not promote the sstables to repaired 
@@ -800,7 +801,7 @@ class TestIncRepair(Tester):
         self.assertNoRepairedSSTables(node2, 'ks')
 
     @since('4.0')
-    def hosts_test(self):
+    def test_hosts(self):
         """ 
         running an incremental repair with hosts specified should incrementally repair 
         the given nodes, but should not promote the sstables to repaired 
@@ -826,7 +827,7 @@ class TestIncRepair(Tester):
         self.assertNoRepairedSSTables(node2, 'ks')
 
     @since('4.0')
-    def subrange_test(self):
+    def test_subrange(self):
         """ 
         running an incremental repair with hosts specified should incrementally repair 
         the given nodes, but should not promote the sstables to repaired 

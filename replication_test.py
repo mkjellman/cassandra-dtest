@@ -3,12 +3,13 @@ import re
 import time
 from collections import defaultdict
 
+import pytest
+
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
-from nose.plugins.attrib import attr
 
 from dtest import PRINT_DEBUG, DtestTimeoutError, Tester, debug, create_ks
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 
 TRACE_DETERMINE_REPLICAS = re.compile('Determining replicas for mutation')
 TRACE_SEND_MESSAGE = re.compile('Sending (?:MUTATION|REQUEST_RESPONSE) message to /([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)')
@@ -73,7 +74,7 @@ def block_on_trace(session):
             raise DtestTimeoutError()
 
 
-@no_vnodes()
+@pytest.mark.no_vnodes
 class ReplicationTest(Tester):
     """
     This test suite looks at how data is replicated across a cluster
@@ -196,7 +197,7 @@ class ReplicationTest(Tester):
                 print(("%s\t%s\t%s\t%s" % (t.source, t.source_elapsed, t.description, t.thread_name)))
             print(("-" * 40))
 
-    def simple_test(self):
+    def test_simple(self):
         """
         Test the SimpleStrategy on a 3 node cluster
         """
@@ -231,8 +232,8 @@ class ReplicationTest(Tester):
             # acknowledged the write:
             self.assertEqual(stats['nodes_sent_write'], stats['nodes_responded_write'])
 
-    @attr("resource-intensive")
-    def network_topology_test(self):
+    @pytest.mark.resource_intensive
+    def test_network_topology(self):
         """
         Test the NetworkTopologyStrategy on a 2DC 3:3 node cluster
         """
@@ -383,7 +384,7 @@ class SnitchConfigurationUpdateTest(Tester):
                                        final_racks=["rack0", "rack1", "rack2"],
                                        nodes_to_shutdown=[0, 2])
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     def test_rf_collapse_gossiping_property_file_snitch_multi_dc(self):
         """
         @jira_ticket CASSANDRA-10238
@@ -400,7 +401,7 @@ class SnitchConfigurationUpdateTest(Tester):
                                        final_racks=["rack1", "rack1", "rack1", "rack1", "rack1", "rack1"],
                                        nodes_to_shutdown=[0, 2, 3, 5])
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     def test_rf_expand_gossiping_property_file_snitch_multi_dc(self):
         """
         @jira_ticket CASSANDRA-10238

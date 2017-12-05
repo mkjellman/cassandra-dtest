@@ -1,13 +1,12 @@
 import itertools
 import time
 import uuid
-from unittest import SkipTest, skipUnless
+from unittest import skipUnless
 
 from cassandra import ConsistencyLevel as CL
 from cassandra import InvalidRequest
 from cassandra.query import SimpleStatement, dict_factory, named_tuple_factory
 from ccmlib.common import LogPatternToVersion
-from nose.tools import assert_not_in
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, debug, run_scenarios
 from tools.assertions import assert_read_timeout_or_failure
@@ -438,7 +437,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
 
 class TestPagingData(BasePagingTester, PageAssertionMixin):
 
-    def basic_paging_test(self):
+    def test_basic_paging(self):
         """
         A simple paging test that is easy to debug.
         """
@@ -487,7 +486,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                     self.assertEqual(len(expected), len(results))
                     self.assertEqual(expected, results)
 
-    def basic_compound_paging_test(self):
+    def test_basic_compound_paging(self):
         cursor = self.prepare()
 
         cursor.execute("""
@@ -635,7 +634,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             self.assertEqualIgnoreOrder(expected_data, pf.all_data())
 
     @since('2.0.6')
-    def static_columns_paging_test(self):
+    def test_static_columns_paging(self):
         """
         Exercises paging with static columns to detect bugs
         @jira_ticket CASSANDRA-8502.
@@ -648,7 +647,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             min_version = min(self.get_node_versions())
             latest_version_with_bug = '2.2.3'
             if min_version <= latest_version_with_bug:
-                raise SkipTest('known bug released in {latest_ver} and earlier (current min version {min_ver}); '
+                pytest.skip('known bug released in {latest_ver} and earlier (current min version {min_ver}); '
                                'skipping'.format(latest_ver=latest_version_with_bug, min_ver=min_version))
 
             debug("Querying %s node" % ("upgraded" if is_upgraded else "old",))
@@ -1525,7 +1524,7 @@ for klaus in BasePagingTester.__subclasses__():
                                                             rf=spec['RF'],
                                                             pathname=spec['UPGRADE_PATH'].name)
         gen_class_name = klaus.__name__ + suffix
-        assert_not_in(gen_class_name, globals())
+        assert gen_class_name not in globals()
 
         upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
         globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (klaus,), spec))

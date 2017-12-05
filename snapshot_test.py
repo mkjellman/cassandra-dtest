@@ -232,7 +232,7 @@ class TestArchiveCommitlog(SnapshotTester):
         """
         self.run_archive_commitlog(restore_point_in_time=False, archive_active_commitlogs=True)
 
-    def dont_test_archive_commitlog(self):
+    def test_dont_archive_commitlog(self):
         """
         Run the archive commitlog test, but forget to add the restore commands
         """
@@ -364,7 +364,7 @@ class TestArchiveCommitlog(SnapshotTester):
             self.copy_logs(self.cluster, name=self.id().split(".")[0] + "_pre-restore")
             cleanup_cluster(self.cluster, self.test_path)
             self.test_path = get_test_path()
-            cluster = self.cluster = create_ccm_cluster(self.test_path, name='test')
+            cluster = self.cluster = create_ccm_cluster(self.test_path, name='test', config=self.dtest_config)
             cluster.populate(1)
             node1, = cluster.nodelist()
 

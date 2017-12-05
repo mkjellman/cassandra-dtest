@@ -10,7 +10,7 @@ from tools.jmxutils import apply_jmx_authentication
 @since('3.6')
 class TestJMXAuth(Tester):
 
-    def basic_auth_test(self):
+    def test_basic_auth(self):
         """
         Some basic smoke testing of JMX authentication and authorization.
         Uses nodetool as a means of exercising the JMX interface as JolokiaAgent

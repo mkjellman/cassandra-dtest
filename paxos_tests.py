@@ -3,12 +3,14 @@
 import time
 from threading import Thread
 
+import pytest
+
 from cassandra import ConsistencyLevel, WriteTimeout
 from cassandra.query import SimpleStatement
 
 from tools.assertions import assert_unavailable
 from dtest import Tester, create_ks
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 
 
 @since('2.0.6')
@@ -32,7 +34,7 @@ class TestPaxos(Tester):
             create_ks(session, 'ks', rf)
         return session
 
-    def replica_availability_test(self):
+    def test_replica_availability(self):
         """
         @jira_ticket CASSANDRA-8640
 
@@ -56,8 +58,8 @@ class TestPaxos(Tester):
         self.cluster.nodelist()[2].start(wait_for_binary_proto=True)
         session.execute("INSERT INTO test (k, v) VALUES (4, 4) IF NOT EXISTS")
 
-    @no_vnodes()
-    def cluster_availability_test(self):
+    @pytest.mark.no_vnodes
+    def test_cluster_availability(self):
         # Warning, a change in partitioner or a change in CCM token allocation
         # may require the partition keys of these inserts to be changed.
         # This must not use vnodes as it relies on assumed token values.
@@ -78,13 +80,13 @@ class TestPaxos(Tester):
         self.cluster.nodelist()[2].start(wait_for_binary_proto=True)
         session.execute("INSERT INTO test (k, v) VALUES (6, 6) IF NOT EXISTS")
 
-    def contention_test_multi_iterations(self):
+    def test_contention_multi_iterations(self):
         self.skipTest("Hanging the build")
         self._contention_test(8, 100)
 
     # Warning, this test will require you to raise the open
     # file limit on OSX. Use 'ulimit -n 1000'
-    def contention_test_many_threads(self):
+    def test_contention_many_threads(self):
         self._contention_test(300, 1)
 
     def _contention_test(self, threads, iterations):

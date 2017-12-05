@@ -1,10 +1,12 @@
+import pytest
+
 import time
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
 from dtest import Tester
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 
 
 @since('4.0')
@@ -16,8 +18,8 @@ class PreviewRepairTest(Tester):
         rows = session.execute("select * from system_distributed.parent_repair_history")
         self.assertEqual(rows.current_rows, [])
 
-    @no_vnodes()
-    def preview_test(self):
+    @pytest.mark.no_vnodes
+    def test_preview(self):
         """ Test that preview correctly detects out of sync data """
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'commitlog_sync_period_in_ms': 500})

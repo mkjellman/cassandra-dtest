@@ -2,7 +2,6 @@ import csv
 import random
 
 import cassandra
-from nose.tools import assert_items_equal
 
 
 class DummyColorMap(object):

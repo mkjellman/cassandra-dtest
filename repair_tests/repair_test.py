@@ -7,14 +7,15 @@ from collections import namedtuple
 from threading import Thread
 from unittest import skip, skipIf
 
+import pytest
+
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from ccmlib.node import ToolError
-from nose.plugins.attrib import attr
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, FlakyRetryPolicy, Tester, debug, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 
 
 def _repair_options(version, ks='', cf=None, sequential=True):
@@ -155,7 +156,7 @@ class TestRepair(BaseRepairTest):
     __test__ = True
 
     @since('2.2.1', '4')
-    def no_anticompaction_after_dclocal_repair_test(self):
+    def test_no_anticompaction_after_dclocal_repair(self):
         """
         * Launch a four node, two DC cluster
         * Start a -local repair on node1 in dc1
@@ -183,7 +184,7 @@ class TestRepair(BaseRepairTest):
             self.assertFalse(node.grep_log("Starting anticompaction"))
 
     @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
-    def nonexistent_table_repair_test(self):
+    def test_nonexistent_table_repair(self):
         """
         * Check that repairing a non-existent table fails
         @jira_ticket CASSANDRA-12279
@@ -224,7 +225,7 @@ class TestRepair(BaseRepairTest):
                             'Repair thread on inexistent table did not detect inexistent table.')
 
     @since('2.2.1', '4')
-    def no_anticompaction_after_hostspecific_repair_test(self):
+    def test_no_anticompaction_after_hostspecific_repair(self):
         """
         * Launch a four node, two DC cluster
         * Start a repair on all nodes, by enumerating with -hosts
@@ -245,7 +246,7 @@ class TestRepair(BaseRepairTest):
             self.assertFalse(node.grep_log("Starting anticompaction"))
 
     @since('2.2.4', '4')
-    def no_anticompaction_after_subrange_repair_test(self):
+    def test_no_anticompaction_after_subrange_repair(self):
         """
         * Launch a three node, two DC cluster
         * Start a repair on a token range
@@ -286,7 +287,7 @@ class TestRepair(BaseRepairTest):
         return [_sstable_data(*a) for a in zip(names, repaired_times)]
 
     @since('2.2.10', '4')
-    def no_anticompaction_of_already_repaired_test(self):
+    def test_no_anticompaction_of_already_repaired(self):
         """
         * Launch three node cluster and stress with RF2
         * Do incremental repair to have all sstables flagged as repaired
@@ -323,7 +324,7 @@ class TestRepair(BaseRepairTest):
         self.assertEqual(repaired.intersection(repairedAfterFull), repaired)
 
     @since('2.2.1', '4')
-    def anticompaction_after_normal_repair_test(self):
+    def test_anticompaction_after_normal_repair(self):
         """
         * Launch a four node, two DC cluster
         * Start a normal repair
@@ -339,72 +340,72 @@ class TestRepair(BaseRepairTest):
         for node in cluster.nodelist():
             self.assertTrue("Starting anticompaction")
 
-    def simple_sequential_repair_test(self):
+    def test_simple_sequential_repair(self):
         """
         Calls simple repair test with a sequential repair
         """
         self._simple_repair(sequential=True)
 
-    def simple_parallel_repair_test(self):
+    def test_simple_parallel_repair(self):
         """
         Calls simple repair test with a parallel repair
         """
         self._simple_repair(sequential=False)
 
-    def empty_vs_gcable_sequential_repair_test(self):
+    def test_empty_vs_gcable_sequential_repair(self):
         """
         Calls empty_vs_gcable repair test with a sequential repair
         """
         self._empty_vs_gcable_no_repair(sequential=True)
 
-    def empty_vs_gcable_parallel_repair_test(self):
+    def test_empty_vs_gcable_parallel_repair(self):
         """
         Calls empty_vs_gcable repair test with a parallel repair
         """
         self._empty_vs_gcable_no_repair(sequential=False)
 
-    def range_tombstone_digest_sequential_repair_test(self):
+    def test_range_tombstone_digest_sequential_repair(self):
         """
         Calls range_tombstone_digest with a sequential repair
         """
         self._range_tombstone_digest(sequential=True)
 
-    def range_tombstone_digest_parallel_repair_test(self):
+    def test_range_tombstone_digest_parallel_repair(self):
         """
         Calls range_tombstone_digest with a parallel repair
         """
         self._range_tombstone_digest(sequential=False)
 
     @since('2.1')
-    def shadowed_cell_digest_sequential_repair_test(self):
+    def test_shadowed_cell_digest_sequential_repair(self):
         """
         Calls _cell_shadowed_by_range_tombstone with sequential repair
         """
         self._cell_shadowed_by_range_tombstone(sequential=True)
 
     @since('2.1')
-    def shadowed_cell_digest_parallel_repair_test(self):
+    def test_shadowed_cell_digest_parallel_repair(self):
         """
         Calls _cell_shadowed_by_range_tombstone with parallel repair
         """
         self._cell_shadowed_by_range_tombstone(sequential=False)
 
     @since('3.0')
-    def shadowed_range_tombstone_digest_sequential_repair_test(self):
+    def test_shadowed_range_tombstone_digest_sequential_repair(self):
         """
         Calls _range_tombstone_shadowed_by_range_tombstone with sequential repair
         """
         self._range_tombstone_shadowed_by_range_tombstone(sequential=True)
 
     @since('3.0')
-    def shadowed_range_tombstone_digest_parallel_repair_test(self):
+    def test_shadowed_range_tombstone_digest_parallel_repair(self):
         """
         Calls _range_tombstone_shadowed_by_range_tombstone with parallel repair
         """
         self._range_tombstone_shadowed_by_range_tombstone(sequential=False)
 
-    @no_vnodes()
-    def simple_repair_order_preserving_test(self):
+    @pytest.mark.no_vnodes
+    def test_simple_repair_order_preserving(self):
         """
         Calls simple repair test with OPP and sequential repair
         @jira_ticket CASSANDRA-5220
@@ -597,7 +598,7 @@ class TestRepair(BaseRepairTest):
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for table1")
         self.assertEqual(len(out_of_sync_logs), 0, "Digest mismatch for range tombstone: {}".format(str([elt[0] for elt in out_of_sync_logs])))
 
-    def local_dc_repair_test(self):
+    def test_local_dc_repair(self):
         """
         * Set up a multi DC cluster
         * Perform a -local repair on one DC
@@ -625,7 +626,7 @@ class TestRepair(BaseRepairTest):
         # Check node2 now has the key
         self.check_rows_on_node(node2, 2001, found=[1000], restart=False)
 
-    def dc_repair_test(self):
+    def test_dc_repair(self):
         """
         * Set up a multi DC cluster
         * Perform a -dc repair on two dc's
@@ -655,7 +656,7 @@ class TestRepair(BaseRepairTest):
         # Check node2 now has the key
         self.check_rows_on_node(node2, 2001, found=[1000], restart=False)
 
-    def dc_parallel_repair_test(self):
+    def test_dc_parallel_repair(self):
         """
         * Set up a multi DC cluster
         * Perform a -dc repair on two dc's, with -dcpar
@@ -773,8 +774,8 @@ class TestRepair(BaseRepairTest):
                 break
         self.assertTrue(found_message)
 
-    @no_vnodes()
-    def token_range_repair_test(self):
+    @pytest.mark.no_vnodes
+    def test_token_range_repair(self):
         """
         Test repair using the -st and -et options
         * Launch a three node cluster
@@ -793,8 +794,8 @@ class TestRepair(BaseRepairTest):
 
         self._parameterized_range_repair(repair_opts=['-st', str(node3.initial_token), '-et', str(node1.initial_token)])
 
-    @no_vnodes()
-    def token_range_repair_test_with_cf(self):
+    @pytest.mark.no_vnodes
+    def test_token_range_repair_with_cf(self):
         """
         @jira_ticket CASSANDRA-11866
 
@@ -846,8 +847,8 @@ class TestRepair(BaseRepairTest):
         valid_out_of_sync_pairs = [{node1.address(), node2.address()}]
         self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
 
-    @no_vnodes()
-    def partitioner_range_repair_test(self):
+    @pytest.mark.no_vnodes
+    def test_partitioner_range_repair(self):
         """
         Test repair using the -pr option
         * Launch a three node cluster
@@ -867,8 +868,8 @@ class TestRepair(BaseRepairTest):
         self._parameterized_range_repair(repair_opts=['-pr'])
 
     @since('3.10')
-    @no_vnodes()
-    def pull_repair_test(self):
+    @pytest.mark.no_vnodes
+    def test_pull_repair(self):
         """
         Test repair using the --pull option
         @jira_ticket CASSANDRA-9876
@@ -946,7 +947,7 @@ class TestRepair(BaseRepairTest):
         self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
 
     @since('2.2')
-    def trace_repair_test(self):
+    def test_trace_repair(self):
         """
         * Launch a three node cluster
         * Insert some data at RF 2
@@ -989,7 +990,7 @@ class TestRepair(BaseRepairTest):
                       'Expected {} job threads in repair options. Instead we saw {}'.format(job_thread_count, rows[0][0]))
 
     @since('2.2')
-    def thread_count_repair_test(self):
+    def test_thread_count_repair(self):
         """
         * Launch a three node cluster
         * Insert some data at RF 2
@@ -1036,7 +1037,7 @@ class TestRepair(BaseRepairTest):
                           rows[0][0],
                           'Expected {} job threads in repair options. Instead we saw {}'.format(job_thread_count, rows[0][0]))
 
-    @no_vnodes()
+    @pytest.mark.no_vnodes
     def test_multiple_concurrent_repairs(self):
         """
         @jira_ticket CASSANDRA-11451
@@ -1227,7 +1228,7 @@ RepairTableContents = namedtuple('RepairTableContents',
 
 
 @since('2.2')
-@attr("resource-intensive")
+@pytest.mark.resource_intensive
 class TestRepairDataSystemTable(Tester):
     """
     @jira_ticket CASSANDRA-5839
@@ -1282,14 +1283,14 @@ class TestRepairDataSystemTable(Tester):
                                    repair_history=repair_history)
 
     @skip('hangs CI')
-    def initial_empty_repair_tables_test(self):
+    def test_initial_empty_repair_tables(self):
         debug('repair tables:')
         debug(self.repair_table_contents(node=self.node1, include_system_keyspaces=False))
         repair_tables_dict = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)._asdict()
         for table_name, table_contents in list(repair_tables_dict.items()):
             self.assertFalse(table_contents, '{} is non-empty'.format(table_name))
 
-    def repair_parent_table_test(self):
+    def test_repair_parent_table(self):
         """
         Test that `system_distributed.parent_repair_history` is properly populated
         after repair by:
@@ -1301,7 +1302,7 @@ class TestRepairDataSystemTable(Tester):
         parent_repair_history, _ = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)
         self.assertTrue(len(parent_repair_history))
 
-    def repair_table_test(self):
+    def test_repair_table(self):
         """
         Test that `system_distributed.repair_history` is properly populated
         after repair by:

@@ -3,7 +3,7 @@ import random
 import re
 import time
 import uuid
-from unittest import skipIf
+import pytest
 
 from cassandra import InvalidRequest
 from cassandra.concurrent import (execute_concurrent,
@@ -11,8 +11,7 @@ from cassandra.concurrent import (execute_concurrent,
 from cassandra.protocol import ConfigurationException
 from cassandra.query import BatchStatement, SimpleStatement
 
-from dtest import (DISABLE_VNODES, OFFHEAP_MEMTABLES, DtestTimeoutError,
-                   Tester, debug, CASSANDRA_VERSION_FROM_BUILD, create_ks, create_cf)
+from dtest import (Tester, debug, CASSANDRA_VERSION_FROM_BUILD, create_ks, create_cf)
 from tools.assertions import assert_bootstrap_state, assert_invalid, assert_none, assert_one, assert_row_count
 from tools.data import block_until_index_is_built, index_is_built, rows_to_list
 from tools.decorators import since
@@ -30,7 +29,7 @@ class TestSecondaryIndexes(Tester):
             files.extend(os.listdir(index_sstables_dir))
         return set(files)
 
-    def data_created_before_index_not_returned_in_where_query_test(self):
+    def test_data_created_before_index_not_returned_in_where_query(self):
         """
         @jira_ticket CASSANDRA-3367
         """
@@ -586,7 +585,7 @@ class TestSecondaryIndexes(Tester):
                            [("127.0.0.1", 1, 200), ("127.0.0.2", 1, 200), ("127.0.0.3", 1, 200)],
                            retry_on_failure)
 
-    @skipIf(DISABLE_VNODES, "Test should only run with vnodes")
+    @pytest.mark.vnodes
     def test_query_indexes_with_vnodes(self):
         """
         Verifies correct query behaviour in the presence of vnodes
@@ -597,7 +596,7 @@ class TestSecondaryIndexes(Tester):
         node1, node2 = cluster.nodelist()
         session = self.patient_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': '1'};")
-        session.execute("CREATE TABLE ks.compact_table (a int PRIMARY KEY, b int) WITH COMPACT STORAGE;")
+        session.execute("CREATE TABLE ks.compact_table (a int PRIMARY KEY, b int);")
         session.execute("CREATE INDEX keys_index ON ks.compact_table (b);")
         session.execute("CREATE TABLE ks.regular_table (a int PRIMARY KEY, b int)")
         session.execute("CREATE INDEX composites_index on ks.regular_table (b)")
@@ -938,7 +937,7 @@ class TestSecondaryIndexesOnCollections(Tester):
         session.cluster.refresh_schema_metadata()
         self.assertEqual(0, len(session.cluster.metadata.keyspaces["map_double_index"].indexes))
 
-    @skipIf(OFFHEAP_MEMTABLES, 'Hangs with offheap memtables')
+    @pytest.mark.no_offheap_memtables
     def test_map_indexes(self):
         """
         Checks that secondary indexes on maps work for querying on both keys and values
@@ -1141,7 +1140,7 @@ class TestUpgradeSecondaryIndexes(Tester):
             # node.nodetool('upgradesstables -a')
 
 
-@skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+@pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
 @since('3.10')
 class TestPreJoinCallback(Tester):
 
@@ -1181,7 +1180,7 @@ class TestPreJoinCallback(Tester):
         # Run the join function to test
         joinFn(cluster, tokens[1])
 
-    def bootstrap_test(self):
+    def test_bootstrap(self):
         def bootstrap(cluster, token):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
@@ -1190,7 +1189,7 @@ class TestPreJoinCallback(Tester):
 
         self._base_test(bootstrap)
 
-    def resume_test(self):
+    def test_resume(self):
         def resume(cluster, token):
             node1 = cluster.nodes['node1']
             # set up byteman on node1 to inject a failure when streaming to node2
@@ -1220,7 +1219,7 @@ class TestPreJoinCallback(Tester):
 
         self._base_test(resume)
 
-    def manual_join_test(self):
+    def test_manual_join(self):
         def manual_join(cluster, token):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
@@ -1233,7 +1232,7 @@ class TestPreJoinCallback(Tester):
 
         self._base_test(manual_join)
 
-    def write_survey_test(self):
+    def test_write_survey(self):
         def write_survey_and_join(cluster, token):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})

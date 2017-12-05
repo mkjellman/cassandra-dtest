@@ -7,7 +7,7 @@ import parse
 from cassandra.util import sortedset
 from ccmlib import common
 
-from dtest import DISABLE_VNODES, Tester, debug
+from dtest import Tester, debug
 from tools.data import rows_to_list
 from tools.decorators import since
 
@@ -77,7 +77,7 @@ class TestTokenGenerator(Tester):
 
         # remove these from cluster options - otherwise node's config would be overridden with cluster._config_options_
         cluster._config_options.__delitem__('num_tokens')
-        if not DISABLE_VNODES:
+        if self.dtest_config.use_vnodes:
             cluster._config_options.__delitem__('initial_token')
 
         self.assertTrue(not cluster.nodelist(), "nodelist() already initialized")
@@ -160,11 +160,11 @@ class TestTokenGenerator(Tester):
                     all_tokens.add(tok)
             self.assertEqual(all_tokens.__len__(), node_count, "Number of tokens %r and number of nodes %r does not match for %r" % (all_tokens.__len__(), node_count, dc_nodes))
 
-    def multi_dc_tokens_default_test(self):
+    def test_multi_dc_tokens_default(self):
         self._multi_dc_tokens()
 
-    def multi_dc_tokens_murmur3_test(self):
+    def test_multi_dc_tokens_murmur3(self):
         self._multi_dc_tokens(False)
 
-    def multi_dc_tokens_random_test(self):
+    def test_multi_dc_tokens_random(self):
         self._multi_dc_tokens(True)

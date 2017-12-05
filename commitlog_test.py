@@ -283,33 +283,33 @@ class TestCommitLog(Tester):
         self.assertItemsEqual(rows_to_list(res),
                               [['gandalf', 1955, 'male', 'p@$$', 'WA']])
 
-    def default_segment_size_test(self):
+    def test_default_segment_size(self):
         """
         Test default commitlog_segment_size_in_mb (32MB)
         """
         self._segment_size_test(32)
 
-    def small_segment_size_test(self):
+    def test_small_segment_size(self):
         """
         Test a small commitlog_segment_size_in_mb (5MB)
         """
         self._segment_size_test(5)
 
     @since('2.2')
-    def default_compressed_segment_size_test(self):
+    def test_default_compressed_segment_size(self):
         """
         Test default compressed commitlog_segment_size_in_mb (32MB)
         """
         self._segment_size_test(32, compressed=True)
 
     @since('2.2')
-    def small_compressed_segment_size_test(self):
+    def test_small_compressed_segment_size(self):
         """
         Test a small compressed commitlog_segment_size_in_mb (5MB)
         """
         self._segment_size_test(5, compressed=True)
 
-    def stop_failure_policy_test(self):
+    def test_stop_failure_policy(self):
         """
         Test the stop commitlog failure policy (default one)
         """
@@ -333,7 +333,7 @@ class TestCommitLog(Tester):
               "SELECT * FROM test;"
             """)
 
-    def stop_commit_failure_policy_test(self):
+    def test_stop_commit_failure_policy(self):
         """
         Test the stop_commit commitlog failure policy
         """
@@ -366,7 +366,7 @@ class TestCommitLog(Tester):
             [2, 2]
         )
 
-    def die_failure_policy_test(self):
+    def test_die_failure_policy(self):
         """
         Test the die commitlog failure policy
         """
@@ -380,7 +380,7 @@ class TestCommitLog(Tester):
         self.assertTrue(failure, "Cannot find the commitlog failure message in logs")
         self.assertFalse(self.node1.is_running(), "Node1 should not be running")
 
-    def ignore_failure_policy_test(self):
+    def test_ignore_failure_policy(self):
         """
         Test the ignore commitlog failure policy
         """

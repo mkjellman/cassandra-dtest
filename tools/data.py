@@ -3,7 +3,6 @@ import time
 from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.query import SimpleStatement
-from nose.tools import assert_equal, assert_true
 
 from . import assertions
 from dtest import debug, create_cf, DtestTimeoutError
@@ -33,7 +32,7 @@ def query_c1c2(session, key, consistency=ConsistencyLevel.QUORUM, tolerate_missi
     if not tolerate_missing:
         assertions.assert_length_equal(rows, 1)
         res = rows[0]
-        assert_true(len(res) == 2 and res[0] == 'value1' and res[1] == 'value2', res)
+        assert len(res) == 2 and res[0] == 'value1' and res[1] == 'value2', res
     if must_be_missing:
         assertions.assert_length_equal(rows, 0)
 
@@ -50,7 +49,7 @@ def query_columns(tester, session, key, columns_count, consistency=ConsistencyLe
     res = list(session.execute(query))
     assertions.assert_length_equal(res, columns_count)
     for i in range(0, columns_count):
-        assert_equal(res[i][1], 'value{}'.format(i + offset))
+        assert res[i][1] == 'value{}'.format(i + offset)
 
 
 # Simple puts and get (on one row), testing both reads by names and by slice,
@@ -98,11 +97,11 @@ def _validate_row(cluster, res):
     assertions.assert_length_equal(res, 100)
     for i in range(0, 100):
         if i % 5 == 0:
-            assert_equal(res[i][2], 'value{}'.format(i * 4), 'for {}, expecting value{}, got {}'.format(i, i * 4, res[i][2]))
+            assert res[i][2] == 'value{}'.format(i * 4), 'for {}, expecting value{}, got {}'.format(i, i * 4, res[i][2])
         elif i % 2 == 0:
-            assert_equal(res[i][2], 'value{}'.format(i * 2), 'for {}, expecting value{}, got {}'.format(i, i * 2, res[i][2]))
+            assert res[i][2] == 'value{}'.format(i * 2), 'for {}, expecting value{}, got {}'.format(i, i * 2, res[i][2])
         else:
-            assert_equal(res[i][2], 'value{}'.format(i), 'for {}, expecting value{}, got {}'.format(i, i, res[i][2]))
+            assert res[i][2] == 'value{}'.format(i), 'for {}, expecting value{}, got {}'.format(i, i, res[i][2])
 
 
 # Simple puts and range gets, with overwrites and flushes between inserts to

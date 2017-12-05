@@ -6,7 +6,7 @@ from dtest import Tester, create_ks, create_cf
 
 class TestRangeGhosts(Tester):
 
-    def ghosts_test(self):
+    def test_ghosts(self):
         """ Check range ghost are correctly removed by the system """
         cluster = self.cluster
         cluster.populate(1).start()
@@ -27,7 +27,7 @@ class TestRangeGhosts(Tester):
 
         node1.flush()
 
-        for i in range(0, rows / 2):
+        for i in range(0, rows // 2):
             session.execute("DELETE FROM cf WHERE key = 'k%i'" % i)
 
         res = list(session.execute("SELECT * FROM cf LIMIT 10000"))

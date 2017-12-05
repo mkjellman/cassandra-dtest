@@ -17,7 +17,7 @@ class TestOfflineTools(Tester):
     # in the classpath
     ignore_log_patterns = ["Unable to initialize MemoryMeter"]
 
-    def sstablelevelreset_test(self):
+    def test_sstablelevelreset(self):
         """
         Insert data and call sstablelevelreset on a series of
         tables. Confirm level is reset to 0 using its output.
@@ -97,7 +97,7 @@ class TestOfflineTools(Tester):
             if pattern.search(output):
                 break
 
-    def sstableofflinerelevel_test(self):
+    def test_sstableofflinerelevel(self):
         """
         Generate sstables of varying levels.
         Reset sstables to L0 with sstablelevelreset
@@ -205,7 +205,7 @@ class TestOfflineTools(Tester):
         self.assertGreater(max(final_levels), 1)
 
     @since('2.2')
-    def sstableverify_test(self):
+    def test_sstableverify(self):
         """
         Generate sstables and test offline verification works correctly
         Test on bad input: nonexistent keyspace and sstables
@@ -288,7 +288,7 @@ class TestOfflineTools(Tester):
             self.assertIn("Corrupted: " + sstable1, error)
             self.assertEqual(e.exit_status, 1, msg=str(e.exit_status))
 
-    def sstableexpiredblockers_test(self):
+    def test_sstableexpiredblockers(self):
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
@@ -310,7 +310,7 @@ class TestOfflineTools(Tester):
     # any difference between the 3.0 and 4.0 sstable format though, but when the version is
     # bumped for 4.0, remove the max_version & add a case for testing a 3.0 -> 4.0 upgrade
     @since('2.2', max_version='3.X')
-    def sstableupgrade_test(self):
+    def test_sstableupgrade(self):
         """
         Test that sstableupgrade functions properly offline on a same-version Cassandra sstable, a
         stdout message of "Found 0 sstables that need upgrading." should be returned.
@@ -383,7 +383,7 @@ class TestOfflineTools(Tester):
         self.assertIn('Found 0 sstables that need upgrading.', out)
 
     @since('3.0')
-    def sstabledump_test(self):
+    def test_sstabledump(self):
         """
         Test that sstabledump functions properly offline to output the contents of a table.
         """
@@ -456,7 +456,7 @@ class TestOfflineTools(Tester):
             env = common.make_cassandra_env(node.get_install_cassandra_root(), node.get_node_cassandra_root())
             p = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             (stdout, stderr) = p.communicate()
-            tmpsstables = list(map(os.path.normcase, stdout.splitlines()))
+            tmpsstables = list(map(os.path.normcase, stdout.decode("utf-8").splitlines()))
 
             ret = list(set(allsstables) - set(tmpsstables))
         else:

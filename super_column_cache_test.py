@@ -14,7 +14,7 @@ from tools.decorators import since
 class TestSCCache(Tester):
     cluster_options = ImmutableMapping({'start_rpc': 'true'})
 
-    def sc_with_row_cache_test(self):
+    def test_sc_with_row_cache(self):
         """ Test for bug reported in #4190 """
         cluster = self.cluster
 

@@ -1,7 +1,8 @@
 import json
 import os
 import subprocess
-from urllib.request import urlopen
+import urllib.request
+import urllib.parse
 
 import ccmlib.common as common
 
@@ -226,9 +227,10 @@ class JolokiaAgent(object):
             raise
 
     def _query(self, body, verbose=True):
-        request_data = json.dumps(body)
+        request_data = json.dumps(body).encode("utf-8")
         url = 'http://%s:8778/jolokia/' % (self.node.network_interfaces['binary'][0],)
-        response = urlopen(url, data=request_data, timeout=10.0)
+        req = urllib.request.Request(url)
+        response = urllib.request.urlopen(req, data=request_data, timeout=10.0)
         if response.code != 200:
             raise Exception("Failed to query Jolokia agent; HTTP response code: %d; response: %s" % (response.code, response.readlines()))
 

@@ -1,7 +1,5 @@
 from collections import namedtuple
 
-from nose import plugins
-
 # A class that defines the attributes that have to be defined for configuring
 # a dtest run. namedtuple does what we want -- it's immutable and requires
 # all the attributes to be passed in to be instantiated.
@@ -12,7 +10,7 @@ GlobalConfigObject = namedtuple('GlobalConfigObject', [
 _CONFIG = None
 
 
-class DtestConfigPlugin(plugins.Plugin):
+class DtestConfigPlugin():
     """
     Pass in configuration options for the dtests.
     """

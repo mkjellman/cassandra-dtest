@@ -1,19 +1,22 @@
+import pytest
+
 from cassandra import ConsistencyLevel
 
 from dtest import Tester, debug, create_ks
 from tools.data import create_c1c2_table, insert_c1c2, query_c1c2
-from tools.decorators import no_vnodes
 from tools.misc import new_node
 
 
 class TestBootstrapConsistency(Tester):
 
-    @no_vnodes()
-    def consistent_reads_after_move_test(self):
+    @pytest.mark.no_vnodes
+    def test_consistent_reads_after_move(self):
         debug("Creating a ring")
         cluster = self.cluster
-        cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'write_request_timeout_in_ms': 60000,
-                                                  'read_request_timeout_in_ms': 60000, 'dynamic_snitch_badness_threshold': 0.0})
+        cluster.set_configuration_options(values={'hinted_handoff_enabled': False,
+                                                  'write_request_timeout_in_ms': 60000,
+                                                  'read_request_timeout_in_ms': 60000,
+                                                  'dynamic_snitch_badness_threshold': 0.0})
         cluster.set_batch_commitlog(enabled=True)
 
         cluster.populate(3, tokens=[0, 2**48, 2**62]).start()
@@ -48,11 +51,13 @@ class TestBootstrapConsistency(Tester):
         for n in range(30, 1000):
             query_c1c2(n2session, n, ConsistencyLevel.ALL)
 
-    def consistent_reads_after_bootstrap_test(self):
+    def test_consistent_reads_after_bootstrap(self):
         debug("Creating a ring")
         cluster = self.cluster
-        cluster.set_configuration_options(values={'hinted_handoff_enabled': False, 'write_request_timeout_in_ms': 60000,
-                                                  'read_request_timeout_in_ms': 60000, 'dynamic_snitch_badness_threshold': 0.0})
+        cluster.set_configuration_options(values={'hinted_handoff_enabled': False,
+                                                  'write_request_timeout_in_ms': 60000,
+                                                  'read_request_timeout_in_ms': 60000,
+                                                  'dynamic_snitch_badness_threshold': 0.0})
         cluster.set_batch_commitlog(enabled=True)
 
         cluster.populate(2)

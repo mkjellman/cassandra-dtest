@@ -25,7 +25,7 @@ class TestMetadata(Tester):
                       '-rate', 'threads=1'])
 
     @skip('hangs CI')
-    def metadata_reset_while_compact_test(self):
+    def test_metadata_reset_while_compact(self):
         """
         Resets the schema while a compact, read and repair happens.
         All kinds of glorious things can fail.
@@ -43,7 +43,8 @@ class TestMetadata(Tester):
         node1.nodetool("setcompactionthroughput 1")
 
         for i in range(3):
-            node1.stress(['write', 'no-warmup', 'n=30000', '-schema', 'replication(factor=2)', 'compression=LZ4Compressor', '-rate', 'threads=5', '-pop', 'seq=1..30000'])
+            node1.stress(['write', 'no-warmup', 'n=30000', '-schema', 'replication(factor=2)',
+                          'compression=LZ4Compressor', '-rate', 'threads=5', '-pop', 'seq=1..30000'])
             node1.flush()
 
         thread = threading.Thread(target=self.force_compact)

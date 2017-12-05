@@ -13,7 +13,6 @@ from cassandra import WriteFailure
 from cassandra.concurrent import (execute_concurrent,
                                   execute_concurrent_with_args)
 from ccmlib.node import Node
-from nose.tools import assert_equal, assert_less_equal
 
 from dtest import Tester, create_ks, debug
 from tools.data import rows_to_list
@@ -39,7 +38,7 @@ def _insert_rows(session, table_name, insert_stmt, values):
     debug('{n} rows inserted into {table_name}'.format(n=len(data_loaded), table_name=table_name))
     # use assert_equal over assert_length_equal to avoid printing out
     # potentially large lists
-    assert_equal(len(values), len(data_loaded))
+    assert len(values) == len(data_loaded)
     return data_loaded
 
 
@@ -82,19 +81,17 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
     while not error_found:
         # We want to fail if inserting data takes too long. Locally this
         # takes about 10s, but let's be generous.
-        assert_less_equal(
-            (time.time() - start), 600,
-            "It's taken more than 10 minutes to reach a WriteFailure trying "
-            'to overrun the space designated for CDC commitlogs. This could '
-            "be because data isn't being written quickly enough in this "
-            'environment, or because C* is failing to reject writes when '
-            'it should.'
-        )
+        assert (
+            (time.time() - start) <= 600), "It's taken more than 10 minutes to reach a WriteFailure trying " + \
+            "to overrun the space designated for CDC commitlogs. This could " + \
+            "be because data isn't being written quickly enough in this " + \
+            "environment, or because C* is failing to reject writes when " + \
+            "it should."
 
         # If we haven't logged from here in the last 5s, do so.
         rate_limited_debug(
-            '  data load step has lasted {s:.2f}s, '
-            'loaded {r} rows'.format(s=(time.time() - start), r=rows_loaded))
+            "  data load step has lasted {s:.2f}s, " +
+            "loaded {r} rows".format(s=(time.time() - start), r=rows_loaded))
 
         batch_results = list(execute_concurrent(
             session,
@@ -111,9 +108,8 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
         rows_loaded += len([br for br in batch_results if br[0]])
         # then, we make sure that the only failures are the expected
         # WriteFailures.
-        assert_equal([],
-                     [result for (success, result) in batch_results
-                      if not success and not isinstance(result, WriteFailure)])
+        assert ([] == [result for (success, result) in batch_results
+                       if not success and not isinstance(result, WriteFailure)])
         # Finally, if we find a WriteFailure, that means we've inserted all
         # the CDC data we can and so we flip error_found to exit the loop.
         if any(isinstance(result, WriteFailure) for (_, result) in batch_results):
@@ -430,7 +426,7 @@ class TestCDC(Tester):
             rate_limited_debug('  non-cdc load step has lasted {s:.2f}s'.format(s=elapsed))
             self.assertLessEqual(
                 elapsed, time_limit,
-                "It's been over a {s}s and we haven't written a new "
+                "It's been over a {s}s and we haven't written a new " +
                 "commitlog segment. Something is wrong.".format(s=time_limit)
             )
             execute_concurrent(

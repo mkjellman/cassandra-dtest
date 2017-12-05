@@ -99,7 +99,7 @@ class TestCqlTracing(Tester):
         self.assertIn(" Frodo |  Baggins", out)
 
     @since('2.2')
-    def tracing_simple_test(self):
+    def test_tracing_simple(self):
         """
         Test tracing using the default tracing class. See trace().
 
@@ -111,7 +111,7 @@ class TestCqlTracing(Tester):
         self.trace(session)
 
     @since('3.4')
-    def tracing_unknown_impl_test(self):
+    def test_tracing_unknown_impl(self):
         """
         Test that Cassandra logs an error, but keeps its default tracing
         behavior, when a nonexistent tracing class is specified.
@@ -141,7 +141,7 @@ class TestCqlTracing(Tester):
         self.assertIn(expected_error, err)
 
     @since('3.4')
-    def tracing_default_impl_test(self):
+    def test_tracing_default_impl(self):
         """
         Test that Cassandra logs an error, but keeps its default tracing
         behavior, when the default tracing class is specified.

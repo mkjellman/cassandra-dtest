@@ -124,7 +124,7 @@ class TestConcurrentSchemaChanges(Tester):
         num_schemas = len(re.findall('\[.*?\]', schemas))
         self.assertEqual(num_schemas, 1, "There were multiple schema versions: {}".format(pprint.pformat(schemas)))
 
-    def create_lots_of_tables_concurrently_test(self):
+    def test_create_lots_of_tables_concurrently(self):
         """
         create tables across multiple threads concurrently
         """
@@ -152,7 +152,7 @@ class TestConcurrentSchemaChanges(Tester):
         self.validate_schema_consistent(node2)
         self.validate_schema_consistent(node3)
 
-    def create_lots_of_alters_concurrently_test(self):
+    def test_create_lots_of_alters_concurrently(self):
         """
         create alters across multiple threads concurrently
         """
@@ -188,7 +188,7 @@ class TestConcurrentSchemaChanges(Tester):
         self.validate_schema_consistent(node2)
         self.validate_schema_consistent(node3)
 
-    def create_lots_of_indexes_concurrently_test(self):
+    def test_create_lots_of_indexes_concurrently(self):
         """
         create indexes across multiple threads concurrently
         """
@@ -238,7 +238,7 @@ class TestConcurrentSchemaChanges(Tester):
                 self.assertEqual(1, len(list(session.execute("select * from base_{0} where c2 = {1}".format(n, ins)))))
 
     @since('3.0')
-    def create_lots_of_mv_concurrently_test(self):
+    def test_create_lots_of_mv_concurrently(self):
         """
         create materialized views across multiple threads concurrently
         """
@@ -315,7 +315,7 @@ class TestConcurrentSchemaChanges(Tester):
 
         self.assertTrue(0 == len(errors), "\n".join(errors))
 
-    def create_lots_of_schema_churn_test(self):
+    def test_create_lots_of_schema_churn(self):
         """
         create tables, indexes, alters across multiple threads concurrently
         """
@@ -331,7 +331,7 @@ class TestConcurrentSchemaChanges(Tester):
         wait(60)
         self._verify_lots_of_schema_actions(session)
 
-    def create_lots_of_schema_churn_with_node_down_test(self):
+    def test_create_lots_of_schema_churn_with_node_down(self):
         """
         create tables, indexes, alters across multiple threads concurrently with a node down
         """
@@ -350,7 +350,7 @@ class TestConcurrentSchemaChanges(Tester):
         wait(120)
         self._verify_lots_of_schema_actions(session)
 
-    def basic_test(self):
+    def test_basic(self):
         """
         make several schema changes on the same node.
         """
@@ -366,7 +366,7 @@ class TestConcurrentSchemaChanges(Tester):
 
         self.make_schema_changes(session, namespace='ns1')
 
-    def changes_to_different_nodes_test(self):
+    def test_changes_to_different_nodes(self):
         debug("changes_to_different_nodes_test()")
         cluster = self.cluster
         cluster.populate(2).start()
@@ -389,7 +389,7 @@ class TestConcurrentSchemaChanges(Tester):
         # check both, just because we can
         self.validate_schema_consistent(node2)
 
-    def changes_while_node_down_test(self):
+    def test_changes_while_node_down(self):
         """
         makes schema changes while a node is down.
         Make schema changes to node 1 while node 2 is down.
@@ -414,7 +414,7 @@ class TestConcurrentSchemaChanges(Tester):
         wait(20)
         self.validate_schema_consistent(node1)
 
-    def changes_while_node_toggle_test(self):
+    def test_changes_while_node_toggle(self):
         """
         makes schema changes while a node is down.
 
@@ -441,7 +441,7 @@ class TestConcurrentSchemaChanges(Tester):
         wait(20)
         self.validate_schema_consistent(node1)
 
-    def decommission_node_test(self):
+    def test_decommission_node(self):
         debug("decommission_node_test()")
         cluster = self.cluster
 
@@ -490,7 +490,7 @@ class TestConcurrentSchemaChanges(Tester):
         wait(30)
         self.validate_schema_consistent(node1)
 
-    def snapshot_test(self):
+    def test_snapshot(self):
         debug("snapshot_test()")
         cluster = self.cluster
         cluster.populate(2).start()
@@ -535,7 +535,7 @@ class TestConcurrentSchemaChanges(Tester):
         wait(2)
         self.validate_schema_consistent(node1)
 
-    def load_test(self):
+    def test_load(self):
         """
         apply schema changes while the cluster is under load.
         """

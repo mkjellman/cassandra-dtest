@@ -4,7 +4,6 @@ import itertools
 from unittest import skipUnless
 
 from cassandra.query import dict_factory
-from nose.tools import assert_equal, assert_not_in
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
 from thrift_bindings.v22 import Cassandra
@@ -37,17 +36,17 @@ def _create_sparse_super_cf(name):
 def _validate_sparse_cql(cursor, cf='sparse_super_1', column1='column1', col1='col1', col2='col2', key='key'):
     cursor.execute('use ks')
 
-    assert_equal(list(cursor.execute("SELECT * FROM {}".format(cf))),
+    assert (list(cursor.execute("SELECT * FROM {}".format(cf))) ==
                  [{key: 'k1', column1: 'key1', col1: 200, col2: 300},
                   {key: 'k1', column1: 'key2', col1: 200, col2: 300},
                   {key: 'k2', column1: 'key1', col1: 200, col2: 300},
                   {key: 'k2', column1: 'key2', col1: 200, col2: 300}])
 
-    assert_equal(list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1'".format(cf, key))),
+    assert (list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1'".format(cf, key))) ==
                  [{key: 'k1', column1: 'key1', col1: 200, col2: 300},
                   {key: 'k1', column1: 'key2', col1: 200, col2: 300}])
 
-    assert_equal(list(cursor.execute("SELECT * FROM {} WHERE {} = 'k2' AND {} = 'key1'".format(cf, key, column1))),
+    assert (list(cursor.execute("SELECT * FROM {} WHERE {} = 'k2' AND {} = 'key1'".format(cf, key, column1))) ==
                  [{key: 'k2', column1: 'key1', col1: 200, col2: 300}])
 
 
@@ -56,35 +55,35 @@ def _validate_sparse_thrift(client, cf='sparse_super_1'):
     client.set_keyspace('ks')
     result = client.get_slice('k1', ColumnParent(cf), SlicePredicate(slice_range=SliceRange('', '', False, 5)), ConsistencyLevel.ONE)
     assert_length_equal(result, 2)
-    assert_equal(result[0].super_column.name, 'key1')
-    assert_equal(result[1].super_column.name, 'key2')
+    assert result[0].super_column.name == 'key1'
+    assert result[1].super_column.name == 'key2'
 
     for cosc in result:
-        assert_equal(cosc.super_column.columns[0].name, 'col1')
-        assert_equal(cosc.super_column.columns[0].value, _i64(200))
-        assert_equal(cosc.super_column.columns[1].name, 'col2')
-        assert_equal(cosc.super_column.columns[1].value, _i64(300))
-        assert_equal(cosc.super_column.columns[2].name, 'value1')
-        assert_equal(cosc.super_column.columns[2].value, _i64(100))
+        assert cosc.super_column.columns[0].name == 'col1'
+        assert cosc.super_column.columns[0].value == _i64(200)
+        assert cosc.super_column.columns[1].name == 'col2'
+        assert cosc.super_column.columns[1].value == _i64(300)
+        assert cosc.super_column.columns[2].name == 'value1'
+        assert cosc.super_column.columns[2].value == _i64(100)
 
 
 def _validate_dense_cql(cursor, cf='dense_super_1', key='key', column1='column1', column2='column2', value='value'):
     cursor.execute('use ks')
 
-    assert_equal(list(cursor.execute("SELECT * FROM {}".format(cf))),
+    assert (list(cursor.execute("SELECT * FROM {}".format(cf))) ==
                  [{key: 'k1', column1: 'key1', column2: 100, value: 'value1'},
                   {key: 'k1', column1: 'key2', column2: 100, value: 'value1'},
                   {key: 'k2', column1: 'key1', column2: 200, value: 'value2'},
                   {key: 'k2', column1: 'key2', column2: 200, value: 'value2'}])
 
-    assert_equal(list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1'".format(cf, key))),
+    assert (list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1'".format(cf, key))) ==
                  [{key: 'k1', column1: 'key1', column2: 100, value: 'value1'},
                   {key: 'k1', column1: 'key2', column2: 100, value: 'value1'}])
 
-    assert_equal(list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1' AND {} = 'key1'".format(cf, key, column1))),
+    assert (list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1' AND {} = 'key1'".format(cf, key, column1))) ==
                  [{key: 'k1', column1: 'key1', column2: 100, value: 'value1'}])
 
-    assert_equal(list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1' AND {} = 'key1' AND {} = 100".format(cf, key, column1, column2))),
+    assert (list(cursor.execute("SELECT * FROM {} WHERE {} = 'k1' AND {} = 'key1' AND {} = 100".format(cf, key, column1, column2))) ==
                  [{key: 'k1', column1: 'key1', column2: 100, value: 'value1'}])
 
 
@@ -93,14 +92,14 @@ def _validate_dense_thrift(client, cf='dense_super_1'):
     client.set_keyspace('ks')
     result = client.get_slice('k1', ColumnParent(cf), SlicePredicate(slice_range=SliceRange('', '', False, 5)), ConsistencyLevel.ONE)
     assert_length_equal(result, 2)
-    assert_equal(result[0].super_column.name, 'key1')
-    assert_equal(result[1].super_column.name, 'key2')
+    assert result[0].super_column.name == 'key1'
+    assert result[1].super_column.name == 'key2'
 
     print((result[0]))
     print((result[1]))
     for cosc in result:
-        assert_equal(cosc.super_column.columns[0].name, _i64(100))
-        assert_equal(cosc.super_column.columns[0].value, 'value1')
+        assert cosc.super_column.columns[0].name == _i64(100)
+        assert cosc.super_column.columns[0].value == 'value1'
 
 
 class UpgradeSuperColumnsThrough(Tester):
@@ -143,7 +142,7 @@ class UpgradeSuperColumnsThrough(Tester):
         cluster.start()
         return cluster
 
-    def dense_supercolumn_3_0_created_test(self):
+    def test_dense_supercolumn_3_0_created(self):
         cluster = self.prepare(cassandra_version='github:apache/cassandra-3.0')
         node = self.cluster.nodelist()[0]
         cursor = self.patient_cql_connection(node, row_factory=dict_factory)
@@ -175,7 +174,7 @@ class UpgradeSuperColumnsThrough(Tester):
         _validate_dense_thrift(client, cf='dense_super_1')
         _validate_dense_cql(cursor, cf='dense_super_1')
 
-    def dense_supercolumn_test(self):
+    def test_dense_supercolumn(self):
         cluster = self.prepare()
         node = self.cluster.nodelist()[0]
         node.nodetool("enablethrift")
@@ -216,7 +215,7 @@ class UpgradeSuperColumnsThrough(Tester):
         _validate_dense_thrift(client, cf='dense_super_1')
         _validate_dense_cql(cursor, cf='dense_super_1')
 
-    def sparse_supercolumn_test(self):
+    def test_sparse_supercolumn(self):
         cluster = self.prepare()
         node = self.cluster.nodelist()[0]
         node.nodetool("enablethrift")
@@ -273,7 +272,7 @@ class TestThrift(UpgradeTester):
     @jira_ticket CASSANDRA-12373
     """
 
-    def dense_supercolumn_test(self):
+    def test_dense_supercolumn(self):
         cursor = self.prepare(nodes=2, rf=2, row_factory=dict_factory)
         cluster = self.cluster
 
@@ -300,7 +299,7 @@ class TestThrift(UpgradeTester):
             _validate_dense_cql(cursor)
             _validate_dense_thrift(client)
 
-    def dense_supercolumn_test_with_renames(self):
+    def test_dense_supercolumn_with_renames(self):
         cursor = self.prepare(row_factory=dict_factory)
         cluster = self.cluster
 
@@ -333,7 +332,7 @@ class TestThrift(UpgradeTester):
             _validate_dense_cql(cursor, cf='dense_super_2', key='renamed_key', column1='renamed_column1', column2='renamed_column2', value='renamed_value')
             _validate_dense_thrift(client, cf='dense_super_2')
 
-    def sparse_supercolumn_test_with_renames(self):
+    def test_sparse_supercolumn_with_renames(self):
         cursor = self.prepare(row_factory=dict_factory)
         cluster = self.cluster
 
@@ -370,7 +369,7 @@ class TestThrift(UpgradeTester):
             _validate_sparse_cql(cursor, column1='renamed_column1', key='renamed_key')
             _validate_sparse_thrift(client)
 
-    def sparse_supercolumn_test(self):
+    def test_sparse_supercolumn(self):
         cursor = self.prepare(row_factory=dict_factory)
         cluster = self.cluster
 
@@ -420,7 +419,7 @@ for spec in specs:
                                                         rf=spec['RF'],
                                                         pathname=spec['UPGRADE_PATH'].name)
     gen_class_name = TestThrift.__name__ + suffix
-    assert_not_in(gen_class_name, globals())
+    assert gen_class_name not in globals()
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
     globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (TestThrift,), spec))

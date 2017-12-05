@@ -63,7 +63,7 @@ class TestAssertStderrClean(TestCase):
 
 class TestAssertionMethods(TestCase):
 
-    def assertions_test(self):
+    def test_assertions(self):
         # assert_exception_test
         mock_session = Mock(**{'execute.side_effect': AlreadyExists("Dummy exception message.")})
         assert_exception(mock_session, "DUMMY QUERY", expected=AlreadyExists)

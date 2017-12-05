@@ -13,7 +13,7 @@ from tools.misc import generate_ssl_stores
 
 
 class TestJMX(Tester):
-    def netstats_test(self):
+    def test_netstats(self):
         """
         Check functioning of nodetool netstats, especially with restarts.
         @jira_ticket CASSANDRA-8122, CASSANDRA-6577
@@ -47,12 +47,11 @@ class TestJMX(Tester):
                 if not isinstance(e, ToolError):
                     raise
                 else:
-                    self.assertRegex(str(e),
-                                             "ConnectException: 'Connection refused( \(Connection refused\))?'.")
+                    self.assertRegex(str(e), "ConnectException: 'Connection refused( \(Connection refused\))?'.")
 
         self.assertTrue(running, msg='node1 never started')
 
-    def table_metric_mbeans_test(self):
+    def test_table_metric_mbeans(self):
         """
         Test some basic table metric mbeans with simple writes.
         """
@@ -92,7 +91,7 @@ class TestJMX(Tester):
             self.assertGreaterEqual(int(sstables), 1)
 
     @since('3.0')
-    def mv_metric_mbeans_release_test(self):
+    def test_mv_metric_mbeans_release(self):
         """
         Test that the right mbeans are created and released when creating mvs
         """
@@ -226,7 +225,7 @@ class TestJMX(Tester):
                 time.sleep(2)
 
     @since('2.2')
-    def phi_test(self):
+    def test_phi(self):
         """
         Check functioning of nodetool failuredetector.
         @jira_ticket CASSANDRA-9526
@@ -236,24 +235,25 @@ class TestJMX(Tester):
         cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
 
-        phivalues = node1.nodetool("failuredetector").stdout.splitlines()
-        endpoint1Values = phivalues[1].split()
-        endpoint2Values = phivalues[2].split()
+        stdout = node1.nodetool("failuredetector").stdout
+        phivalues = stdout.decode("utf-8").splitlines()
+        endpoint1values = phivalues[1].split()
+        endpoint2values = phivalues[2].split()
 
-        endpoint1 = endpoint1Values[0][1:-1]
-        endpoint2 = endpoint2Values[0][1:-1]
+        endpoint1 = endpoint1values[0][1:-1]
+        endpoint2 = endpoint2values[0][1:-1]
 
         self.assertItemsEqual([endpoint1, endpoint2], ['127.0.0.2', '127.0.0.3'])
 
-        endpoint1Phi = float(endpoint1Values[1])
-        endpoint2Phi = float(endpoint2Values[1])
+        endpoint1phi = float(endpoint1values[1])
+        endpoint2phi = float(endpoint2values[1])
 
         max_phi = 2.0
-        self.assertGreater(endpoint1Phi, 0.0)
-        self.assertLess(endpoint1Phi, max_phi)
+        self.assertGreater(endpoint1phi, 0.0)
+        self.assertLess(endpoint1phi, max_phi)
 
-        self.assertGreater(endpoint2Phi, 0.0)
-        self.assertLess(endpoint2Phi, max_phi)
+        self.assertGreater(endpoint2phi, 0.0)
+        self.assertLess(endpoint2phi, max_phi)
 
     @since('4.0')
     def test_set_get_batchlog_replay_throttle(self):
@@ -288,7 +288,7 @@ class TestJMXSSL(Tester):
     def keystore(self):
         return os.path.join(self.test_path, 'keystore.jks')
 
-    def jmx_connection_test(self):
+    def test_jmx_connection(self):
         """
         Check connecting with a JMX client (via nodetool) where SSL is enabled for JMX
         @jira_ticket CASSANDRA-12109
@@ -302,7 +302,7 @@ class TestJMXSSL(Tester):
         node.nodetool("info --ssl -Djavax.net.ssl.trustStore={ts} -Djavax.net.ssl.trustStorePassword={ts_pwd}"
                       .format(ts=self.truststore(), ts_pwd=self.truststore_password))
 
-    def require_client_auth_test(self):
+    def test_require_client_auth(self):
         """
         Check connecting with a JMX client (via nodetool) where SSL is enabled and
         client certificate auth is also configured

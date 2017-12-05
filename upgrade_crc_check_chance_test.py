@@ -1,6 +1,6 @@
-from unittest import skipIf
+import pytest
 
-from dtest import OFFHEAP_MEMTABLES, Tester, debug
+from dtest import Tester, debug
 from tools.assertions import assert_crc_check_chance_equal, assert_one
 from tools.decorators import since
 
@@ -14,8 +14,8 @@ class TestCrcCheckChanceUpgrade(Tester):
         r'Can\'t send migration request: node.*is down',
     )
 
-    @skipIf(OFFHEAP_MEMTABLES, 'offheap_objects are not available in 3.0')
-    def crc_check_chance_upgrade_test(self):
+    @pytest.mark.no_offheap_memtables
+    def test_crc_check_chance_upgrade(self):
         """
         Tests behavior of compression property crc_check_chance after upgrade to 3.0,
         when it was promoted to a top-level property

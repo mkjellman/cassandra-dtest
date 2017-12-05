@@ -23,7 +23,7 @@ class TestCompaction(Tester):
         self.cluster.set_log_level("DEBUG")
 
     @since('0', '2.2.X')
-    def compaction_delete_test(self):
+    def test_compaction_delete(self):
         """
         Test that executing a delete properly tombstones a row.
         Insert data, delete a partition of data and check that the requesite rows are tombstoned.
@@ -60,7 +60,7 @@ class TestCompaction(Tester):
 
         self.assertEqual(numfound, 10)
 
-    def data_size_test(self):
+    def test_data_size(self):
         """
         Ensure that data size does not have unwarranted increases after compaction.
         Insert data and check data size before and after a compaction.
@@ -97,7 +97,7 @@ class TestCompaction(Tester):
         # allow 5% size increase - if we have few sstables it is not impossible that live size increases *slightly* after compaction
         self.assertLess(finalValue, initialValue * 1.05)
 
-    def bloomfilter_size_test(self):
+    def test_bloomfilter_size(self):
         """
         @jira_ticket CASSANDRA-11344
         Check that bloom filter size is between 50KB and 100KB for 100K keys
@@ -151,7 +151,7 @@ class TestCompaction(Tester):
         self.assertGreaterEqual(bfSize, size_factor * min_bf_size)
         self.assertLessEqual(bfSize, size_factor * max_bf_size)
 
-    def sstable_deletion_test(self):
+    def test_sstable_deletion(self):
         """
         Test that sstables are deleted properly when able after compaction.
         Insert data setting gc_grace_seconds to 0, and determine sstable
@@ -185,7 +185,7 @@ class TestCompaction(Tester):
         except OSError:
             self.fail("Path to sstables not valid.")
 
-    def dtcs_deletion_test(self):
+    def test_dtcs_deletion(self):
         """
         Test that sstables are deleted properly when able after compaction with
         DateTieredCompactionStrategy.
@@ -234,7 +234,7 @@ class TestCompaction(Tester):
         for expired_sstable in expired_sstables:
             self.assertNotIn(expired_sstable, node1.get_sstables('ks', 'cf'))
 
-    def compaction_throughput_test(self):
+    def test_compaction_throughput(self):
         """
         Test setting compaction throughput.
         Set throughput, insert data and ensure compaction performance corresponds.
@@ -287,7 +287,7 @@ class TestCompaction(Tester):
         # principle, a bit of wiggle room is expected
         self.assertGreaterEqual(float(threshold) + 0.5, avgthroughput_mb)
 
-    def compaction_strategy_switching_test(self):
+    def test_compaction_strategy_switching(self):
         """Ensure that switching strategies does not result in problems.
         Insert data, switch strategies, then check against data loss.
         """
@@ -326,7 +326,7 @@ class TestCompaction(Tester):
                 time.sleep(5)
                 cluster.start(wait_for_binary_proto=True)
 
-    def large_compaction_warning_test(self):
+    def test_large_compaction_warning(self):
         """
         @jira_ticket CASSANDRA-9643
         Check that we log a warning when the partition size is bigger than compaction_large_partition_warning_threshold_mb
@@ -360,7 +360,7 @@ class TestCompaction(Tester):
         assert_length_equal(ret, 1)
         self.assertEqual(200, len(list(ret[0][0].keys())))
 
-    def disable_autocompaction_nodetool_test(self):
+    def test_disable_autocompaction_nodetool(self):
         """
         Make sure we can enable/disable compaction using nodetool
         """
@@ -385,7 +385,7 @@ class TestCompaction(Tester):
         time.sleep(2)
         self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
 
-    def disable_autocompaction_schema_test(self):
+    def test_disable_autocompaction_schema(self):
         """
         Make sure we can disable compaction via the schema compaction parameter 'enabled' = false
         """
@@ -418,7 +418,7 @@ class TestCompaction(Tester):
         time.sleep(2)
         self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
 
-    def disable_autocompaction_alter_test(self):
+    def test_disable_autocompaction_alter(self):
         """
         Make sure we can enable compaction using an alter-statement
         """
@@ -446,7 +446,7 @@ class TestCompaction(Tester):
         time.sleep(2)
         self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
 
-    def disable_autocompaction_alter_and_nodetool_test(self):
+    def test_disable_autocompaction_alter_and_nodetool(self):
         """
         Make sure compaction stays disabled after an alter statement where we have disabled using nodetool first
         """
@@ -477,7 +477,7 @@ class TestCompaction(Tester):
         self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
 
     @since('3.7')
-    def user_defined_compaction_test(self):
+    def test_user_defined_compaction(self):
         """
         Test a user defined compaction task by generating a few sstables with cassandra stress
         and autocompaction disabled, and then passing a list of sstable data files directly to nodetool compact.
@@ -507,7 +507,7 @@ class TestCompaction(Tester):
                           'Expected one sstable data file per node directory but got {}'.format(sstable_files))
 
     @since('3.10')
-    def fanout_size_test(self):
+    def test_fanout_size(self):
         """
         @jira_ticket CASSANDRA-11550
         """

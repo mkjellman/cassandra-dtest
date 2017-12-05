@@ -19,7 +19,7 @@ class TestCompression(TestHelper):
             return types.get(file_start.encode('hex'), 'UNKNOWN')
 
     @since("3.0")
-    def disable_compression_cql_test(self):
+    def test_disable_compression_cql(self):
         """
         @jira_ticket CASSANDRA-8384
         using new cql create table syntax to disable compression
@@ -49,7 +49,7 @@ class TestCompression(TestHelper):
         self.assertTrue(found)
 
     @since("3.0")
-    def compression_cql_options_test(self):
+    def test_compression_cql_options(self):
         """
         @jira_ticket CASSANDRA-8384
         using new cql create table syntax to configure compression
@@ -110,7 +110,7 @@ class TestCompression(TestHelper):
         self.assertTrue(found)
 
     @since("3.0")
-    def compression_cql_disabled_with_alter_test(self):
+    def test_compression_cql_disabled_with_alter(self):
         """
         @jira_ticket CASSANDRA-8384
         starting with compression enabled then disabling it
@@ -141,7 +141,7 @@ class TestCompression(TestHelper):
         self.assertEqual('false', meta.options['compression']['enabled'])
 
     @since("3.0")
-    def compression_cql_enabled_with_alter_test(self):
+    def test_compression_cql_enabled_with_alter(self):
         """
         @jira_ticket CASSANDRA-8384
         starting with compression disabled and enabling it

@@ -7,10 +7,11 @@ from cassandra import ConsistencyLevel as CL
 from cassandra import ReadFailure
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node, TimeoutError
-from nose.tools import timed
+
+import pytest
 
 from dtest import Tester, debug, get_ip_from_node, create_ks
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 
 
 class NotificationWaiter(object):
@@ -83,8 +84,8 @@ class TestPushedNotifications(Tester):
     Tests for pushed native protocol notification from Cassandra.
     """
 
-    @no_vnodes()
-    def move_single_node_test(self):
+    @pytest.mark.no_vnodes
+    def test_move_single_node(self):
         """
         @jira_ticket CASSANDRA-8516
         Moving a token should result in MOVED_NODE notifications.
@@ -114,8 +115,8 @@ class TestPushedNotifications(Tester):
             self.assertEqual("MOVED_NODE", change_type)
             self.assertEqual(get_ip_from_node(node1), address)
 
-    @no_vnodes()
-    def move_single_node_localhost_test(self):
+    @pytest.mark.no_vnodes
+    def test_move_single_node_localhost(self):
         """
         @jira_ticket  CASSANDRA-10052
         Test that we don't get NODE_MOVED notifications from nodes other than the local one,
@@ -149,7 +150,7 @@ class TestPushedNotifications(Tester):
             notifications = waiter.wait_for_notifications(30.0)
             self.assertEqual(1 if waiter.node is node1 else 0, len(notifications), notifications)
 
-    def restart_node_test(self):
+    def test_restart_node(self):
         """
         @jira_ticket CASSANDRA-7816
         Restarting a node should generate exactly one DOWN and one UP notification
@@ -189,7 +190,7 @@ class TestPushedNotifications(Tester):
 
             waiter.clear_notifications()
 
-    def restart_node_localhost_test(self):
+    def test_restart_node_localhost(self):
         """
         Test that we don't get client notifications when rpc_address is set to localhost.
         @jira_ticket  CASSANDRA-10052
@@ -219,7 +220,7 @@ class TestPushedNotifications(Tester):
         self.assertEqual(0, len(notifications), notifications)
 
     @since("2.2")
-    def add_and_remove_node_test(self):
+    def test_add_and_remove_node(self):
         """
         Test that NEW_NODE and REMOVED_NODE are sent correctly as nodes join and leave.
         @jira_ticket CASSANDRA-11038
@@ -282,7 +283,7 @@ class TestPushedNotifications(Tester):
             i += 2
 
     @since("3.0")
-    def schema_changes_test(self):
+    def test_schema_changes(self):
         """
         @jira_ticket CASSANDRA-10328
         Creating, updating and dropping a keyspace, a table and a materialized view
@@ -325,7 +326,7 @@ class TestVariousNotifications(Tester):
     """
 
     @since('2.2')
-    def tombstone_failure_threshold_message_test(self):
+    def test_tombstone_failure_threshold_message(self):
         """
         Ensure nodes return an error message in case of TombstoneOverwhelmingExceptions rather
         than dropping the request. A drop makes the coordinator waits for the specified
@@ -367,7 +368,7 @@ class TestVariousNotifications(Tester):
 
         failure_msg = ("Scanned over.* tombstones.* query aborted")
 
-        @timed(25)
+        @pytest.mark.timeout(25)
         def read_failure_query():
             try:
                 session.execute(SimpleStatement("select * from test where id in (1,2,3,4,5)", consistency_level=CL.ALL))
@@ -400,7 +401,7 @@ class TestVariousNotifications(Tester):
         mark2 = node2.mark_log()
         mark3 = node3.mark_log()
 
-        @timed(35)
+        @pytest.mark.timeout(35)
         def range_request_failure_query():
             try:
                 session.execute(SimpleStatement("select * from test", consistency_level=CL.ALL))

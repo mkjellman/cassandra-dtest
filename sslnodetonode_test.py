@@ -1,3 +1,5 @@
+import pytest
+
 import os
 import os.path
 import shutil
@@ -15,7 +17,7 @@ _LOG_ERR_GENERAL = "javax.net.ssl.SSLException"
 @since('3.6')
 class TestNodeToNodeSSLEncryption(Tester):
 
-    def ssl_enabled_test(self):
+    def test_ssl_enabled(self):
         """Should be able to start with valid ssl options"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
@@ -25,7 +27,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         self.cluster.start()
         self.cql_connection(self.node1)
 
-    def ssl_correct_hostname_with_validation_test(self):
+    def test_ssl_correct_hostname_with_validation(self):
         """Should be able to start with valid ssl options"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
@@ -37,7 +39,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         time.sleep(2)
         self.cql_connection(self.node1)
 
-    def ssl_wrong_hostname_no_validation_test(self):
+    def test_ssl_wrong_hostname_no_validation(self):
         """Should be able to start with valid ssl options"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.80")
@@ -48,7 +50,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         time.sleep(2)
         self.cql_connection(self.node1)
 
-    def ssl_wrong_hostname_with_validation_test(self):
+    def test_ssl_wrong_hostname_with_validation(self):
         """Should be able to start with valid ssl options"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.80")
@@ -67,7 +69,7 @@ class TestNodeToNodeSSLEncryption(Tester):
 
         self.cluster.stop()
 
-    def ssl_client_auth_required_fail_test(self):
+    def test_ssl_client_auth_required_fail(self):
         """peers need to perform mutual auth (cient auth required), but do not supply the local cert"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
@@ -88,7 +90,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         self.cluster.stop()
         self.assertTrue(found)
 
-    def ssl_client_auth_required_succeed_test(self):
+    def test_ssl_client_auth_required_succeed(self):
         """peers need to perform mutual auth (cient auth required), but do not supply the loca cert"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
@@ -101,7 +103,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         self.cluster.start()
         self.cql_connection(self.node1)
 
-    def ca_mismatch_test(self):
+    def test_ca_mismatch(self):
         """CA mismatch should cause nodes to fail to connect"""
 
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
@@ -117,7 +119,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         self.assertTrue(found)
 
     @since('4.0')
-    def optional_outbound_tls_test(self):
+    def test_optional_outbound_tls(self):
         """listen on TLS port, but optionally connect using TLS. this supports the upgrade case of starting with a non-encrypted cluster and then upgrading each node to use encryption.
 
         @jira_ticket CASSANDRA-10404

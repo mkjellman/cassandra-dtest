@@ -10,11 +10,11 @@ from multiprocessing import Process, Queue
 from queue import Empty, Full
 from unittest import skipUnless
 
+import pytest
+
 import psutil
 from cassandra import ConsistencyLevel, WriteTimeout
 from cassandra.query import SimpleStatement
-from nose.plugins.attrib import attr
-from six import print_
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
 from tools.misc import generate_ssl_stores, new_node
@@ -221,7 +221,7 @@ def counter_checker(tester, to_verify_queue, verification_done_queue):
                 pass
 
 
-@attr("resource-intensive")
+@pytest.mark.resource_intensive
 class UpgradeTester(Tester):
     """
     Upgrades a 3-node Murmur3Partitioner cluster through versions specified in test_version_metas.
@@ -266,25 +266,25 @@ class UpgradeTester(Tester):
                 values=dict(self.extra_config)
             )
 
-    def parallel_upgrade_test(self):
+    def test_parallel_upgrade(self):
         """
         Test upgrading cluster all at once (requires cluster downtime).
         """
         self.upgrade_scenario()
 
-    def rolling_upgrade_test(self):
+    def test_rolling_upgrade(self):
         """
         Test rolling upgrade of the cluster, so we have mixed versions part way through.
         """
         self.upgrade_scenario(rolling=True)
 
-    def parallel_upgrade_with_internode_ssl_test(self):
+    def test_parallel_upgrade_with_internode_ssl(self):
         """
         Test upgrading cluster all at once (requires cluster downtime), with internode ssl.
         """
         self.upgrade_scenario(internode_ssl=True)
 
-    def rolling_upgrade_with_internode_ssl_test(self):
+    def test_rolling_upgrade_with_internode_ssl(self):
         """
         Rolling upgrade test using internode ssl.
         """
@@ -697,11 +697,11 @@ class BootstrapMixin(object):
         self._check_values()
         self._check_counters()
 
-    def bootstrap_test(self):
+    def test_bootstrap(self):
         # try and add a new node
         self.upgrade_scenario(after_upgrade_call=(self._bootstrap_new_node,))
 
-    def bootstrap_multidc_test(self):
+    def test_bootstrap_multidc(self):
         # try and add a new node
         # multi dc, 2 nodes in each dc
         cluster = self.cluster
@@ -766,10 +766,10 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
     # short names for debug output
     parent_class_names = [cls.__name__ for cls in parent_classes]
 
-    print_("Creating test class {} ".format(clsname))
-    print_("  for C* versions:\n{} ".format(pprint.pformat(version_metas)))
-    print_("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
-    print_("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
+    print("Creating test class {} ".format(clsname))
+    print("  for C* versions:\n{} ".format(pprint.pformat(version_metas)))
+    print("  using protocol: v{}, and parent classes: {}".format(protocol_version, parent_class_names))
+    print("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or version_metas[-1].matches_current_env_version_family
 

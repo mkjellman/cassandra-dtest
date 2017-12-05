@@ -5,14 +5,14 @@ import time
 from collections import OrderedDict, namedtuple
 from copy import deepcopy
 
+import pytest
+
 from cassandra import ConsistencyLevel, consistency_value_to_name
 from cassandra.query import SimpleStatement
-from nose.plugins.attrib import attr
-from nose.tools import assert_greater_equal
 
 from tools.assertions import (assert_all, assert_length_equal, assert_none,
                               assert_unavailable)
-from dtest import DISABLE_VNODES, MultiError, Tester, debug, create_ks, create_cf
+from dtest import MultiError, Tester, debug, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns,
                         query_c1c2, rows_to_list)
 from tools.decorators import since
@@ -361,7 +361,7 @@ class TestAvailability(TestHelper):
 
         self._test_simple_strategy(combinations)
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     def test_network_topology_strategy(self):
         """
         Test for multiple datacenters, using network topology replication strategy.
@@ -393,7 +393,7 @@ class TestAvailability(TestHelper):
 
         self._test_network_topology_strategy(combinations)
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     @since("3.0")
     def test_network_topology_strategy_each_quorum(self):
         """
@@ -459,10 +459,8 @@ class TestAccuracy(TestHelper):
                 for s in sessions:
                     if outer.query_user(s, n, val, read_cl, check_ret=expected_consistency.is_strong):
                         num += 1
-                assert_greater_equal(num, expected_consistency.num_write_nodes,
-                                     "Failed to read value from sufficient number of nodes,"
-                                     " required {} but got {} - [{}, {}]"
-                                     .format(expected_consistency.num_write_nodes, num, n, val))
+                assert num >= expected_consistency.num_write_nodes, "Failed to read value from sufficient number of nodes," + \
+                                     " required {} but got {} - [{}, {}]".format(expected_consistency.num_write_nodes, num, n, val)
 
             for n in range(start, end):
                 age = 30
@@ -499,10 +497,8 @@ class TestAccuracy(TestHelper):
                 for s in sessions:
                     results.append(outer.query_counter(s, n, val, read_cl, check_ret=expected_consistency.is_strong))
 
-                assert_greater_equal(results.count(val), expected_consistency.num_write_nodes,
-                                     "Failed to read value from sufficient number of nodes, required {} nodes to have a"
-                                     " counter value of {} at key {}, instead got these values: {}"
-                                     .format(expected_consistency.num_write_nodes, val, n, results))
+                assert results.count(val) >= expected_consistency.num_write_nodes, "Failed to read value from sufficient number of nodes, required {} nodes to have a" + \
+                                     " counter value of {} at key {}, instead got these values: {}".format(expected_consistency.num_write_nodes, val, n, results)
 
             for n in range(start, end):
                 c = 1
@@ -570,7 +566,7 @@ class TestAccuracy(TestHelper):
             _, exceptions, tracebacks = list(zip(*exceptions_queue.queue))
             raise MultiError(exceptions=exceptions, tracebacks=tracebacks)
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     def test_simple_strategy_users(self):
         """
         Test for a single datacenter, users table, only the each quorum reads.
@@ -602,7 +598,7 @@ class TestAccuracy(TestHelper):
         self.log("Testing single dc, users")
         self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, [self.nodes], [self.rf], combinations)
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     @since("3.0")
     def test_simple_strategy_each_quorum_users(self):
         """
@@ -620,7 +616,7 @@ class TestAccuracy(TestHelper):
         self.log("Testing single dc, users, each quorum reads")
         self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, [self.nodes], [self.rf], combinations)
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     def test_network_topology_strategy_users(self):
         """
         Test for multiple datacenters, users table.
@@ -656,7 +652,7 @@ class TestAccuracy(TestHelper):
         self.log("Testing multiple dcs, users")
         self._run_test_function_in_parallel(TestAccuracy.Validation.validate_users, self.nodes, list(self.rf.values()), combinations),
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     @since("3.0")
     def test_network_topology_strategy_each_quorum_users(self):
         """
@@ -721,7 +717,7 @@ class TestAccuracy(TestHelper):
         self.log("Testing single dc, counters, each quorum reads")
         self._run_test_function_in_parallel(TestAccuracy.Validation.validate_counters, [self.nodes], [self.rf], combinations)
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     def test_network_topology_strategy_counters(self):
         """
         Test for multiple datacenters, counters table.
@@ -752,7 +748,7 @@ class TestAccuracy(TestHelper):
         self.log("Testing multiple dcs, counters")
         self._run_test_function_in_parallel(TestAccuracy.Validation.validate_counters, self.nodes, list(self.rf.values()), combinations),
 
-    @attr("resource-intensive")
+    @pytest.mark.resource_intensive
     @since("3.0")
     def test_network_topology_strategy_each_quorum_counters(self):
         """
@@ -1174,7 +1170,7 @@ class TestConsistency(Tester):
                    [[0], [4]],
                    cl = ConsistencyLevel.ALL)
 
-    def short_read_test(self):
+    def test_short_read(self):
         """
         @jira_ticket CASSANDRA-9460
         """
@@ -1236,7 +1232,7 @@ class TestConsistency(Tester):
 
             session.execute('TRUNCATE cf')
 
-    def short_read_delete_test(self):
+    def test_short_read_delete(self):
         """ Test short reads ultimately leaving no columns alive [#4000] """
         cluster = self.cluster
 
@@ -1269,7 +1265,7 @@ class TestConsistency(Tester):
 
         assert_none(session, "SELECT c, v FROM cf WHERE key=\'k0\' LIMIT 1", cl=ConsistencyLevel.QUORUM)
 
-    def short_read_quorum_delete_test(self):
+    def test_short_read_quorum_delete(self):
         """
         @jira_ticket CASSANDRA-8933
         """
@@ -1311,11 +1307,11 @@ class TestConsistency(Tester):
         node3.stop(wait_other_notice=True)
         assert_none(session, "SELECT * FROM t WHERE id = 0 LIMIT 1", cl=ConsistencyLevel.QUORUM)
 
-    def readrepair_test(self):
+    def test_readrepair(self):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
 
-        if DISABLE_VNODES:
+        if not self.dtest_config.use_vnodes:
             cluster.populate(2).start()
         else:
             tokens = cluster.balanced_tokens(2)
@@ -1343,13 +1339,13 @@ class TestConsistency(Tester):
         for n in range(0, 10000):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
-    def quorum_available_during_failure_test(self):
+    def test_quorum_available_during_failure(self):
         CL = ConsistencyLevel.QUORUM
         RF = 3
 
         debug("Creating a ring")
         cluster = self.cluster
-        if DISABLE_VNODES:
+        if not self.dtest_config.use_vnodes:
             cluster.populate(3).start()
         else:
             tokens = cluster.balanced_tokens(3)

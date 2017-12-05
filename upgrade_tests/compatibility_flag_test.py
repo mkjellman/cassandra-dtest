@@ -52,7 +52,7 @@ class CompatibilityFlagTest(Tester):
         session = self.patient_cql_connection(node1)
         self._run_test(session)
 
-    def _compatibility_flag_on_3014_test(self):
+    def test__compatibility_flag_on_3014(self):
         """
         Test compatibility between post-13004 nodes, one of which is in compatibility mode
         """
@@ -67,7 +67,7 @@ class CompatibilityFlagTest(Tester):
         session = self.patient_cql_connection(node1)
         self._run_test(session)
 
-    def _compatibility_flag_off_3014_test(self):
+    def test__compatibility_flag_off_3014(self):
         """
         Test compatibility between post-13004 nodes
         """
@@ -103,30 +103,30 @@ class CompatibilityFlagTest(Tester):
 @since('3.0.14', max_version='3.0.x')
 class CompatibilityFlag30XTest(CompatibilityFlagTest):
 
-    def compatibility_flag_off_with_30_node_test(self):
+    def test_compatibility_flag_off_with_30_node(self):
         self._compatibility_flag_off_with_30_node_test('3.0.12')
 
-    def compatibility_flag_on_with_3_0_test(self):
+    def test_compatibility_flag_on_with_3_0(self):
         self._compatibility_flag_on_with_30_test('3.0.12')
 
-    def compatibility_flag_on_3014_test(self):
+    def test_compatibility_flag_on_3014(self):
         self._compatibility_flag_on_3014_test()
 
-    def compatibility_flag_off_3014_test(self):
+    def test_compatibility_flag_off_3014(self):
         self._compatibility_flag_off_3014_test()
 
 
 @since('3.11', max_version='4')
 class CompatibilityFlag3XTest(CompatibilityFlagTest):
 
-    def compatibility_flag_off_with_30_node_test(self):
+    def test_compatibility_flag_off_with_30_node(self):
         self._compatibility_flag_off_with_30_node_test('3.10')
 
-    def compatibility_flag_on_with_3_0_test(self):
+    def test_compatibility_flag_on_with_3_0(self):
         self._compatibility_flag_on_with_30_test('3.10')
 
-    def compatibility_flag_on_3014_test(self):
+    def test_compatibility_flag_on_3014(self):
         self._compatibility_flag_on_3014_test()
 
-    def compatibility_flag_off_3014_test(self):
+    def test_compatibility_flag_off_3014(self):
         self._compatibility_flag_off_3014_test()

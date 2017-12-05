@@ -32,7 +32,7 @@ class TestLargeColumn(Tester):
             self.assertTrue(is_number(field.strip()) or field == 'NaN', "Expected numeric from fields from nodetool gcstats. However, field.strip() is: {}".format(field.strip()))
         return fields[6]
 
-    def cleanup_test(self):
+    def test_cleanup(self):
         """
         @jira_ticket CASSANDRA-8670
         """

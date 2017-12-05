@@ -6,7 +6,6 @@ import os
 import time
 
 from cassandra.concurrent import execute_concurrent
-from nose.tools import assert_less_equal
 
 import dtest
 from tools.funcutils import get_rate_limited_function
@@ -64,11 +63,9 @@ def advance_to_next_cl_segment(session, commitlog_dir,
     while _files_in(commitlog_dir) <= initial_cl_files:
         elapsed = time.time() - start
         rate_limited_debug('  commitlog-advancing load step has lasted {s:.2f}s'.format(s=elapsed))
-        assert_less_equal(
-            time.time(), stop_time,
-            "It's been over a {s}s and we haven't written a new "
+        assert (
+            time.time() <= stop_time), "It's been over a {s}s and we haven't written a new " + \
             "commitlog segment. Something is wrong.".format(s=timeout)
-        )
         execute_concurrent(
             session,
             ((prepared_insert, ()) for _ in range(1000)),

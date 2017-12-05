@@ -10,11 +10,13 @@ from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
 from ccmlib.node import NodeError
 
-from dtest import DISABLE_VNODES, Tester, debug, create_ks, create_cf
+import pytest
+
+from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import (assert_almost_equal, assert_bootstrap_state, assert_not_running,
                               assert_one, assert_stderr_clean)
 from tools.data import query_c1c2
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 from tools.intervention import InterruptBootstrap, KillOnBootstrap
 from tools.misc import new_node
 from tools.misc import generate_ssl_stores
@@ -107,24 +109,26 @@ class BaseBootstrapTest(Tester):
         assert_almost_equal(size1, size2, error=0.3)
         assert_almost_equal(float(initial_size - empty_size), 2 * (size1 - float(empty_size)))
 
+        session.shutdown()
+
         assert_bootstrap_state(self, node2, 'COMPLETED')
-        if bootstrap_from_version:
-            self.assertTrue(node2.grep_log('does not support keep-alive', filename='debug.log'))
 
 
 class TestBootstrap(BaseBootstrapTest):
     __test__ = True
 
-    @no_vnodes()
-    def simple_bootstrap_test_with_ssl(self):
+    @pytest.mark.no_vnodes
+    def test_simple_bootstrap_with_ssl(self):
         self._base_bootstrap_test(enable_ssl=True)
 
-    @no_vnodes()
-    def simple_bootstrap_test(self):
+    @pytest.mark.no_vnodes
+    def test_simple_bootstrap(self):
         self._base_bootstrap_test()
 
-    @no_vnodes()
-    def bootstrap_on_write_survey_test(self):
+    @pytest.mark.no_vnodes
+    def test_bootstrap_on_write_survey(self):
+        import faulthandler
+        faulthandler.enable()
         def bootstrap_on_write_survey_and_join(cluster, token):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
@@ -140,8 +144,8 @@ class TestBootstrap(BaseBootstrapTest):
         self._base_bootstrap_test(bootstrap_on_write_survey_and_join)
 
     @since('3.10')
-    @no_vnodes()
-    def simple_bootstrap_test_small_keepalive_period(self):
+    @pytest.mark.no_vnodes
+    def test_simple_bootstrap_small_keepalive_period(self):
         """
         @jira_ticket CASSANDRA-11841
         Test that bootstrap completes if it takes longer than streaming_socket_timeout_in_ms or
@@ -185,7 +189,7 @@ class TestBootstrap(BaseBootstrapTest):
             self.assertTrue(node.grep_log('Sending keep-alive', filename='debug.log'))
             self.assertTrue(node.grep_log('Received keep-alive', filename='debug.log'))
 
-    def simple_bootstrap_test_nodata(self):
+    def test_simple_bootstrap_nodata(self):
         """
         @jira_ticket CASSANDRA-11010
         Test that bootstrap completes if streaming from nodes with no data
@@ -202,7 +206,7 @@ class TestBootstrap(BaseBootstrapTest):
 
         assert_bootstrap_state(self, node3, 'COMPLETED')
 
-    def read_from_bootstrapped_node_test(self):
+    def test_read_from_bootstrapped_node(self):
         """
         Test bootstrapped node sees existing data
         @jira_ticket CASSANDRA-6648
@@ -225,16 +229,16 @@ class TestBootstrap(BaseBootstrapTest):
         new_rows = list(session.execute("SELECT * FROM %s" % (stress_table,)))
         self.assertEqual(original_rows, new_rows)
 
-    def consistent_range_movement_true_with_replica_down_should_fail_test(self):
+    def test_consistent_range_movement_true_with_replica_down_should_fail(self):
         self._bootstrap_test_with_replica_down(True)
 
-    def consistent_range_movement_false_with_replica_down_should_succeed_test(self):
+    def test_consistent_range_movement_false_with_replica_down_should_succeed(self):
         self._bootstrap_test_with_replica_down(False)
 
-    def consistent_range_movement_true_with_rf1_should_fail_test(self):
+    def test_consistent_range_movement_true_with_rf1_should_fail(self):
         self._bootstrap_test_with_replica_down(True, rf=1)
 
-    def consistent_range_movement_false_with_rf1_should_succeed_test(self):
+    def test_consistent_range_movement_false_with_rf1_should_succeed(self):
         self._bootstrap_test_with_replica_down(False, rf=1)
 
     def _bootstrap_test_with_replica_down(self, consistent_range_movement, rf=2):
@@ -249,7 +253,7 @@ class TestBootstrap(BaseBootstrapTest):
 
         node3_token = None
         # Make token assignment deterministic
-        if DISABLE_VNODES:
+        if not self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 1})
             tokens = cluster.balanced_tokens(3)
             debug("non-vnode tokens: %r" % (tokens,))
@@ -293,7 +297,7 @@ class TestBootstrap(BaseBootstrapTest):
             assert_not_running(node3)
 
     @since('2.2')
-    def resumable_bootstrap_test(self):
+    def test_resumable_bootstrap(self):
         """
         Test resuming bootstrap after data streaming failure
         """
@@ -339,10 +343,10 @@ class TestBootstrap(BaseBootstrapTest):
         stdout, stderr, _ = node3.stress(['read', 'n=1k', 'no-warmup', '-schema', 'replication(factor=2)', '-rate', 'threads=8'])
 
         if stdout is not None:
-            self.assertNotIn("FAILURE", stdout)
+            self.assertNotIn("FAILURE", stdout.decode("utf-8"))
 
     @since('2.2')
-    def bootstrap_with_reset_bootstrap_state_test(self):
+    def test_bootstrap_with_reset_bootstrap_state(self):
         """Test bootstrap with resetting bootstrap progress"""
 
         cluster = self.cluster
@@ -378,7 +382,7 @@ class TestBootstrap(BaseBootstrapTest):
         # check if 2nd bootstrap succeeded
         assert_bootstrap_state(self, node3, 'COMPLETED')
 
-    def manual_bootstrap_test(self):
+    def test_manual_bootstrap(self):
         """
             Test adding a new node and bootstrapping it manually. No auto_bootstrap.
             This test also verify that all data are OK after the addition of the new node.
@@ -405,7 +409,7 @@ class TestBootstrap(BaseBootstrapTest):
         current_rows = list(session.execute("SELECT * FROM %s" % stress_table))
         self.assertEqual(original_rows, current_rows)
 
-    def local_quorum_bootstrap_test(self):
+    def test_local_quorum_bootstrap(self):
         """
         Test that CL local_quorum works while a node is bootstrapping.
         @jira_ticket CASSANDRA-8058
@@ -456,13 +460,13 @@ class TestBootstrap(BaseBootstrapTest):
         debug(out)
         assert_stderr_clean(err)
         regex = re.compile("Operation.+error inserting key.+Exception")
-        failure = regex.search(out)
+        failure = regex.search(str(out))
         self.assertIsNone(failure, "Error during stress while bootstrapping")
 
-    def shutdown_wiped_node_cannot_join_test(self):
+    def test_shutdown_wiped_node_cannot_join(self):
         self._wiped_node_cannot_join_test(gently=True)
 
-    def killed_wiped_node_cannot_join_test(self):
+    def test_killed_wiped_node_cannot_join(self):
         self._wiped_node_cannot_join_test(gently=False)
 
     def _wiped_node_cannot_join_test(self, gently):
@@ -500,7 +504,7 @@ class TestBootstrap(BaseBootstrapTest):
         node4.start(no_wait=True, wait_other_notice=False)
         node4.watch_log_for("A node with address /127.0.0.4 already exists, cancelling join", from_mark=mark)
 
-    def decommissioned_wiped_node_can_join_test(self):
+    def test_decommissioned_wiped_node_can_join(self):
         """
         @jira_ticket CASSANDRA-9765
         Test that if we decommission a node and then wipe its data, it can join the cluster.
@@ -534,7 +538,7 @@ class TestBootstrap(BaseBootstrapTest):
         node4.start(wait_other_notice=True)
         node4.watch_log_for("JOINING:", from_mark=mark)
 
-    def decommissioned_wiped_node_can_gossip_to_single_seed_test(self):
+    def test_decommissioned_wiped_node_can_gossip_to_single_seed(self):
         """
         @jira_ticket CASSANDRA-8072
         @jira_ticket CASSANDRA-8422
@@ -578,7 +582,7 @@ class TestBootstrap(BaseBootstrapTest):
         node2.start(wait_other_notice=False)
         node2.watch_log_for("JOINING:", from_mark=mark)
 
-    def failed_bootstrap_wiped_node_can_join_test(self):
+    def test_failed_bootstrap_wiped_node_can_join(self):
         """
         @jira_ticket CASSANDRA-9765
         Test that if a node fails to bootstrap, it can join the cluster even if the data is wiped.
@@ -617,7 +621,7 @@ class TestBootstrap(BaseBootstrapTest):
         node2.watch_log_for("JOINING:", from_mark=mark)
 
     @since('2.1.1')
-    def simultaneous_bootstrap_test(self):
+    def test_simultaneous_bootstrap(self):
         """
         Attempt to bootstrap two nodes at once, to assert the second bootstrapped node fails, and does not interfere.
 
@@ -682,6 +686,7 @@ class TestBootstrap(BaseBootstrapTest):
         failed = threading.Event()
         jobs = 1
         thread = threading.Thread(target=self._monitor_datadir, args=(node1, event, len(node1.get_sstables("keyspace1", "standard1")), jobs, failed))
+        thread.setDaemon(True)
         thread.start()
         node1.nodetool("cleanup -j {} keyspace1 standard1".format(jobs))
         event.set()

@@ -681,7 +681,7 @@ class TestUserTypes(Tester):
             self.assertEqual(listify(res), [[['a', 'z']], [['c', 'a']], [['c', 'f']], [['c', 'z']], [['d', 'e']], [['z', 'a']]])
 
     @since('3.6')
-    def udt_subfield_test(self):
+    def test_udt_subfield(self):
         """
         @jira_ticket CASSANDRA-7423
         @since 3.6

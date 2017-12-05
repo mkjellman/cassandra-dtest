@@ -7,6 +7,8 @@ from functools import partial
 from multiprocessing import Process, Queue
 from unittest import skip, skipIf
 
+import pytest
+
 from cassandra import ConsistencyLevel, WriteFailure
 from cassandra.cluster import NoHostAvailable
 from cassandra.concurrent import execute_concurrent_with_args
@@ -14,8 +16,6 @@ from cassandra.cluster import Cluster
 from cassandra.query import SimpleStatement
 # TODO add in requirements.txt
 from enum import Enum  # Remove when switching to py3
-from nose.plugins.attrib import attr
-from nose.tools import (assert_equal)
 
 from distutils.version import LooseVersion
 from dtest import Tester, debug, get_ip_from_node, create_ks, supports_v5_protocol
@@ -138,7 +138,7 @@ class TestMaterializedViews(Tester):
                 result = list(node_session.execute("SELECT count(*) FROM system.batches;"))
                 self.assertEqual(result[0].count, 0)
 
-    def create_test(self):
+    def test_create(self):
         """Test the materialized view creation"""
 
         session = self.prepare(user_table=True)
@@ -185,7 +185,7 @@ class TestMaterializedViews(Tester):
                        "updates. Setting gc_grace_seconds too low might cause undelivered updates"
                        " to expire before being replayed.")
 
-    def insert_test(self):
+    def test_insert(self):
         """Test basic insertions"""
 
         session = self.prepare(user_table=True)
@@ -204,7 +204,7 @@ class TestMaterializedViews(Tester):
         result = list(session.execute("SELECT * FROM users_by_state WHERE state='MA';"))
         self.assertEqual(len(result), 0, "Expecting {} users, got {}".format(0, len(result)))
 
-    def populate_mv_after_insert_test(self):
+    def test_populate_mv_after_insert(self):
         """Test that a view is OK when created with existing data"""
 
         session = self.prepare(consistency_level=ConsistencyLevel.QUORUM)
@@ -226,7 +226,7 @@ class TestMaterializedViews(Tester):
         for i in range(1000):
             assert_one(session, "SELECT * FROM t_by_v WHERE v = {}".format(i), [i, i])
 
-    def populate_mv_after_insert_wide_rows_test(self):
+    def test_populate_mv_after_insert_wide_rows(self):
         """Test that a view is OK when created with existing data with wide rows"""
 
         session = self.prepare(consistency_level=ConsistencyLevel.QUORUM)
@@ -249,7 +249,7 @@ class TestMaterializedViews(Tester):
             for j in range(10000):
                 assert_one(session, "SELECT * FROM t_by_v WHERE id = {} AND v = {}".format(i, j), [j, i])
 
-    def crc_check_chance_test(self):
+    def test_crc_check_chance(self):
         """Test that crc_check_chance parameter is properly populated after mv creation and update"""
 
         session = self.prepare()
@@ -264,7 +264,7 @@ class TestMaterializedViews(Tester):
 
         assert_crc_check_chance_equal(session, "t_by_v", 0.3, view=True)
 
-    def prepared_statement_test(self):
+    def test_prepared_statement(self):
         """Test basic insertions with prepared statement"""
 
         session = self.prepare(user_table=True)
@@ -294,7 +294,7 @@ class TestMaterializedViews(Tester):
         result = list(session.execute(selectPrepared.bind(['MA'])))
         self.assertEqual(len(result), 0, "Expecting {} users, got {}".format(0, len(result)))
 
-    def immutable_test(self):
+    def test_immutable(self):
         """Test that a materialized view is immutable"""
 
         session = self.prepare(user_table=True)
@@ -319,7 +319,7 @@ class TestMaterializedViews(Tester):
         assert_invalid(session, "ALTER TABLE users_by_state ADD first_name varchar",
                        "Cannot use ALTER TABLE on Materialized View")
 
-    def drop_mv_test(self):
+    def test_drop_mv(self):
         """Test that we can drop a view properly"""
 
         session = self.prepare(user_table=True)
@@ -339,7 +339,7 @@ class TestMaterializedViews(Tester):
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
         self.assertEqual(len(result), 1, "Expecting {} materialized view, got {}".format(1, len(result)))
 
-    def drop_column_test(self):
+    def test_drop_column(self):
         """Test that we cannot drop a column if it is used by a MV"""
 
         session = self.prepare(user_table=True)
@@ -354,7 +354,7 @@ class TestMaterializedViews(Tester):
             "Cannot drop column state on base table with materialized views."
         )
 
-    def drop_table_test(self):
+    def test_drop_table(self):
         """Test that we cannot drop a table without deleting its MVs first"""
 
         session = self.prepare(user_table=True)
@@ -389,7 +389,7 @@ class TestMaterializedViews(Tester):
             "Expecting {} materialized view, got {}".format(1, len(result))
         )
 
-    def clustering_column_test(self):
+    def test_clustering_column(self):
         """Test that we can use clustering columns as primary key for a materialized view"""
 
         session = self.prepare(consistency_level=ConsistencyLevel.QUORUM)
@@ -461,8 +461,8 @@ class TestMaterializedViews(Tester):
         for i in range(1000, 1100):
             assert_one(session, "SELECT * FROM t_by_v WHERE v = {}".format(-i), [-i, i])
 
-    @attr('resource-intensive')
-    def add_dc_after_mv_simple_replication_test(self):
+    @pytest.mark.resource_intensive
+    def test_add_dc_after_mv_simple_replication(self):
         """
         @jira_ticket CASSANDRA-10634
 
@@ -471,8 +471,8 @@ class TestMaterializedViews(Tester):
 
         self._add_dc_after_mv_test(1)
 
-    @attr('resource-intensive')
-    def add_dc_after_mv_network_replication_test(self):
+    @pytest.mark.resource_intensive
+    def test_add_dc_after_mv_network_replication(self):
         """
         @jira_ticket CASSANDRA-10634
 
@@ -481,8 +481,8 @@ class TestMaterializedViews(Tester):
 
         self._add_dc_after_mv_test({'dc1': 1, 'dc2': 1})
 
-    @attr('resource-intensive')
-    def add_node_after_mv_test(self):
+    @pytest.mark.resource_intensive
+    def test_add_node_after_mv(self):
         """
         @jira_ticket CASSANDRA-10978
 
@@ -522,8 +522,8 @@ class TestMaterializedViews(Tester):
         for i in range(1000, 1100):
             assert_one(session, "SELECT * FROM t_by_v WHERE v = {}".format(-i), [-i, i])
 
-    @attr('resource-intensive')
-    def add_node_after_wide_mv_with_range_deletions_test(self):
+    @pytest.mark.resource_intensive
+    def test_add_node_after_wide_mv_with_range_deletions(self):
         """
         @jira_ticket CASSANDRA-11670
 
@@ -592,8 +592,8 @@ class TestMaterializedViews(Tester):
                     assert_one(session2, "SELECT * FROM ks.t WHERE id = {} and v = {}".format(i, j), [i, j])
                     assert_one(session2, "SELECT * FROM ks.t_by_v WHERE id = {} and v = {}".format(i, j), [j, i])
 
-    @attr('resource-intensive')
-    def add_node_after_very_wide_mv_test(self):
+    @pytest.mark.resource_intensive
+    def test_add_node_after_very_wide_mv(self):
         """
         @jira_ticket CASSANDRA-11670
 
@@ -635,8 +635,8 @@ class TestMaterializedViews(Tester):
             for j in range(5100):
                 assert_one(session, "SELECT * FROM t_by_v WHERE id = {} and v = {}".format(i, j), [j, i])
 
-    @attr('resource-intensive')
-    def add_write_survey_node_after_mv_test(self):
+    @pytest.mark.resource_intensive
+    def test_add_write_survey_node_after_mv(self):
         """
         @jira_ticket CASSANDRA-10621
         @jira_ticket CASSANDRA-10978
@@ -665,7 +665,7 @@ class TestMaterializedViews(Tester):
         for i in range(1100):
             assert_one(session, "SELECT * FROM t_by_v WHERE v = {}".format(-i), [-i, i])
 
-    def allow_filtering_test(self):
+    def test_allow_filtering(self):
         """Test that allow filtering works as usual for a materialized view"""
 
         session = self.prepare()
@@ -700,7 +700,7 @@ class TestMaterializedViews(Tester):
                 ['a', i, i, 3.0]
             )
 
-    def secondary_index_test(self):
+    def test_secondary_index(self):
         """Test that secondary indexes cannot be created on a materialized view"""
 
         session = self.prepare()
@@ -711,7 +711,7 @@ class TestMaterializedViews(Tester):
         assert_invalid(session, "CREATE INDEX ON t_by_v (v2)",
                        "Secondary indexes are not supported on materialized views")
 
-    def ttl_test(self):
+    def test_ttl(self):
         """
         Test that TTL works as expected for a materialized view
         @expected_result The TTL is propagated properly between tables.
@@ -733,7 +733,7 @@ class TestMaterializedViews(Tester):
         rows = list(session.execute("SELECT * FROM t_by_v2"))
         self.assertEqual(len(rows), 0, "Expected 0 rows but got {}".format(len(rows)))
 
-    def query_all_new_column_test(self):
+    def test_query_all_new_column(self):
         """
         Test that a materialized view created with a 'SELECT *' works as expected when adding a new column
         @expected_result The new column is present in the view.
@@ -760,7 +760,7 @@ class TestMaterializedViews(Tester):
             ['TX', 'user1', 1968, None, 'f', 'ch@ngem3a', None]
         )
 
-    def query_new_column_test(self):
+    def test_query_new_column(self):
         """
         Test that a materialized view created with 'SELECT <col1, ...>' works as expected when adding a new column
         @expected_result The new column is not present in the view.
@@ -790,7 +790,7 @@ class TestMaterializedViews(Tester):
             ['TX', 'user1']
         )
 
-    def rename_column_test(self):
+    def test_rename_column(self):
         """
         Test that a materialized view created with a 'SELECT *' works as expected when renaming a column
         @expected_result The column is also renamed in the view.
@@ -817,7 +817,7 @@ class TestMaterializedViews(Tester):
             ['TX', 'user1', 1968, 'f']
         )
 
-    def rename_column_atomicity_test(self):
+    def test_rename_column_atomicity(self):
         """
         Test that column renaming is atomically done between a table and its materialized views
         @jira_ticket CASSANDRA-12952
@@ -858,7 +858,7 @@ class TestMaterializedViews(Tester):
             ['TX', 'user1', 1968, 'f', 'ch@ngem3a', None]
         )
 
-    def lwt_test(self):
+    def test_lwt(self):
         """Test that lightweight transaction behave properly with a materialized view"""
 
         session = self.prepare()
@@ -935,7 +935,7 @@ class TestMaterializedViews(Tester):
                 [i, i, 'a', 3.0]
             )
 
-    def interrupt_build_process_test(self):
+    def test_interrupt_build_process(self):
         """Test that an interupted MV build process is resumed as it should"""
 
         session = self.prepare(options={'hinted_handoff_enabled': False})
@@ -1342,7 +1342,7 @@ class TestMaterializedViews(Tester):
         assert_none(session, "SELECT * FROM t_by_v")
         assert_one(session, "SELECT * FROM t", [1, None, None, None])
 
-    def view_tombstone_test(self):
+    def test_view_tombstone(self):
         """
         Test that a materialized views properly tombstone
 
@@ -1446,10 +1446,10 @@ class TestMaterializedViews(Tester):
             if expect_digest:
                 self.fail("Didn't find digest mismatch")
 
-    def simple_repair_test_by_base(self):
+    def test_simple_repair_by_base(self):
         self._simple_repair_test(repair_base=True)
 
-    def simple_repair_test_by_view(self):
+    def test_simple_repair_by_view(self):
         self._simple_repair_test(repair_view=True)
 
     def _simple_repair_test(self, repair_base=False, repair_view=False):
@@ -1511,10 +1511,10 @@ class TestMaterializedViews(Tester):
             self.check_trace_events(result.get_query_trace(), False)
             self.assertEqual(self._rows_to_list(result.current_rows), [[i, i, 'a', 3.0]])
 
-    def base_replica_repair_test(self):
+    def test_base_replica_repair(self):
         self._base_replica_repair_test()
 
-    def base_replica_repair_with_contention_test(self):
+    def test_base_replica_repair_with_contention(self):
         """
         Test repair does not fail when there is MV lock contention
         @jira_ticket CASSANDRA-12905
@@ -1596,8 +1596,8 @@ class TestMaterializedViews(Tester):
                 [i, i, 'a', 3.0]
             )
 
-    @attr("resource-intensive")
-    def complex_repair_test(self):
+    @pytest.mark.resource_intensive
+    def test_complex_repair(self):
         """
         Test that a materialized view are consistent after a more complex repair.
         """
@@ -1695,8 +1695,8 @@ class TestMaterializedViews(Tester):
                 cl=ConsistencyLevel.QUORUM
             )
 
-    @attr('resource-intensive')
-    def throttled_partition_update_test(self):
+    @pytest.mark.resource_intensive
+    def test_throttled_partition_update(self):
         """
         @jira_ticket: CASSANDRA-13299, test break up large partition when repairing base with mv.
 
@@ -1804,8 +1804,8 @@ class TestMaterializedViews(Tester):
             debug('stopping {}'.format(node.name))
             node.stop(wait_other_notice=True, wait_for_binary_proto=True)
 
-    @attr('resource-intensive')
-    def really_complex_repair_test(self):
+    @pytest.mark.resource_intensive
+    def test_really_complex_repair(self):
         """
         Test that a materialized view are consistent after a more complex repair.
         """
@@ -1894,7 +1894,7 @@ class TestMaterializedViews(Tester):
 
         assert_none(session2, "SELECT * FROM ks.t_by_v WHERE v2 = 'a'", cl=ConsistencyLevel.QUORUM)
 
-    def complex_mv_select_statements_test(self):
+    def test_complex_mv_select_statements(self):
         """
         Test complex MV select statements
         @jira_ticket CASSANDRA-9664
@@ -2054,10 +2054,10 @@ class TestMaterializedViews(Tester):
         # node3 should have received and ignored the creation of the MV over the dropped table
         self.assertTrue(node3.grep_log('Not adding view users_by_state because the base table'))
 
-    def base_view_consistency_on_failure_after_mv_apply_test(self):
+    def test_base_view_consistency_on_failure_after_mv_apply(self):
         self._test_base_view_consistency_on_crash("after")
 
-    def base_view_consistency_on_failure_before_mv_apply_test(self):
+    def test_base_view_consistency_on_failure_before_mv_apply(self):
         self._test_base_view_consistency_on_crash("before")
 
     def _test_base_view_consistency_on_crash(self, fail_phase):
@@ -2335,7 +2335,7 @@ class TestMaterializedViewsConsistency(Tester):
             self.rows[(row.a, row.b)] = row.c
 
     @skip('awaiting CASSANDRA-11290')
-    def single_partition_consistent_reads_after_write_test(self):
+    def test_single_partition_consistent_reads_after_write(self):
         """
         Tests consistency of multiple writes to a single partition
 
@@ -2343,7 +2343,7 @@ class TestMaterializedViewsConsistency(Tester):
         """
         self._consistent_reads_after_write_test(1)
 
-    def multi_partition_consistent_reads_after_write_test(self):
+    def test_multi_partition_consistent_reads_after_write(self):
         """
         Tests consistency of multiple writes to a multiple partitions
 
@@ -2499,4 +2499,4 @@ class TestMaterializedViewsLockcontention(Tester):
                 mutationStagePending = jmx.read_attribute(
                     make_mbean('metrics', type="ThreadPools", path='request', scope='MutationStage', name='PendingTasks'), "Value"
                 )
-                assert_equal(0, mutationStagePending, "Pending mutations: {}".format(mutationStagePending))
+                assert 0 == mutationStagePending, "Pending mutations: {}".format(mutationStagePending)

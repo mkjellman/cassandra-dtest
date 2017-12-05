@@ -520,7 +520,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         assert_invalid(session, "select * from paging_test where col_2 IN (1, 2) and col_1=1 order by col_3 desc;", expected=InvalidRequest)
 
     @since('3.10')
-    def group_by_paging_test(self):
+    def test_group_by_paging(self):
         """
         @jira_ticket CASSANDRA-10707
         """
@@ -863,7 +863,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [1, 4, 2, 6]])
 
     @since('3.10')
-    def group_by_with_range_name_query_paging_test(self):
+    def test_group_by_with_range_name_query_paging(self):
         """
         @jira_ticket CASSANDRA-10707
         """
@@ -940,7 +940,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, 1, 3, 2, 3]])
 
     @since('3.10')
-    def group_by_with_static_columns_paging_test(self):
+    def test_group_by_with_static_columns_paging(self):
         """
         @jira_ticket CASSANDRA-10707
         """
@@ -1448,7 +1448,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             self.assertEqual(res, [[1, 1, 4, 3]])
 
     @since('2.0.6')
-    def static_columns_paging_test(self):
+    def test_static_columns_paging(self):
         """
         Exercises paging with static columns to detect bugs
         @jira_ticket CASSANDRA-8502.
@@ -1692,7 +1692,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         self.assertEqual(pf.num_results_all(), [400, 200])
         self.assertEqualIgnoreOrder(expected_data, pf.all_data())
 
-    def static_columns_with_empty_non_static_columns_paging_test(self):
+    def test_static_columns_with_empty_non_static_columns_paging(self):
         """
         @jira_ticket CASSANDRA-10381.
         """

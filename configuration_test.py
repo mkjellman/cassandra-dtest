@@ -10,7 +10,7 @@ from tools.jmxutils import (JolokiaAgent, make_mbean,
 
 class TestConfiguration(Tester):
 
-    def compression_chunk_length_test(self):
+    def test_compression_chunk_length(self):
         """ Verify the setting of compression chunk_length [#3558]"""
         cluster = self.cluster
 
@@ -20,7 +20,9 @@ class TestConfiguration(Tester):
         create_ks(session, 'ks', 1)
 
         create_table_query = "CREATE TABLE test_table (row varchar, name varchar, value int, PRIMARY KEY (row, name));"
-        alter_chunk_len_query = "ALTER TABLE test_table WITH compression = {{'sstable_compression' : 'SnappyCompressor', 'chunk_length_kb' : {chunk_length}}};"
+        alter_chunk_len_query = "ALTER TABLE test_table WITH " \
+                                "compression = {{'sstable_compression' : 'SnappyCompressor', " \
+                                "'chunk_length_kb' : {chunk_length}}};"
 
         session.execute(create_table_query)
 
@@ -30,7 +32,7 @@ class TestConfiguration(Tester):
         session.execute(alter_chunk_len_query.format(chunk_length=64))
         self._check_chunk_length(session, 64)
 
-    def change_durable_writes_test(self):
+    def test_change_durable_writes(self):
         """
         @jira_ticket CASSANDRA-9560
 
@@ -130,7 +132,8 @@ class TestConfiguration(Tester):
             if 'compression' in result:
                 params = result
 
-        self.assertNotEqual(params, '', "Looking for the string 'sstable_compression', but could not find it in {str}".format(str=result))
+        self.assertNotEqual(params, '', "Looking for the string 'sstable_compression', but could not find "
+                                        "it in {str}".format(str=result))
 
         chunk_string = "chunk_length_kb" if self.cluster.version() < '3.0' else "chunk_length_in_kb"
         chunk_length = parse.search("'" + chunk_string + "': '{chunk_length:d}'", result).named['chunk_length']
@@ -146,7 +149,8 @@ def write_to_trigger_fsync(session, ks, table):
     (key int, a int, b int, c int).
     """
     execute_concurrent_with_args(session,
-                                 session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
+                                 session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
+                                                 'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
                                  ((x, x + 1, x + 2, x + 3) for x in range(50000)))
 
 

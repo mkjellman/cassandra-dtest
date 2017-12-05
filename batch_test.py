@@ -1,7 +1,6 @@
 import sys
 import time
 from unittest import skipIf
-from nose.tools import assert_greater_equal
 
 from cassandra import ConsistencyLevel, Timeout, Unavailable
 from cassandra.query import SimpleStatement
@@ -16,7 +15,7 @@ from tools.jmxutils import (JolokiaAgent, make_mbean,
 
 class TestBatch(Tester):
 
-    def empty_batch_throws_no_error_test(self):
+    def test_empty_batch_throws_no_error(self):
         """
         @jira_ticket CASSANDRA-10711
         """
@@ -28,7 +27,7 @@ class TestBatch(Tester):
         for node in self.cluster.nodelist():
             self.assertEqual(0, len(node.grep_log_for_errors()))
 
-    def counter_batch_accepts_counter_mutations_test(self):
+    def test_counter_batch_accepts_counter_mutations(self):
         """ Test that counter batch accepts counter mutations """
         session = self.prepare()
         session.execute("""
@@ -40,7 +39,7 @@ class TestBatch(Tester):
         """)
         assert_all(session, "SELECT total FROM clicks", [[1], [1], [1]])
 
-    def counter_batch_rejects_regular_mutations_test(self):
+    def test_counter_batch_rejects_regular_mutations(self):
         """ Test that counter batch rejects non-counter mutations """
         session = self.prepare()
         err = "Cannot include non-counter statement in a counter batch"
@@ -54,7 +53,7 @@ class TestBatch(Tester):
             APPLY BATCH
             """, matching=err)
 
-    def logged_batch_accepts_regular_mutations_test(self):
+    def test_logged_batch_accepts_regular_mutations(self):
         """ Test that logged batch accepts regular mutations """
         session = self.prepare()
         session.execute("""
@@ -66,7 +65,7 @@ class TestBatch(Tester):
         assert_all(session, "SELECT * FROM users", [[1, 'Will', 'Turner'], [0, 'Jack', 'Sparrow']])
 
     @since('3.0')
-    def logged_batch_gcgs_below_threshold_single_table_test(self):
+    def test_logged_batch_gcgs_below_threshold_single_table(self):
         """ Test that logged batch accepts regular mutations """
         session = self.prepare()
 
@@ -88,7 +87,7 @@ class TestBatch(Tester):
         self.assertEqual(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
 
     @since('3.0')
-    def logged_batch_gcgs_below_threshold_multi_table_test(self):
+    def test_logged_batch_gcgs_below_threshold_multi_table(self):
         """ Test that logged batch accepts regular mutations """
         session = self.prepare()
         session.execute("ALTER TABLE users WITH gc_grace_seconds = 0")
@@ -115,7 +114,7 @@ class TestBatch(Tester):
         self.assertEqual(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
 
     @since('3.0')
-    def unlogged_batch_gcgs_below_threshold_should_not_print_warning_test(self):
+    def test_unlogged_batch_gcgs_below_threshold_should_not_print_warning(self):
         """ Test that logged batch accepts regular mutations """
         session = self.prepare()
         session.execute("ALTER TABLE users WITH gc_grace_seconds = 0")
@@ -130,7 +129,7 @@ class TestBatch(Tester):
         debug(warning)
         self.assertEqual(0, len(warning), "Cannot find the gc_grace_seconds warning message.")
 
-    def logged_batch_rejects_counter_mutations_test(self):
+    def test_logged_batch_rejects_counter_mutations(self):
         """ Test that logged batch rejects counter mutations """
         session = self.prepare()
         err = "Cannot include a counter statement in a logged batch"
@@ -143,7 +142,7 @@ class TestBatch(Tester):
             APPLY BATCH
             """, matching=err)
 
-    def unlogged_batch_accepts_regular_mutations_test(self):
+    def test_unlogged_batch_accepts_regular_mutations(self):
         """ Test that unlogged batch accepts regular mutations """
         session = self.prepare()
         session.execute("""
@@ -154,7 +153,7 @@ class TestBatch(Tester):
         """)
         assert_all(session, "SELECT * FROM users", [[0, 'Jack', 'Sparrow'], [2, 'Elizabeth', 'Swann']])
 
-    def unlogged_batch_rejects_counter_mutations_test(self):
+    def test_unlogged_batch_rejects_counter_mutations(self):
         """ Test that unlogged batch rejects counter mutations """
         session = self.prepare()
         err = "Counter and non-counter mutations cannot exist in the same batch"
@@ -167,7 +166,7 @@ class TestBatch(Tester):
             APPLY BATCH
             """, matching=err)
 
-    def logged_batch_throws_uae_test(self):
+    def test_logged_batch_throws_uae(self):
         """ Test that logged batch throws UAE if there aren't enough live nodes """
         session = self.prepare(nodes=3)
         [node.stop(wait_other_notice=True) for node in self.cluster.nodelist()[1:]]
@@ -179,7 +178,7 @@ class TestBatch(Tester):
             APPLY BATCH
         """)
 
-    def logged_batch_doesnt_throw_uae_test(self):
+    def test_logged_batch_doesnt_throw_uae(self):
         """ Test that logged batch DOES NOT throw UAE if there are at least 2 live nodes """
         session = self.prepare(nodes=3)
         self.cluster.nodelist()[-1].stop(wait_other_notice=True)
@@ -195,7 +194,7 @@ class TestBatch(Tester):
         assert_all(session, "SELECT * FROM users", [[1, 'Will', 'Turner'], [0, 'Jack', 'Sparrow']],
                    cl=ConsistencyLevel.ALL)
 
-    def acknowledged_by_batchlog_not_set_when_batchlog_write_fails_test(self):
+    def test_acknowledged_by_batchlog_not_set_when_batchlog_write_fails(self):
         """ Test that acknowledged_by_batchlog is False if batchlog can't be written """
         session = self.prepare(nodes=3, compression=False)
         # kill 2 of the 3 nodes (all the batchlog write candidates).
@@ -207,7 +206,7 @@ class TestBatch(Tester):
             APPLY BATCH
         """, ConsistencyLevel.ONE, received_responses=0)
 
-    def acknowledged_by_batchlog_set_when_batchlog_write_succeeds_test(self):
+    def test_acknowledged_by_batchlog_set_when_batchlog_write_succeeds(self):
         """ Test that acknowledged_by_batchlog is True if batchlog can be written """
         session = self.prepare(nodes=3, compression=False)
         # kill one of the nodes so that batchlog will be written, but the write will fail.
@@ -219,7 +218,7 @@ class TestBatch(Tester):
             APPLY BATCH
         """, ConsistencyLevel.THREE, received_responses=2)
 
-    def batch_uses_proper_timestamp_test(self):
+    def test_batch_uses_proper_timestamp(self):
         """ Test that each statement will be executed with provided BATCH timestamp """
         session = self.prepare()
         session.execute("""
@@ -231,7 +230,7 @@ class TestBatch(Tester):
         query = "SELECT id, writetime(firstname), writetime(lastname) FROM users"
         assert_all(session, query, [[1, 1111111111111111, 1111111111111111], [0, 1111111111111111, 1111111111111111]])
 
-    def only_one_timestamp_is_valid_test(self):
+    def test_only_one_timestamp_is_valid(self):
         """ Test that TIMESTAMP must not be used in the statements within the batch. """
         session = self.prepare()
         assert_invalid(session, """
@@ -241,7 +240,7 @@ class TestBatch(Tester):
             APPLY BATCH
         """, matching="Timestamp must be set either on BATCH or individual statements")
 
-    def each_statement_in_batch_uses_proper_timestamp_test(self):
+    def test_each_statement_in_batch_uses_proper_timestamp(self):
         """ Test that each statement will be executed with its own timestamp """
         session = self.prepare()
         session.execute("""
@@ -254,7 +253,7 @@ class TestBatch(Tester):
         query = "SELECT id, writetime(firstname), writetime(lastname) FROM users"
         assert_all(session, query, [[1, 1111111111111112, 1111111111111112], [0, 1111111111111111, 1111111111111111]])
 
-    def multi_table_batch_for_10554_test(self):
+    def test_multi_table_batch_for_10554(self):
         """ Test a batch on 2 tables having different columns, restarting the node afterwards, to reproduce CASSANDRA-10554 """
 
         session = self.prepare()
@@ -289,7 +288,7 @@ class TestBatch(Tester):
         assert_one(session, "SELECT * FROM dogs", [0, 'Pluto'])
 
     @since('3.0', max_version='3.x')
-    def logged_batch_compatibility_1_test(self):
+    def test_logged_batch_compatibility_1(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -298,7 +297,7 @@ class TestBatch(Tester):
         self._logged_batch_compatibility_test(0, 1, 'github:apache/cassandra-2.2', 2, 4)
 
     @since('3.0', max_version='3.x')
-    def batchlog_replay_compatibility_1_test(self):
+    def test_batchlog_replay_compatibility_1(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -308,7 +307,7 @@ class TestBatch(Tester):
 
     @since('3.0', max_version='3.x')
     @skipIf(sys.platform == 'win32', 'Windows production support only on 2.2+')
-    def logged_batch_compatibility_2_test(self):
+    def test_logged_batch_compatibility_2(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -318,7 +317,7 @@ class TestBatch(Tester):
 
     @since('3.0', max_version='3.x')
     @skipIf(sys.platform == 'win32', 'Windows production support only on 2.2+')
-    def logged_batch_compatibility_3_test(self):
+    def test_logged_batch_compatibility_3(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -327,7 +326,7 @@ class TestBatch(Tester):
         self._logged_batch_compatibility_test(0, 2, 'github:apache/cassandra-2.1', 1, 3)
 
     @since('3.0', max_version='3.x')
-    def logged_batch_compatibility_4_test(self):
+    def test_logged_batch_compatibility_4(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -336,7 +335,7 @@ class TestBatch(Tester):
         self._logged_batch_compatibility_test(2, 2, 'github:apache/cassandra-2.2', 1, 4)
 
     @since('3.0', max_version='3.x')
-    def batchlog_replay_compatibility_4_test(self):
+    def test_batchlog_replay_compatibility_4(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -346,7 +345,7 @@ class TestBatch(Tester):
 
     @since('3.0', max_version='3.x')
     @skipIf(sys.platform == 'win32', 'Windows production support only on 2.2+')
-    def logged_batch_compatibility_5_test(self):
+    def test_logged_batch_compatibility_5(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
 
@@ -404,7 +403,7 @@ class TestBatch(Tester):
                 debug('{} batches replayed on node {}'.format(batches_replayed, n.name))
                 total_batches_replayed += batches_replayed
 
-        assert_greater_equal(total_batches_replayed, 2)
+        assert total_batches_replayed >= 2
 
         for node in self.cluster.nodelist():
             session = self.patient_exclusive_cql_connection(node, protocol_version=protocol_version)
@@ -472,19 +471,22 @@ class TestBatch(Tester):
 
         time.sleep(.5)
 
-    def prepare_mixed(self, coordinator_idx, current_nodes, previous_version, previous_nodes, compression=True, protocol_version=None, install_byteman=False):
+    def prepare_mixed(self, coordinator_idx, current_nodes, previous_version, previous_nodes, compression=True,
+                      protocol_version=None, install_byteman=False):
         debug("Testing with {} node(s) at version '{}', {} node(s) at current version"
               .format(previous_nodes, previous_version, current_nodes))
 
         # start a cluster using the previous version
-        self.prepare(previous_nodes + current_nodes, compression, previous_version, protocol_version=protocol_version, install_byteman=install_byteman)
+        self.prepare(previous_nodes + current_nodes, compression, previous_version, protocol_version=protocol_version,
+                     install_byteman=install_byteman)
 
         # then upgrade the current nodes to the current version but not the previous nodes
         for i in range(current_nodes):
             node = self.cluster.nodelist()[i]
             self.upgrade_node(node)
 
-        session = self.patient_exclusive_cql_connection(self.cluster.nodelist()[coordinator_idx], protocol_version=protocol_version)
+        session = self.patient_exclusive_cql_connection(self.cluster.nodelist()[coordinator_idx],
+                                                        protocol_version=protocol_version)
         session.execute('USE ks')
         return session
 

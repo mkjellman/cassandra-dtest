@@ -549,7 +549,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
         self.assertTrue(expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected))
 
-    def tracing_from_system_traces_test(self):
+    def test_tracing_from_system_traces(self):
         self.cluster.populate(1).start(wait_for_binary_proto=True)
 
         node1, = self.cluster.nodelist()
@@ -570,7 +570,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         out, err = self.run_cqlsh(node1, 'TRACING ON; SELECT * FROM system_traces.sessions')
         self.assertNotIn('Tracing session: ', out)
 
-    def select_element_inside_udt_test(self):
+    def test_select_element_inside_udt(self):
         self.cluster.populate(1).start()
 
         node1, = self.cluster.nodelist()
@@ -2009,7 +2009,7 @@ class CqlLoginTest(Tester):
             query,
             cqlsh_options=['-u', 'cassandra', '-p', 'cassandra'])
 
-        err_lines = cqlsh_stderr.splitlines()
+        err_lines = str(cqlsh_stderr).splitlines()
         for err_line in err_lines:
             if expected_error in err_line:
                 break

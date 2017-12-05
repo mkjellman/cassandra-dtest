@@ -1,7 +1,7 @@
 import os
 import os.path
 
-from dtest import DISABLE_VNODES, Tester, create_ks
+from dtest import Tester, create_ks
 from tools.assertions import assert_almost_equal
 from tools.data import create_c1c2_table, insert_c1c2, query_c1c2
 from tools.decorators import since
@@ -16,42 +16,45 @@ class TestDiskBalance(Tester):
     @jira_ticket CASSANDRA-6696
     """
 
-    def disk_balance_stress_test(self):
+    def test_disk_balance_stress(self):
         cluster = self.cluster
-        if not DISABLE_VNODES:
+        if self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 256})
         cluster.populate(4).start(wait_for_binary_proto=True)
         node1 = cluster.nodes['node1']
 
-        node1.stress(['write', 'n=50k', 'no-warmup', '-rate', 'threads=100', '-schema', 'replication(factor=3)', 'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)'])
+        node1.stress(['write', 'n=50k', 'no-warmup', '-rate', 'threads=100', '-schema', 'replication(factor=3)',
+                      'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)'])
         cluster.flush()
         # make sure the data directories are balanced:
         for node in cluster.nodelist():
             self.assert_balanced(node)
 
-    def disk_balance_bootstrap_test(self):
+    def test_disk_balance_bootstrap(self):
         cluster = self.cluster
-        if not DISABLE_VNODES:
+        if self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 256})
         # apparently we have legitimate errors in the log when bootstrapping (see bootstrap_test.py)
         self.allow_log_errors = True
         cluster.populate(4).start(wait_for_binary_proto=True)
         node1 = cluster.nodes['node1']
 
-        node1.stress(['write', 'n=50k', 'no-warmup', '-rate', 'threads=100', '-schema', 'replication(factor=3)', 'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)'])
+        node1.stress(['write', 'n=50k', 'no-warmup', '-rate', 'threads=100', '-schema', 'replication(factor=3)',
+                      'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)'])
         cluster.flush()
         node5 = new_node(cluster)
         node5.start(wait_for_binary_proto=True)
         self.assert_balanced(node5)
 
-    def disk_balance_decommission_test(self):
+    def test_disk_balance_decommission(self):
         cluster = self.cluster
-        if not DISABLE_VNODES:
+        if self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 256})
         cluster.populate(4).start(wait_for_binary_proto=True)
         node1 = cluster.nodes['node1']
         node4 = cluster.nodes['node4']
-        node1.stress(['write', 'n=50k', 'no-warmup', '-rate', 'threads=100', '-schema', 'replication(factor=2)', 'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)'])
+        node1.stress(['write', 'n=50k', 'no-warmup', '-rate', 'threads=100', '-schema', 'replication(factor=2)',
+                      'compaction(strategy=SizeTieredCompactionStrategy,enabled=false)'])
         cluster.flush()
 
         node4.decommission()
@@ -62,7 +65,7 @@ class TestDiskBalance(Tester):
         for node in cluster.nodelist():
             self.assert_balanced(node)
 
-    def blacklisted_directory_test(self):
+    def test_blacklisted_directory(self):
         cluster = self.cluster
         cluster.set_datadir_count(3)
         cluster.populate(1)
@@ -91,9 +94,9 @@ class TestDiskBalance(Tester):
         for k in range(0, 10000):
             query_c1c2(session, k)
 
-    def alter_replication_factor_test(self):
+    def test_alter_replication_factor(self):
         cluster = self.cluster
-        if not DISABLE_VNODES:
+        if self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 256})
         cluster.populate(3).start(wait_for_binary_proto=True)
         node1 = cluster.nodes['node1']

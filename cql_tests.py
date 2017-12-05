@@ -70,7 +70,7 @@ class StorageProxyCQLTester(CQLTester):
     #      is covered in greater detail in other test classes.
     """
 
-    def keyspace_test(self):
+    def test_keyspace(self):
         """
         Smoke test that basic keyspace operations work:
 
@@ -103,7 +103,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("DROP KEYSPACE ks")
         self.assertNotIn('ks', meta.keyspaces)
 
-    def table_test(self):
+    def test_table(self):
         """
         Smoke test that basic table operations work:
 
@@ -142,7 +142,7 @@ class StorageProxyCQLTester(CQLTester):
         self.assertNotIn('test1', ks_meta.tables)
 
     @since("2.0", max_version="3.X")
-    def table_test_compact_storage(self):
+    def test_table_compact_storage(self):
         """
         Smoke test that basic table operations work:
 
@@ -174,7 +174,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("DROP TABLE test2")
         self.assertNotIn('test2', ks_meta.tables)
 
-    def index_test(self):
+    def test_index(self):
         """
         Smoke test CQL statements related to indexes:
 
@@ -201,7 +201,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("DROP INDEX testidx")
         self.assertNotIn('testidx', table_meta.indexes)
 
-    def type_test(self):
+    def test_type(self):
         """
         Smoke test basic TYPE operations:
 
@@ -233,7 +233,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("DROP TYPE address_t")
         self.assertNotIn('address_t', ks_meta.user_types)
 
-    def user_test(self):
+    def test_user(self):
         """
         Smoke test for basic USER queries:
 
@@ -263,7 +263,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("DROP USER user1")
         self.assertNotIn('user1', get_usernames())
 
-    def statements_test(self):
+    def test_statements(self):
         """
         Smoke test SELECT and UPDATE statements:
 
@@ -307,7 +307,7 @@ class StorageProxyCQLTester(CQLTester):
         assert_one(session, "SELECT COUNT(*) FROM test7 WHERE kind = 'ev1'", [0])
 
     @since('3.10')
-    def partition_key_allow_filtering_test(self):
+    def test_partition_key_allow_filtering(self):
         """
         Filtering with unrestricted parts of partition keys
 
@@ -440,7 +440,7 @@ class StorageProxyCQLTester(CQLTester):
         with self.assertRaises(InvalidRequest):
             session.execute("SELECT * FROM test_filter WHERE k2 > 0")
 
-    def batch_test(self):
+    def test_batch(self):
         """
         Smoke test for BATCH statements:
 
@@ -479,7 +479,7 @@ class MiscellaneousCQLTester(CQLTester):
     """
 
     @since('2.1', max_version='3.0')
-    def large_collection_errors_test(self):
+    def test_large_collection_errors(self):
         """
         Assert C* logs warnings when selecting too large a collection over
         protocol v2:
@@ -516,7 +516,7 @@ class MiscellaneousCQLTester(CQLTester):
                             "http://cassandra.apache.org/doc/cql3/CQL.html#collections for more details.")
 
     @since('2.0', max_version='4')
-    def cql3_insert_thrift_test(self):
+    def test_cql3_insert_thrift(self):
         """
         Check that we can insert from thrift into a CQL3 table:
 
@@ -554,7 +554,7 @@ class MiscellaneousCQLTester(CQLTester):
         assert_one(session, "SELECT * FROM test", [2, 4, 8])
 
     @since('2.0', max_version='4')
-    def rename_test(self):
+    def test_rename(self):
         """
         Check that a thrift-created table can be renamed via CQL:
 
@@ -585,7 +585,7 @@ class MiscellaneousCQLTester(CQLTester):
         session.execute("ALTER TABLE test RENAME column1 TO foo1 AND column2 TO foo2 AND column3 TO foo3")
         assert_one(session, "SELECT foo1, foo2, foo3 FROM test", [4, 3, 2])
 
-    def invalid_string_literals_test(self):
+    def test_invalid_string_literals(self):
         """
         @jira_ticket CASSANDRA-8101
 
@@ -609,7 +609,7 @@ class MiscellaneousCQLTester(CQLTester):
         with self.assertRaisesRegex(ProtocolException, 'Cannot decode string as UTF8'):
             session.execute("insert into invalid_string_literals (k, c) VALUES (0, '\xc2\x01')")
 
-    def prepared_statement_invalidation_test(self):
+    def test_prepared_statement_invalidation(self):
         """
         @jira_ticket CASSANDRA-7910
 
@@ -659,7 +659,7 @@ class MiscellaneousCQLTester(CQLTester):
             result = session.execute(explicit_prepared.bind(None))
             self.assertEqual(result, [(0, 0, 0, None)])
 
-    def range_slice_test(self):
+    def test_range_slice(self):
         """
         Regression test for CASSANDRA-1337:
 
@@ -695,7 +695,7 @@ class MiscellaneousCQLTester(CQLTester):
         res = list(session.execute("SELECT * FROM test"))
         self.assertEqual(len(res), 2, msg=res)
 
-    def many_columns_test(self):
+    def test_many_columns(self):
         """
         Test for tables with thousands of columns.
         For CASSANDRA-11621.
@@ -720,7 +720,7 @@ class MiscellaneousCQLTester(CQLTester):
                    " FROM very_wide_table", [[i for i in range(width)]])
 
     @since("3.11", max_version="3.X")
-    def drop_compact_storage_flag_test(self):
+    def test_drop_compact_storage_flag(self):
         """
         Test for CASSANDRA-10857, verifying the schema change
         distribution across the other nodes.
@@ -780,7 +780,7 @@ class AbortedQueryTester(CQLTester):
     #      more than one value.
     """
 
-    def local_query_test(self):
+    def test_local_query(self):
         """
         Check that a query running on the local coordinator node times out:
 
@@ -827,7 +827,7 @@ class AbortedQueryTester(CQLTester):
         assert_unavailable(lambda c: debug(c.execute(statement)), session)
         node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
-    def remote_query_test(self):
+    def test_remote_query(self):
         """
         Check that a query running on a node other than the coordinator times out:
 
@@ -898,7 +898,7 @@ class AbortedQueryTester(CQLTester):
 
         node2.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
-    def index_query_test(self):
+    def test_index_query(self):
         """
         Check that a secondary index query times out:
 
@@ -946,7 +946,7 @@ class AbortedQueryTester(CQLTester):
         assert_unavailable(lambda c: debug(c.execute(statement, [50])), session)
         node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
-    def materialized_view_test(self):
+    def test_materialized_view(self):
         """
         Check that a materialized view query times out:
 
@@ -1008,7 +1008,7 @@ class SlowQueryTester(CQLTester):
 
     @jira_ticket CASSANDRA-12403
     """
-    def local_query_test(self):
+    def test_local_query(self):
         """
         Check that a query running locally on the coordinator is reported as slow:
 
@@ -1086,7 +1086,7 @@ class SlowQueryTester(CQLTester):
         node.watch_log_for(["operations were slow", "SELECT \* FROM ks.test1"],
                            from_mark=mark, filename='debug.log', timeout=60)
 
-    def remote_query_test(self):
+    def test_remote_query(self):
         """
         Check that a query running on a node other than the coordinator is reported as slow:
 
@@ -1165,7 +1165,7 @@ class SlowQueryTester(CQLTester):
         node2.watch_log_for(["operations were slow", "SELECT \* FROM ks.test2"],
                             from_mark=mark, filename='debug.log', timeout=60)
 
-    def disable_slow_query_log_test(self):
+    def test_disable_slow_query_log(self):
         """
         Check that a query is NOT reported as slow if slow query logging is disabled.
 
@@ -1239,7 +1239,7 @@ class LWTTester(ReusableClusterTester):
         session.execute("USE ks")
         return session
 
-    def lwt_with_static_columns_test(self):
+    def test_lwt_with_static_columns(self):
         session = self.get_lwttester_session()
 
         session.execute("""
@@ -1289,7 +1289,7 @@ class LWTTester(ReusableClusterTester):
     def _is_new_lwt_format_version(self, version):
         return version > LooseVersion('3.9') or (version > LooseVersion('3.0.9') and version < LooseVersion('3.1'))
 
-    def conditional_updates_on_static_columns_with_null_values_test(self):
+    def test_conditional_updates_on_static_columns_with_null_values(self):
         session = self.get_lwttester_session()
 
         table_name = "conditional_updates_on_static_columns_with_null"
@@ -1313,7 +1313,7 @@ class LWTTester(ReusableClusterTester):
 
             assert_one(session, "SELECT * FROM {} WHERE a = 5".format(table_name), [5, 5, None, None])
 
-    def conditional_updates_on_static_columns_with_non_existing_values_test(self):
+    def test_conditional_updates_on_static_columns_with_non_existing_values(self):
         session = self.get_lwttester_session()
 
         table_name = "conditional_updates_on_static_columns_with_ne"
@@ -1365,7 +1365,7 @@ class LWTTester(ReusableClusterTester):
 
         assert_one(session, "SELECT * FROM {table_name} WHERE a = 7".format(table_name=table_name), [7, 7, 8, "a"])
 
-    def conditional_updates_on_static_columns_with_null_values_batch_test(self):
+    def test_conditional_updates_on_static_columns_with_null_values_batch(self):
         session = self.get_lwttester_session()
 
         table_name = "lwt_on_static_columns_with_null_batch"
@@ -1397,7 +1397,7 @@ class LWTTester(ReusableClusterTester):
 
         assert_one(session, "SELECT * FROM {table_name} WHERE a = 6".format(table_name=table_name), [6, 6, None, None])
 
-    def conditional_deletes_on_static_columns_with_null_values_test(self):
+    def test_conditional_deletes_on_static_columns_with_null_values(self):
         session = self.get_lwttester_session()
 
         table_name = "conditional_deletes_on_static_with_null"
@@ -1428,7 +1428,7 @@ class LWTTester(ReusableClusterTester):
             assert_one(session, "DELETE s1 FROM {} WHERE a = 5 IF s2 {} 3".format(table_name, operator), [False, None])
             assert_one(session, "SELECT * FROM {} WHERE a = 5".format(table_name), [5, 5, 5, None, 5])
 
-    def conditional_deletes_on_static_columns_with_null_values_batch_test(self):
+    def test_conditional_deletes_on_static_columns_with_null_values_batch(self):
         session = self.get_lwttester_session()
 
         table_name = "conditional_deletes_on_static_with_null_batch"

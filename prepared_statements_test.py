@@ -10,7 +10,7 @@ class TestPreparedStatements(Tester):
     Tests for pushed native protocol notification from Cassandra.
     """
 
-    def dropped_index_test(self):
+    def test_dropped_index(self):
         """
         Prepared statements using dropped indexes should be handled correctly
         """

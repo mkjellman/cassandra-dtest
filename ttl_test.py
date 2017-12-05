@@ -51,7 +51,7 @@ class TestTTL(Tester):
         if real_time_to_wait > 0:
             time.sleep(real_time_to_wait)
 
-    def default_ttl_test(self):
+    def test_default_ttl(self):
         """ Test default_time_to_live specified on a table """
 
         self.prepare(default_time_to_live=1)
@@ -62,7 +62,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 3)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def insert_ttl_has_priority_on_defaut_ttl_test(self):
+    def test_insert_ttl_has_priority_on_defaut_ttl(self):
         """ Test that a ttl specified during an insert has priority on the default table ttl """
 
         self.prepare(default_time_to_live=1)
@@ -76,7 +76,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 7)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def insert_ttl_works_without_default_ttl_test(self):
+    def test_insert_ttl_works_without_default_ttl(self):
         """ Test that a ttl specified during an insert works even if a table has no default ttl """
 
         self.prepare()
@@ -88,7 +88,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 3)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def default_ttl_can_be_removed_test(self):
+    def test_default_ttl_can_be_removed(self):
         """ Test that default_time_to_live can be removed """
 
         self.prepare(default_time_to_live=1)
@@ -101,7 +101,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 1.5)
         assert_row_count(self.session1, 'ttl_table', 1)
 
-    def removing_default_ttl_does_not_affect_existing_rows_test(self):
+    def test_removing_default_ttl_does_not_affect_existing_rows(self):
         """ Test that removing a default_time_to_live doesn't affect the existings rows """
 
         self.prepare(default_time_to_live=1)
@@ -123,7 +123,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 20)
         assert_row_count(self.session1, 'ttl_table', 1)
 
-    def update_single_column_ttl_test(self):
+    def test_update_single_column_ttl(self):
         """ Test that specifying a TTL on a single column works """
 
         self.prepare()
@@ -137,7 +137,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 5)
         assert_all(self.session1, "SELECT * FROM ttl_table;", [[1, None, 1, 1]])
 
-    def update_multiple_columns_ttl_test(self):
+    def test_update_multiple_columns_ttl(self):
         """ Test that specifying a TTL on multiple columns works """
 
         self.prepare()
@@ -153,7 +153,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 4)
         assert_all(self.session1, "SELECT * FROM ttl_table;", [[1, None, None, None]])
 
-    def update_column_ttl_with_default_ttl_test(self):
+    def test_update_column_ttl_with_default_ttl(self):
         """
         Test that specifying a column ttl works when a default ttl is set.
         This test specify a lower ttl for the column than the default ttl.
@@ -190,7 +190,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 8)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def remove_column_ttl_test(self):
+    def test_remove_column_ttl(self):
         """
         Test that removing a column ttl works.
         """
@@ -206,7 +206,7 @@ class TestTTL(Tester):
         assert_all(self.session1, "SELECT * FROM ttl_table;", [[1, 42, None, None]])
 
     @since('3.6')
-    def set_ttl_to_zero_to_default_ttl_test(self):
+    def test_set_ttl_to_zero_to_default_ttl(self):
         """
         Test that we can remove the default ttl by setting the ttl explicitly to zero.
         CASSANDRA-11207
@@ -225,7 +225,7 @@ class TestTTL(Tester):
         assert_all(self.session1, "SELECT * FROM ttl_table;", [[1, 42, None, None]])
 
     @since('2.1', max_version='3.5')
-    def remove_column_ttl_with_default_ttl_test(self):
+    def test_remove_column_ttl_with_default_ttl(self):
         """
         Test that we cannot remove a column ttl when a default ttl is set.
         """
@@ -247,7 +247,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 10)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def collection_list_ttl_test(self):
+    def test_collection_list_ttl(self):
         """
         Test that ttl has a granularity of elements using a list collection.
         """
@@ -268,7 +268,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 12)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def collection_set_ttl_test(self):
+    def test_collection_set_ttl(self):
         """
         Test that ttl has a granularity of elements using a set collection.
         """
@@ -297,7 +297,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 12)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def collection_map_ttl_test(self):
+    def test_collection_map_ttl(self):
         """
         Test that ttl has a granularity of elements using a map collection.
         """
@@ -326,7 +326,7 @@ class TestTTL(Tester):
         self.smart_sleep(start, 8)
         assert_row_count(self.session1, 'ttl_table', 0)
 
-    def delete_with_ttl_expired_test(self):
+    def test_delete_with_ttl_expired(self):
         """
         Updating a row with a ttl does not prevent deletion, test for CASSANDRA-6363
         """
@@ -366,7 +366,7 @@ class TestDistributedTTL(Tester):
 
         self.session1.execute(query)
 
-    def ttl_is_replicated_test(self):
+    def test_ttl_is_replicated(self):
         """
         Test that the ttl setting is replicated properly on all nodes
         """
@@ -398,7 +398,7 @@ class TestDistributedTTL(Tester):
 
         assert_none(session1, "SELECT * FROM ttl_table;", cl=ConsistencyLevel.ALL)
 
-    def ttl_is_respected_on_delayed_replication_test(self):
+    def test_ttl_is_respected_on_delayed_replication(self):
         """ Test that ttl is respected on delayed replication """
 
         self.prepare()
@@ -441,7 +441,7 @@ class TestDistributedTTL(Tester):
         debug("ttl_2 is {}:".format(ttl_2))
         self.assertLessEqual(abs(ttl_1 - ttl_2), 1)
 
-    def ttl_is_respected_on_repair_test(self):
+    def test_ttl_is_respected_on_repair(self):
         """ Test that ttl is respected on repair """
 
         self.prepare()

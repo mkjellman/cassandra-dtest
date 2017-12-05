@@ -1,3 +1,5 @@
+import pytest
+
 import time
 
 from cassandra import ConsistencyLevel
@@ -7,22 +9,22 @@ from thrift.transport import TSocket, TTransport
 from dtest import Tester, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns, putget,
                         query_c1c2, query_columns, range_putget)
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 from tools.misc import ImmutableMapping, retry_till_success
 
 
 class TestPutGet(Tester):
     cluster_options = ImmutableMapping({'start_rpc': 'true'})
 
-    def putget_test(self):
+    def test_putget(self):
         """ Simple put/get on a single row, hitting multiple sstables """
         self._putget()
 
-    def putget_snappy_test(self):
+    def test_putget_snappy(self):
         """ Simple put/get on a single row, but hitting multiple sstables (with snappy compression) """
         self._putget(compression="Snappy")
 
-    def putget_deflate_test(self):
+    def test_putget_deflate(self):
         """ Simple put/get on a single row, but hitting multiple sstables (with deflate compression) """
         self._putget(compression="Deflate")
 
@@ -40,7 +42,7 @@ class TestPutGet(Tester):
 
         putget(cluster, session)
 
-    def non_local_read_test(self):
+    def test_non_local_read(self):
         """ This test reads from a coordinator we know has no copy of the data """
         cluster = self.cluster
 
@@ -56,7 +58,7 @@ class TestPutGet(Tester):
         for n in range(0, 1000):
             query_c1c2(session, n, ConsistencyLevel.QUORUM)
 
-    def rangeputget_test(self):
+    def test_rangeputget(self):
         """ Simple put/get on ranges of rows, hitting multiple sstables """
 
         cluster = self.cluster
@@ -70,7 +72,7 @@ class TestPutGet(Tester):
 
         range_putget(cluster, session)
 
-    def wide_row_test(self):
+    def test_wide_row(self):
         """ Test wide row slices """
         cluster = self.cluster
 
@@ -87,12 +89,12 @@ class TestPutGet(Tester):
             insert_columns(self, session, key, 100, offset=x - 1)
 
         for size in (10, 100, 1000):
-            for x in range(1, (50001 - size) / size):
+            for x in range(1, (50001 - size) // size):
                 query_columns(self, session, key, size, offset=x * size - 1)
 
-    @no_vnodes()
+    @pytest.mark.no_vnodes
     @since('2.0', max_version='4')
-    def wide_slice_test(self):
+    def test_wide_slice(self):
         """
         Check slicing a wide row.
         See https://issues.apache.org/jira/browse/CASSANDRA-4919

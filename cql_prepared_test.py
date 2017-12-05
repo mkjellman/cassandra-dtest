@@ -18,7 +18,7 @@ class TestCQL(Tester):
         create_ks(session, 'ks', 1)
         return session
 
-    def batch_preparation_test(self):
+    def test_batch_preparation(self):
         """ Test preparation of batch statement (#4202) """
         session = self.prepare()
 

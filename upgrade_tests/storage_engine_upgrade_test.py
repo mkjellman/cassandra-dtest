@@ -75,7 +75,7 @@ class TestStorageEngineUpgrade(Tester):
             cursor.execute('USE ks')
         return cursor
 
-    def update_and_drop_column_test(self):
+    def test_update_and_drop_column(self):
         """
         Checks that dropped columns are properly handled in legacy sstables
 
@@ -95,27 +95,27 @@ class TestStorageEngineUpgrade(Tester):
 
         assert_one(cursor, "SELECT * FROM t", ['some_key', 0])
 
-    def upgrade_with_clustered_CQL_table_test(self):
+    def test_upgrade_with_clustered_CQL_table(self):
         """
         Validates we can do basic slice queries (forward and reverse ones) on legacy sstables for a CQL table
         with a clustering column.
         """
         self.upgrade_with_clustered_table()
 
-    def upgrade_with_clustered_compact_table_test(self):
+    def test_upgrade_with_clustered_compact_table(self):
         """
         Validates we can do basic slice queries (forward and reverse ones) on legacy sstables for a COMPACT table
         with a clustering column.
         """
         self.upgrade_with_clustered_table(compact_storage=True)
 
-    def upgrade_with_unclustered_CQL_table_test(self):
+    def test_upgrade_with_unclustered_CQL_table(self):
         """
         Validates we can do basic name queries on legacy sstables for a CQL table without clustering.
         """
         self.upgrade_with_unclustered_table()
 
-    def upgrade_with_unclustered_compact_table_test(self):
+    def test_upgrade_with_unclustered_compact_table(self):
         """
         Validates we can do basic name queries on legacy sstables for a COMPACT table without clustering.
         """
@@ -214,10 +214,10 @@ class TestStorageEngineUpgrade(Tester):
         for n in range(PARTITIONS):
             assert_one(session, "SELECT * FROM t WHERE k = {}".format(n), [n, n + 1, n + 2, n + 3, n + 4])
 
-    def upgrade_with_statics_test(self):
+    def test_upgrade_with_statics(self):
         self.upgrade_with_statics(rows=10)
 
-    def upgrade_with_wide_partition_and_statics_test(self):
+    def test_upgrade_with_wide_partition_and_statics(self):
         """ Checks we read old indexed sstables with statics by creating partitions larger than a single index block"""
         self.upgrade_with_statics(rows=1000)
 
@@ -255,13 +255,13 @@ class TestStorageEngineUpgrade(Tester):
                        "SELECT * FROM t WHERE k = {} ORDER BY t DESC".format(n),
                        [[n, v, ROWS - 1, ROWS, v, v + 1] for v in range(ROWS - 1, -1, -1)])
 
-    def upgrade_with_wide_partition_test(self):
+    def test_upgrade_with_wide_partition(self):
         """
         Checks we can read old indexed sstable by creating large partitions (larger than the index block used by sstables).
         """
         self.upgrade_with_wide_partition()
 
-    def upgrade_with_wide_partition_reversed_test(self):
+    def test_upgrade_with_wide_partition_reversed(self):
         """
         Checks we can read old indexed sstable by creating large partitions (larger than the index block used by sstables). This test
         validates reverse queries.
@@ -315,7 +315,7 @@ class TestStorageEngineUpgrade(Tester):
             else:
                 assert_none(session, query)
 
-    def upgrade_with_index_test(self):
+    def test_upgrade_with_index(self):
         """
         Checks a simple index can still be read after upgrade.
         """
@@ -353,7 +353,7 @@ class TestStorageEngineUpgrade(Tester):
                    [[p, r, 0, r * 2] for p in range(PARTITIONS) for r in range(ROWS) if r % 2 == 0],
                    ignore_order=True)
 
-    def upgrade_with_range_tombstones_test(self):
+    def test_upgrade_with_range_tombstones(self):
         """
         Checks sstable including range tombstone can be read after upgrade.
 
@@ -379,7 +379,7 @@ class TestStorageEngineUpgrade(Tester):
 
         self.cluster.compact()
 
-    def upgrade_with_range_and_collection_tombstones_test(self):
+    def test_upgrade_with_range_and_collection_tombstones(self):
         """
         Check sstable including collection tombstone (inserted through adding a collection) can be read after upgrade.
 
@@ -398,7 +398,7 @@ class TestStorageEngineUpgrade(Tester):
         assert_one(session, "SELECT k FROM t", ['some_key'])
 
     @since('3.0', max_version='4')
-    def upgrade_with_range_tombstone_eoc_0_test(self):
+    def test_upgrade_with_range_tombstone_eoc_0(self):
         """
         Check sstable upgrading when the sstable contains a range tombstone with EOC=0.
 
@@ -433,7 +433,7 @@ class TestStorageEngineUpgrade(Tester):
         assert_length_equal(ret, 2)
 
     @since('3.0')
-    def upgrade_with_range_tombstone_ae_test(self):
+    def test_upgrade_with_range_tombstone_ae(self):
         """
         Certain range tombstone pattern causes AssertionError when upgrade.
         This test makes sure it won't happeen.

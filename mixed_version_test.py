@@ -20,6 +20,7 @@ class TestSchemaChanges(Tester):
 
         node1, node2 = cluster.nodelist()
         original_version = node1.get_cassandra_version()
+        upgraded_version = None
         if original_version.vstring.startswith('2.0'):
             upgraded_version = 'github:apache/cassandra-2.1'
         elif original_version.vstring.startswith('2.1'):
@@ -41,7 +42,8 @@ class TestSchemaChanges(Tester):
         session.cluster.max_schema_agreement_wait = -1  # don't wait for schema agreement
 
         debug("Creating keyspace and table")
-        session.execute("CREATE KEYSPACE test_upgrades WITH replication={'class': 'SimpleStrategy', 'replication_factor': '2'}")
+        session.execute("CREATE KEYSPACE test_upgrades WITH replication={'class': 'SimpleStrategy', "
+                        "'replication_factor': '2'}")
         session.execute("CREATE TABLE test_upgrades.foo (a int primary key, b int)")
 
         pattern = r".*Got .* command for nonexistent table test_upgrades.foo.*"
@@ -55,7 +57,8 @@ class TestSchemaChanges(Tester):
 
         # non-paged range slice
         try:
-            session.execute(SimpleStatement("SELECT * FROM test_upgrades.foo", consistency_level=ConsistencyLevel.ALL, fetch_size=None))
+            session.execute(SimpleStatement("SELECT * FROM test_upgrades.foo", consistency_level=ConsistencyLevel.ALL,
+                                            fetch_size=None))
             self.fail("expected failure")
         except (ReadTimeout, OperationTimedOut):
             debug("Checking node2 for warning in log")

@@ -74,7 +74,7 @@ class TestCounters(Tester):
         session = self.patient_cql_connection(node1, consistency_level=ConsistencyLevel.ALL)
         assert_one(session, "SELECT COUNT(*) FROM test.test", [1000])
 
-    def counter_leader_with_partial_view_test(self):
+    def test_counter_leader_with_partial_view(self):
         """
         Test leader election with a starting node.
 
@@ -116,7 +116,7 @@ class TestCounters(Tester):
             )
             session.execute(q)
 
-    def simple_increment_test(self):
+    def test_simple_increment(self):
         """ Simple incrementation test (Created for #3465, that wasn't a bug) """
         cluster = self.cluster
 
@@ -147,7 +147,7 @@ class TestCounters(Tester):
                 self.assertEqual(len(res[c]), 2, "Expecting key and counter for counter {}, got {}".format(c, str(res[c])))
                 self.assertEqual(res[c][1], i + 1, "Expecting counter {} = {}, got {}".format(c, i + 1, res[c][0]))
 
-    def upgrade_test(self):
+    def test_upgrade(self):
         """ Test for bug of #4436 """
 
         cluster = self.cluster
@@ -213,7 +213,7 @@ class TestCounters(Tester):
 
         check(3)
 
-    def counter_consistency_test(self):
+    def test_counter_consistency(self):
         """
         Do a bunch of writes with ONE, read back with ALL and check results.
         """
@@ -294,7 +294,7 @@ class TestCounters(Tester):
             self.assertEqual(counter_one_actual, counter_dict[counter_id]['counter_one'])
             self.assertEqual(counter_two_actual, counter_dict[counter_id]['counter_two'])
 
-    def multi_counter_update_test(self):
+    def test_multi_counter_update(self):
         """
         Test for singlular update statements that will affect multiple counters.
         """
@@ -335,7 +335,7 @@ class TestCounters(Tester):
             self.assertEqual(v, count[0][0])
 
     @since("2.0", max_version="3.X")
-    def validate_empty_column_name_test(self):
+    def test_validate_empty_column_name(self):
         cluster = self.cluster
         cluster.populate(1).start()
         node1 = cluster.nodelist()[0]
@@ -360,7 +360,7 @@ class TestCounters(Tester):
         assert_one(session, "SELECT pk, ck, value FROM compact_counter_table", [0, 'ck', 3])
 
     @since('2.0')
-    def drop_counter_column_test(self):
+    def test_drop_counter_column(self):
         """Test for CASSANDRA-7831"""
         cluster = self.cluster
         cluster.populate(1).start()
@@ -381,7 +381,7 @@ class TestCounters(Tester):
         assert_invalid(session, "ALTER TABLE counter_bug add c counter", "Cannot re-add previously dropped counter column c")
 
     @since("2.0", max_version="3.X") # Compact Storage
-    def compact_counter_cluster_test(self):
+    def test_compact_counter_cluster(self):
         """
         @jira_ticket CASSANDRA-12219
         This test will fail on 3.0.0 - 3.0.8, and 3.1 - 3.8

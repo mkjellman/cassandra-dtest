@@ -3,7 +3,7 @@ from collections import namedtuple
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 
-from nose.tools import assert_regexp_matches
+from plugins.assert_tools import assert_regexp_matches
 
 from cassandra import AuthenticationFailed, InvalidRequest, Unauthorized
 from cassandra.cluster import NoHostAvailable
@@ -29,7 +29,7 @@ class TestAuth(Tester):
         r'Can\'t send migration request: node.*is down',
     )
 
-    def system_auth_ks_is_alterable_test(self):
+    def test_system_auth_ks_is_alterable(self):
         """
         * Launch a three node cluster
         * Verify the default RF of system_auth is 1
@@ -81,7 +81,7 @@ class TestAuth(Tester):
             )
             self.assertEqual(3, exclusive_auth_metadata.replication_strategy.replication_factor)
 
-    def login_test(self):
+    def test_login(self):
         """
         * Launch a one node cluster
         * Connect as the default user/password
@@ -102,7 +102,7 @@ class TestAuth(Tester):
 
     # from 2.2 role creation is granted by CREATE_ROLE permissions, not superuser status
     @since('1.2', max_version='2.1.x')
-    def only_superuser_can_create_users_test(self):
+    def test_only_superuser_can_create_users(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -119,7 +119,7 @@ class TestAuth(Tester):
         assert_unauthorized(jackob, "CREATE USER james WITH PASSWORD '54321' NOSUPERUSER", 'Only superusers are allowed to perform CREATE (\[ROLE\|USER\]|USER) queries', )
 
     @since('1.2', max_version='2.1.x')
-    def password_authenticator_create_user_requires_password_test(self):
+    def test_password_authenticator_create_user_requires_password(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -132,7 +132,7 @@ class TestAuth(Tester):
         assert_invalid(session, "CREATE USER jackob NOSUPERUSER", 'PasswordAuthenticator requires PASSWORD option')
         session.execute("CREATE USER jackob WITH PASSWORD '12345' NOSUPERUSER")
 
-    def cant_create_existing_user_test(self):
+    def test_cant_create_existing_user(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -145,7 +145,7 @@ class TestAuth(Tester):
         session.execute("CREATE USER 'james@example.com' WITH PASSWORD '12345' NOSUPERUSER")
         assert_invalid(session, "CREATE USER 'james@example.com' WITH PASSWORD '12345' NOSUPERUSER", 'james@example.com already exists')
 
-    def list_users_test(self):
+    def test_list_users(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -186,7 +186,7 @@ class TestAuth(Tester):
         self.assertTrue(users['dave'])
 
     @since('2.2')
-    def handle_corrupt_role_data_test(self):
+    def test_handle_corrupt_role_data(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -215,7 +215,7 @@ class TestAuth(Tester):
         except NoHostAvailable as e:
             self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
 
-    def user_cant_drop_themselves_test(self):
+    def test_user_cant_drop_themselves(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -229,7 +229,7 @@ class TestAuth(Tester):
 
     # from 2.2 role deletion is granted by DROP_ROLE permissions, not superuser status
     @since('1.2', max_version='2.1.x')
-    def only_superusers_can_drop_users_test(self):
+    def test_only_superusers_can_drop_users(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -257,7 +257,7 @@ class TestAuth(Tester):
         rows = list(cassandra.execute("LIST USERS"))
         self.assertEqual(2, len(rows))
 
-    def dropping_nonexistent_user_throws_exception_test(self):
+    def test_dropping_nonexistent_user_throws_exception(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -268,7 +268,7 @@ class TestAuth(Tester):
         session = self.get_session(user='cassandra', password='cassandra')
         assert_invalid(session, 'DROP USER nonexistent', "nonexistent doesn't exist")
 
-    def drop_user_case_sensitive_test(self):
+    def test_drop_user_case_sensitive(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -295,7 +295,7 @@ class TestAuth(Tester):
         rows = [x[0] for x in list(cassandra.execute("LIST USERS"))]
         self.assertItemsEqual(rows, ['cassandra'])
 
-    def alter_user_case_sensitive_test(self):
+    def test_alter_user_case_sensitive(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -315,7 +315,7 @@ class TestAuth(Tester):
         assert_invalid(cassandra, "ALTER USER TEST WITH PASSWORD '12345'")
         cassandra.execute("ALTER USER test WITH PASSWORD '54321'")
 
-    def regular_users_can_alter_their_passwords_only_test(self):
+    def test_regular_users_can_alter_their_passwords_only(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -336,7 +336,7 @@ class TestAuth(Tester):
         assert_unauthorized(cathy, "ALTER USER bob WITH PASSWORD 'cantchangeit'",
                             "You aren't allowed to alter this user|User cathy does not have sufficient privileges to perform the requested operation")
 
-    def users_cant_alter_their_superuser_status_test(self):
+    def test_users_cant_alter_their_superuser_status(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -347,7 +347,7 @@ class TestAuth(Tester):
         session = self.get_session(user='cassandra', password='cassandra')
         assert_unauthorized(session, "ALTER USER cassandra NOSUPERUSER", "You aren't allowed to alter your own superuser status")
 
-    def only_superuser_alters_superuser_status_test(self):
+    def test_only_superuser_alters_superuser_status(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -366,7 +366,7 @@ class TestAuth(Tester):
 
         cassandra.execute("ALTER USER cathy SUPERUSER")
 
-    def altering_nonexistent_user_throws_exception_test(self):
+    def test_altering_nonexistent_user_throws_exception(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -377,7 +377,7 @@ class TestAuth(Tester):
         session = self.get_session(user='cassandra', password='cassandra')
         assert_invalid(session, "ALTER USER nonexistent WITH PASSWORD 'doesn''tmatter'", "nonexistent doesn't exist")
 
-    def conditional_create_drop_user_test(self):
+    def test_conditional_create_drop_user(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -404,7 +404,7 @@ class TestAuth(Tester):
         session.execute("DROP USER IF EXISTS aleksey")
         assert_one(session, "LIST USERS", ['cassandra', True])
 
-    def create_ks_auth_test(self):
+    def test_create_ks_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -427,7 +427,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT CREATE ON ALL KEYSPACES TO cathy")
         cathy.execute("""CREATE KEYSPACE ks WITH replication = {'class':'SimpleStrategy', 'replication_factor':1}""")
 
-    def create_cf_auth_test(self):
+    def test_create_cf_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -450,7 +450,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT CREATE ON KEYSPACE ks TO cathy")
         cathy.execute("CREATE TABLE ks.cf (id int primary key)")
 
-    def alter_ks_auth_test(self):
+    def test_alter_ks_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -474,7 +474,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT ALTER ON KEYSPACE ks TO cathy")
         cathy.execute("ALTER KEYSPACE ks WITH replication = {'class':'SimpleStrategy', 'replication_factor':2}")
 
-    def alter_cf_auth_test(self):
+    def test_alter_cf_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -515,7 +515,7 @@ class TestAuth(Tester):
         cathy.execute("DROP INDEX cf_val_idx")
 
     @since('3.0')
-    def materialized_views_auth_test(self):
+    def test_materialized_views_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -562,7 +562,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT ALTER ON ks.cf TO cathy")
         cathy.execute("DROP MATERIALIZED VIEW mv1")
 
-    def drop_ks_auth_test(self):
+    def test_drop_ks_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -584,7 +584,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT DROP ON KEYSPACE ks TO cathy")
         cathy.execute("DROP KEYSPACE ks")
 
-    def drop_cf_auth_test(self):
+    def test_drop_cf_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -607,7 +607,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT DROP ON ks.cf TO cathy")
         cathy.execute("DROP TABLE ks.cf")
 
-    def modify_and_select_auth_test(self):
+    def test_modify_and_select_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -655,7 +655,7 @@ class TestAuth(Tester):
         self.assertItemsEqual(rows, [])
 
     @since('2.2')
-    def grant_revoke_without_ks_specified_test(self):
+    def test_grant_revoke_without_ks_specified(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -687,7 +687,7 @@ class TestAuth(Tester):
         cathy.execute("GRANT SELECT ON cf TO bob")
         bob.execute("SELECT * FROM ks.cf")
 
-    def grant_revoke_auth_test(self):
+    def test_grant_revoke_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -725,7 +725,7 @@ class TestAuth(Tester):
         bob = self.get_session(user='bob', password='12345')
         bob.execute("SELECT * FROM ks.cf")
 
-    def grant_revoke_nonexistent_user_or_ks_test(self):
+    def test_grant_revoke_nonexistent_user_or_ks(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -747,7 +747,7 @@ class TestAuth(Tester):
 
         assert_invalid(cassandra, "REVOKE ALL ON KEYSPACE ks FROM nonexistent", "(User|Role) nonexistent doesn't exist")
 
-    def grant_revoke_cleanup_test(self):
+    def test_grant_revoke_cleanup(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -796,7 +796,7 @@ class TestAuth(Tester):
 
         assert_unauthorized(cathy, "SELECT * FROM ks.cf", "User cathy has no SELECT permission on <table ks.cf> or any of its parents")
 
-    def permissions_caching_test(self):
+    def test_permissions_caching(self):
         """
         * Launch a one node cluster, with a 2s permission cache
         * Connect as the default superuser
@@ -880,7 +880,7 @@ class TestAuth(Tester):
 
         self.assertTrue(success)
 
-    def list_permissions_test(self):
+    def test_list_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -956,7 +956,7 @@ class TestAuth(Tester):
 
         assert_unauthorized(bob, "LIST ALL PERMISSIONS OF cathy", "You are not authorized to view cathy's permissions")
 
-    def type_auth_test(self):
+    def test_type_auth(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -983,7 +983,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT DROP ON KEYSPACE ks TO cathy")
         cathy.execute("DROP TYPE ks.address")
 
-    def restart_node_doesnt_lose_auth_data_test(self):
+    def test_restart_node_doesnt_lose_auth_data(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1018,7 +1018,7 @@ class TestAuth(Tester):
         philip.execute("SELECT * FROM ks.cf")
 
     @since('3.10')
-    def auth_metrics_test(self):
+    def test_auth_metrics(self):
         """
         Success and failure metrics were added to the authentication procedure
         so as to estimate the percentage of authentication attempts that failed.
@@ -1143,7 +1143,7 @@ class TestAuthRoles(Tester):
     else:
         cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
 
-    def create_drop_role_test(self):
+    def test_create_drop_role(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1160,7 +1160,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP ROLE role1")
         assert_one(cassandra, "LIST ROLES", list(cassandra_role))
 
-    def conditional_create_drop_role_test(self):
+    def test_conditional_create_drop_role(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1181,7 +1181,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP ROLE IF EXISTS role1")
         assert_one(cassandra, "LIST ROLES", list(cassandra_role))
 
-    def create_drop_role_validation_test(self):
+    def test_create_drop_role_validation(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1212,7 +1212,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP ROLE role1")
         assert_invalid(cassandra, "DROP ROLE role1", "role1 doesn't exist")
 
-    def role_admin_validation_test(self):
+    def test_role_admin_validation(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1275,7 +1275,7 @@ class TestAuthRoles(Tester):
         assert_unauthorized(mike, "CREATE ROLE role3 WITH LOGIN = false",
                             "User mike does not have sufficient privileges to perform the requested operation")
 
-    def creator_of_db_resource_granted_all_permissions_test(self):
+    def test_creator_of_db_resource_granted_all_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1317,7 +1317,7 @@ class TestAuthRoles(Tester):
                                        cassandra,
                                        "LIST ALL PERMISSIONS")
 
-    def create_and_grant_roles_with_superuser_status_test(self):
+    def test_create_and_grant_roles_with_superuser_status(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1347,7 +1347,7 @@ class TestAuthRoles(Tester):
                                                       ['non_superuser', False, False, {}],
                                                       ['role1', False, False, {}]])
 
-    def drop_and_revoke_roles_with_superuser_status_test(self):
+    def test_drop_and_revoke_roles_with_superuser_status(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1374,7 +1374,7 @@ class TestAuthRoles(Tester):
         mike.execute("DROP ROLE non_superuser")
         mike.execute("DROP ROLE role1")
 
-    def drop_role_removes_memberships_test(self):
+    def test_drop_role_removes_memberships(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1406,7 +1406,7 @@ class TestAuthRoles(Tester):
         assert_one(cassandra, "LIST ROLES OF mike", list(mike_role))
         assert_all(cassandra, "LIST ROLES", [list(cassandra_role), list(mike_role), list(role2_role)])
 
-    def drop_role_revokes_permissions_granted_on_it_test(self):
+    def test_drop_role_revokes_permissions_granted_on_it(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1433,7 +1433,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP ROLE role2")
         self.assertItemsEqual(list(cassandra.execute("LIST ALL PERMISSIONS OF mike")), [])
 
-    def grant_revoke_roles_test(self):
+    def test_grant_revoke_roles(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1460,7 +1460,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("REVOKE role1 FROM role2")
         assert_one(cassandra, "LIST ROLES OF role2", list(role2_role))
 
-    def grant_revoke_role_validation_test(self):
+    def test_grant_revoke_role_validation(self):
         """
         * Launch a one node cluster
         * Connect as the default superusers
@@ -1501,7 +1501,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("REVOKE role1 FROM john")
         mike.execute("REVOKE role2 from john")
 
-    def list_roles_test(self):
+    def test_list_roles(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1540,7 +1540,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("GRANT DESCRIBE ON ALL ROLES TO mike")
         assert_all(mike, "LIST ROLES", [list(cassandra_role), list(mike_role), list(role1_role), list(role2_role)])
 
-    def grant_revoke_permissions_test(self):
+    def test_grant_revoke_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1578,7 +1578,7 @@ class TestAuthRoles(Tester):
                             "INSERT INTO ks.cf (id, val) VALUES (0, 0)",
                             "mike has no MODIFY permission on <table ks.cf> or any of its parents")
 
-    def filter_granted_permissions_by_resource_type_test(self):
+    def test_filter_granted_permissions_by_resource_type(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1694,7 +1694,7 @@ class TestAuthRoles(Tester):
                                        "LIST ALL PERMISSIONS OF mike")
         cassandra.execute("REVOKE ALL ON FUNCTION ks.agg_func(int) FROM mike")
 
-    def list_permissions_test(self):
+    def test_list_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1771,7 +1771,7 @@ class TestAuthRoles(Tester):
                                        mike,
                                        "LIST ALL PERMISSIONS OF mike")
 
-    def list_permissions_validation_test(self):
+    def test_list_permissions_validation(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1815,7 +1815,7 @@ class TestAuthRoles(Tester):
                             "LIST ALL PERMISSIONS OF john",
                             "You are not authorized to view john's permissions")
 
-    def role_caching_authenticated_user_test(self):
+    def test_role_caching_authenticated_user(self):
         """
         This test is to show that the role caching in AuthenticatedUser
         works correctly and revokes the roles from a logged in user
@@ -1883,7 +1883,7 @@ class TestAuthRoles(Tester):
         mike = self.get_session(user='mike', password='12345')
         mike.execute("SELECT * FROM ks.cf")
 
-    def prevent_circular_grants_test(self):
+    def test_prevent_circular_grants(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1906,7 +1906,7 @@ class TestAuthRoles(Tester):
                        "mike is a member of role2",
                        InvalidRequest)
 
-    def create_user_as_alias_for_create_role_test(self):
+    def test_create_user_as_alias_for_create_role(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1920,7 +1920,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("CREATE USER super_user WITH PASSWORD '12345' SUPERUSER")
         assert_one(cassandra, "LIST ROLES OF super_user", ["super_user", True, True, {}])
 
-    def role_name_test(self):
+    def test_role_name(self):
         """
         Simple test to verify the behaviour of quoting when creating roles & users
         * Launch a one node cluster
@@ -1959,7 +1959,7 @@ class TestAuthRoles(Tester):
         self.get_session(user='USER2', password='12345')
         self.assert_unauthenticated('User2', '12345')
 
-    def role_requires_login_privilege_to_authenticate_test(self):
+    def test_role_requires_login_privilege_to_authenticate(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -1982,7 +1982,7 @@ class TestAuthRoles(Tester):
         assert_one(cassandra, "LIST ROLES OF mike", ["mike", False, True, {}])
         self.get_session(user='mike', password='12345')
 
-    def roles_do_not_inherit_login_privilege_test(self):
+    def test_roles_do_not_inherit_login_privilege(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2002,7 +2002,7 @@ class TestAuthRoles(Tester):
 
         self.assert_login_not_allowed("mike", "12345")
 
-    def role_requires_password_to_login_test(self):
+    def test_role_requires_password_to_login(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2021,7 +2021,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("ALTER ROLE mike WITH PASSWORD = '12345'")
         self.get_session(user='mike', password='12345')
 
-    def superuser_status_is_inherited_test(self):
+    def test_superuser_status_is_inherited(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2048,7 +2048,7 @@ class TestAuthRoles(Tester):
                                         ["db_admin", True, False, {}],
                                         list(mike_role)])
 
-    def list_users_considers_inherited_superuser_status_test(self):
+    def test_list_users_considers_inherited_superuser_status(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2065,7 +2065,7 @@ class TestAuthRoles(Tester):
                                              ["mike", True]])
 
     # UDF permissions tests # TODO move to separate fixture & refactor this + auth_test.py
-    def grant_revoke_udf_permissions_test(self):
+    def test_grant_revoke_udf_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2111,7 +2111,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("REVOKE EXECUTE PERMISSION ON ALL FUNCTIONS FROM mike")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
-    def grant_revoke_are_idempotent_test(self):
+    def test_grant_revoke_are_idempotent(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2135,7 +2135,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("REVOKE EXECUTE ON FUNCTION ks.plus_one(int) FROM mike")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
-    def function_resource_hierarchy_permissions_test(self):
+    def test_function_resource_hierarchy_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2197,7 +2197,7 @@ class TestAuthRoles(Tester):
         mike.execute(select_one)
         mike.execute(select_two)
 
-    def udf_permissions_validation_test(self):
+    def test_udf_permissions_validation(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2262,7 +2262,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("GRANT CREATE ON ALL FUNCTIONS IN KEYSPACE ks TO mike")
         mike.execute(cql)
 
-    def drop_role_cleans_up_udf_permissions_test(self):
+    def test_drop_role_cleans_up_udf_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2291,7 +2291,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("CREATE ROLE mike WITH PASSWORD = '12345' AND LOGIN = true")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
-    def drop_function_and_keyspace_cleans_up_udf_permissions_test(self):
+    def test_drop_function_and_keyspace_cleans_up_udf_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2323,7 +2323,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP KEYSPACE ks")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
-    def udf_with_overloads_permissions_test(self):
+    def test_udf_with_overloads_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2367,7 +2367,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP FUNCTION ks.plus_one(int)")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
-    def drop_keyspace_cleans_up_function_level_permissions_test(self):
+    def test_drop_keyspace_cleans_up_function_level_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2393,31 +2393,31 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP KEYSPACE ks")
         self.assert_no_permissions(cassandra, "LIST ALL PERMISSIONS OF mike")
 
-    def udf_permissions_in_selection_test(self):
+    def test_udf_permissions_in_selection(self):
         """
         Verify EXECUTE permission works in a SELECT when UDF is one of the columns requested
         """
         self.verify_udf_permissions("SELECT k, v, ks.plus_one(v) FROM ks.t1 WHERE k = 1")
 
-    def udf_permissions_in_select_where_clause_test(self):
+    def test_udf_permissions_in_select_where_clause(self):
         """
         Verify EXECUTE permission works in a SELECT when UDF is in the WHERE clause
         """
         self.verify_udf_permissions("SELECT k, v FROM ks.t1 WHERE k = ks.plus_one(0)")
 
-    def udf_permissions_in_insert_test(self):
+    def test_udf_permissions_in_insert(self):
         """
         Verify EXECUTE permission works in an INSERT when UDF is in the VALUES
         """
         self.verify_udf_permissions("INSERT INTO ks.t1 (k, v) VALUES (1, ks.plus_one(1))")
 
-    def udf_permissions_in_update_test(self):
+    def test_udf_permissions_in_update(self):
         """
         Verify EXECUTE permission works in an UPDATE when UDF is in the SET and WHERE clauses
         """
         self.verify_udf_permissions("UPDATE ks.t1 SET v = ks.plus_one(2) WHERE k = ks.plus_one(0)")
 
-    def udf_permissions_in_delete_test(self):
+    def test_udf_permissions_in_delete(self):
         """
         Verify EXECUTE permission works in a DELETE when UDF is in the WHERE clause
         """
@@ -2447,7 +2447,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("GRANT EXECUTE ON FUNCTION ks.plus_one(int) TO mike")
         return mike.execute(cql)
 
-    def inheritence_of_udf_permissions_test(self):
+    def test_inheritence_of_udf_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2471,7 +2471,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("GRANT function_user TO mike")
         assert_one(mike, select, [1, 1, 2])
 
-    def builtin_functions_require_no_special_permissions_test(self):
+    def test_builtin_functions_require_no_special_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2486,7 +2486,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("GRANT ALL PERMISSIONS ON ks.t1 TO mike")
         assert_one(mike, "SELECT * from ks.t1 WHERE k=blobasint(intasblob(1))", [1, 1])
 
-    def disallow_grant_revoke_on_builtin_functions_test(self):
+    def test_disallow_grant_revoke_on_builtin_functions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2510,7 +2510,7 @@ class TestAuthRoles(Tester):
                        "Altering permissions on builtin functions is not supported",
                        InvalidRequest)
 
-    def disallow_grant_execute_on_non_function_resources_test(self):
+    def test_disallow_grant_execute_on_non_function_resources(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2540,7 +2540,7 @@ class TestAuthRoles(Tester):
                        "Resource type RoleResource does not support any of the requested permissions",
                        SyntaxException)
 
-    def aggregate_function_permissions_test(self):
+    def test_aggregate_function_permissions(self):
         """
         * Launch a one node cluster
         * Connect as the default superuser
@@ -2611,7 +2611,7 @@ class TestAuthRoles(Tester):
         for p in agg_perms:
             self.assertFalse(p in all_perms, msg="Perm {p} found, but should be removed".format(p=p))
 
-    def ignore_invalid_roles_test(self):
+    def test_ignore_invalid_roles(self):
         """
         The system_auth.roles table includes a set of roles of which each role
         is a member. If that list were to get out of sync, so that it indicated

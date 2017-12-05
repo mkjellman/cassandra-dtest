@@ -6,7 +6,7 @@ from dtest import Tester, create_ks
 
 class TestUDTEncoding(Tester):
 
-    def udt_test(self):
+    def test_udt(self):
         """ Test (somewhat indirectly) that user queries involving UDT's are properly encoded (due to driver not recognizing UDT syntax) """
         cluster = self.cluster
 

@@ -9,7 +9,7 @@ from dtest import Tester, debug
 
 class TestSSTableSplit(Tester):
 
-    def split_test(self):
+    def test_split(self):
         """
         Check that after running compaction, sstablessplit can succesfully split
         The resultant sstable.  Check that split is reversible and that data is readable
@@ -82,7 +82,7 @@ class TestSSTableSplit(Tester):
         # make sure node can start with changed sstables
         node.start(wait_for_binary_proto=True)
 
-    def single_file_split_test(self):
+    def test_single_file_split(self):
         """
         Covers CASSANDRA-8623
 

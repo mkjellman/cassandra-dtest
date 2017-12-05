@@ -9,7 +9,7 @@ from dtest import Tester, create_ks
 
 class TestSchema(Tester):
 
-    def table_alteration_test(self):
+    def test_table_alteration(self):
         """
         Tests that table alters return as expected with many sstables at different schema points
         """
@@ -51,7 +51,7 @@ class TestSchema(Tester):
                 self.assertFalse(hasattr(row, 'c0'))
 
     @since("2.0", max_version="3.X")  # Compact Storage
-    def drop_column_compact_test(self):
+    def test_drop_column_compact(self):
         session = self.prepare()
 
         session.execute("USE ks")
@@ -59,7 +59,7 @@ class TestSchema(Tester):
 
         assert_invalid(session, "ALTER TABLE cf DROP c1", "Cannot drop columns from a")
 
-    def drop_column_compaction_test(self):
+    def test_drop_column_compaction(self):
         session = self.prepare()
         session.execute("USE ks")
         session.execute("CREATE TABLE cf (key int PRIMARY KEY, c1 int, c2 int)")
@@ -84,7 +84,7 @@ class TestSchema(Tester):
         session = self.patient_cql_connection(node)
         assert_all(session, "SELECT c1 FROM ks.cf", [[None], [None], [None], [4]], ignore_order=True)
 
-    def drop_column_queries_test(self):
+    def test_drop_column_queries(self):
         session = self.prepare()
 
         session.execute("USE ks")
@@ -116,7 +116,7 @@ class TestSchema(Tester):
 
         assert_one(session, "SELECT * FROM cf WHERE c2 = 5", [3, 4, 5])
 
-    def drop_column_and_restart_test(self):
+    def test_drop_column_and_restart(self):
         """
         Simply insert data in a table, drop a column involved in the insert and restart the node afterwards.
         This ensures that the dropped_columns system table is properly flushed on the alter or the restart
@@ -142,7 +142,7 @@ class TestSchema(Tester):
         session.execute("USE ks")
         assert_one(session, "SELECT * FROM t", [0, 0])
 
-    def drop_static_column_and_restart_test(self):
+    def test_drop_static_column_and_restart(self):
         """
         Dropping a static column caused an sstable corrupt exception after restarting, here
         we test that we can drop a static column and restart safely.

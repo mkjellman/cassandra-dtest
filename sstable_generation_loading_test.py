@@ -1,7 +1,7 @@
 import os
 import subprocess
 import time
-from distutils import dir_util
+import distutils.dir_util
 
 from ccmlib import common as ccmcommon
 
@@ -29,34 +29,34 @@ class BaseSStableLoaderTest(Tester):
         create_cf(session, "counter1", compression=compression, columns={'v': 'counter'},
                   compact_storage=self.compact)
 
-    def sstableloader_compression_none_to_none_test(self):
+    def test_sstableloader_compression_none_to_none(self):
         self.load_sstable_with_configuration(None, None)
 
-    def sstableloader_compression_none_to_snappy_test(self):
+    def test_sstableloader_compression_none_to_snappy(self):
         self.load_sstable_with_configuration(None, 'Snappy')
 
-    def sstableloader_compression_none_to_deflate_test(self):
+    def test_sstableloader_compression_none_to_deflate(self):
         self.load_sstable_with_configuration(None, 'Deflate')
 
-    def sstableloader_compression_snappy_to_none_test(self):
+    def test_sstableloader_compression_snappy_to_none(self):
         self.load_sstable_with_configuration('Snappy', None)
 
-    def sstableloader_compression_snappy_to_snappy_test(self):
+    def test_sstableloader_compression_snappy_to_snappy(self):
         self.load_sstable_with_configuration('Snappy', 'Snappy')
 
-    def sstableloader_compression_snappy_to_deflate_test(self):
+    def test_sstableloader_compression_snappy_to_deflate(self):
         self.load_sstable_with_configuration('Snappy', 'Deflate')
 
-    def sstableloader_compression_deflate_to_none_test(self):
+    def test_sstableloader_compression_deflate_to_none(self):
         self.load_sstable_with_configuration('Deflate', None)
 
-    def sstableloader_compression_deflate_to_snappy_test(self):
+    def test_sstableloader_compression_deflate_to_snappy(self):
         self.load_sstable_with_configuration('Deflate', 'Snappy')
 
-    def sstableloader_compression_deflate_to_deflate_test(self):
+    def test_sstableloader_compression_deflate_to_deflate(self):
         self.load_sstable_with_configuration('Deflate', 'Deflate')
 
-    def sstableloader_with_mv_test(self):
+    def test_sstableloader_with_mv(self):
         """
         @jira_ticket CASSANDRA-11275
         """
@@ -77,7 +77,7 @@ class BaseSStableLoaderTest(Tester):
                 keyspace_dir = os.path.join(data_dir, ddir)
                 if os.path.isdir(keyspace_dir) and ddir != 'system':
                     copy_dir = os.path.join(copy_root, ddir)
-                    dir_util.copy_tree(keyspace_dir, copy_dir)
+                    distutils.dir_util.copy_tree(keyspace_dir, copy_dir)
 
     def load_sstables(self, cluster, node, ks):
         cdir = node.get_install_dir()
@@ -199,14 +199,14 @@ class BaseSStableLoaderTest(Tester):
 class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
     __test__ = True
 
-    def sstableloader_uppercase_keyspace_name_test(self):
+    def test_sstableloader_uppercase_keyspace_name(self):
         """
         Make sure sstableloader works with upper case keyspace
         @jira_ticket CASSANDRA-10806
         """
         self.load_sstable_with_configuration(ks='"Keyspace1"')
 
-    def incompressible_data_in_compressed_table_test(self):
+    def test_incompressible_data_in_compressed_table(self):
         """
         tests for the bug that caused #3370:
         https://issues.apache.org/jira/browse/CASSANDRA-3370
@@ -230,7 +230,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         for col in range(10):
             col_name = str(col)
             col_val = os.urandom(5000)
-            col_val = col_val.encode('hex')
+            col_val = col_val.hex()
             cql = "UPDATE cf SET v='%s' WHERE KEY='0' AND c='%s'" % (col_val, col_name)
             # print cql
             session.execute(cql)
@@ -240,7 +240,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         rows = list(session.execute("SELECT * FROM cf WHERE KEY = '0' AND c < '8'"))
         self.assertGreater(len(rows), 0)
 
-    def remove_index_file_test(self):
+    def test_remove_index_file(self):
         """
         tests for situations similar to that found in #343:
         https://issues.apache.org/jira/browse/CASSANDRA-343
@@ -282,7 +282,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
                     data_found += 1
         self.assertGreater(data_found, 0, "After removing index, filter, stats, and digest files, the data file was deleted!")
 
-    def sstableloader_with_mv_test(self):
+    def test_sstableloader_with_mv(self):
         """
         @jira_ticket CASSANDRA-11275
         """
@@ -296,7 +296,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         self.load_sstable_with_configuration(ks='"Keyspace1"', create_schema=create_schema_with_mv)
 
     @since('4.0')
-    def sstableloader_with_failing_2i_test(self):
+    def test_sstableloader_with_failing_2i(self):
         """
         @jira_ticket CASSANDRA-10130
 

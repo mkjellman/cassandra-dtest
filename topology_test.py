@@ -3,19 +3,20 @@ import time
 from threading import Thread
 from unittest import skip
 
+import pytest
+
 from cassandra import ConsistencyLevel
 from ccmlib.node import TimeoutError, ToolError
-from nose.plugins.attrib import attr
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_almost_equal, assert_all, assert_none
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import no_vnodes, since
+from tools.decorators import since
 
 
 class TestTopology(Tester):
 
-    def do_not_join_ring_test(self):
+    def test_do_not_join_ring(self):
         """
         @jira_ticket CASSANDRA-9034
         Check that AssertionError is not thrown on SizeEstimatesRecorder before node joins ring
@@ -32,7 +33,7 @@ class TestTopology(Tester):
         node1.stop(gently=False)
 
     @since('3.0.11')
-    def size_estimates_multidc_test(self):
+    def test_size_estimates_multidc(self):
         """
         Test that primary ranges are correctly generated on
         system.size_estimates for multi-dc, multi-ks scenario
@@ -124,7 +125,7 @@ class TestTopology(Tester):
         assert_none(session, "SELECT range_start, range_end FROM system.size_estimates "
                              "WHERE keyspace_name = 'ks2'")
 
-    def simple_decommission_test(self):
+    def test_simple_decommission(self):
         """
         @jira_ticket CASSANDRA-9912
         Check that AssertionError is not thrown on SizeEstimatesRecorder after node is decommissioned
@@ -152,7 +153,7 @@ class TestTopology(Tester):
         time.sleep(10)
 
     @skip('Hangs on CI for 2.1')
-    def concurrent_decommission_not_allowed_test(self):
+    def test_concurrent_decommission_not_allowed(self):
         """
         Test concurrent decommission is not allowed
         """
@@ -191,7 +192,7 @@ class TestTopology(Tester):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     @since('3.10')
-    def resumable_decommission_test(self):
+    def test_resumable_decommission(self):
         """
         @jira_ticket CASSANDRA-12008
 
@@ -247,8 +248,8 @@ class TestTopology(Tester):
         for i in range(0, 10000):
             query_c1c2(session, i, ConsistencyLevel.ONE)
 
-    @no_vnodes()
-    def movement_test(self):
+    @pytest.mark.no_vnodes
+    def test_movement(self):
         cluster = self.cluster
 
         # Create an unbalanced ring
@@ -291,8 +292,8 @@ class TestTopology(Tester):
         assert_almost_equal(sizes[0], sizes[2])
         assert_almost_equal(sizes[1], sizes[2])
 
-    @no_vnodes()
-    def decommission_test(self):
+    @pytest.mark.no_vnodes
+    def test_decommission(self):
         cluster = self.cluster
 
         tokens = cluster.balanced_tokens(4)
@@ -326,8 +327,8 @@ class TestTopology(Tester):
         assert_almost_equal((2.0 / 3.0) * sizes[0], sizes[2])
         assert_almost_equal(sizes[2], init_size)
 
-    @no_vnodes()
-    def move_single_node_test(self):
+    @pytest.mark.no_vnodes
+    def test_move_single_node(self):
         """ Test moving a node in a single-node cluster (#4200) """
         cluster = self.cluster
 
@@ -354,8 +355,8 @@ class TestTopology(Tester):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     @since('3.0')
-    def decommissioned_node_cant_rejoin_test(self):
-        '''
+    def test_decommissioned_node_cant_rejoin(self):
+        """
         @jira_ticket CASSANDRA-8801
 
         Test that a decommissioned node can't rejoin the cluster by:
@@ -365,7 +366,7 @@ class TestTopology(Tester):
         - asserting that the "decommissioned node won't rejoin" error is in the
         logs for that node and
         - asserting that the node is not running.
-        '''
+        """
         rejoin_err = 'This node was decommissioned and will not rejoin the ring'
         try:
             self.ignore_log_patterns = list(self.ignore_log_patterns)
@@ -404,7 +405,7 @@ class TestTopology(Tester):
         self.assertFalse(node3.is_running())
 
     @since('3.0')
-    def crash_during_decommission_test(self):
+    def test_crash_during_decommission(self):
         """
         If a node crashes whilst another node is being decommissioned,
         upon restarting the crashed node should not have invalid entries
@@ -441,8 +442,8 @@ class TestTopology(Tester):
         self.assertFalse(null_status_pattern.search(out))
 
     @since('3.12')
-    @attr('resource-intensive')
-    def stop_decommission_too_few_replicas_multi_dc_test(self):
+    @pytest.mark.resource_intensive
+    def test_stop_decommission_too_few_replicas_multi_dc(self):
         """
         Decommission should fail when it would result in the number of live replicas being less than
         the replication factor. --force should bypass this requirement.

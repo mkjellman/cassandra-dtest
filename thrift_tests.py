@@ -9,8 +9,7 @@ from thrift.Thrift import TApplicationException
 from thrift.transport import TSocket, TTransport
 
 from tools.assertions import assert_length_equal
-from dtest import (CASSANDRA_VERSION_FROM_BUILD, DISABLE_VNODES, NUM_TOKENS,
-                   ReusableClusterTester, debug, init_default_config)
+from dtest import (CASSANDRA_VERSION_FROM_BUILD, ReusableClusterTester, debug, init_default_config)
 from thrift_bindings.v22 import Cassandra
 from thrift_bindings.v22.Cassandra import (CfDef, Column, ColumnDef,
                                            ColumnOrSuperColumn, ColumnParent,
@@ -95,7 +94,7 @@ class ThriftTester(ReusableClusterTester):
         # Because ccm will not set a hex token for ByteOrderedPartitioner
         # automatically. It does not matter what token we set as we only
         # ever use one node.
-        if DISABLE_VNODES:
+        if not cls.dtest_config.use_vnodes:
             node1.set_configuration_options(values={'initial_token': "a".encode('hex')})
 
         cluster.start(wait_for_binary_proto=True)
@@ -1642,12 +1641,12 @@ class TestMutations(ThriftTester):
         # which uses BytesToken, so this just tests that the string representation of the token
         # matches a regex pattern for BytesToken.toString().
         ring = list(client.describe_token_map().items())
-        if DISABLE_VNODES:
+        if not self.dtest_config.use_vnodes:
             self.assertEqual(len(ring), 1)
         else:
-            self.assertEqual(len(ring), int(NUM_TOKENS))
+            self.assertEqual(len(ring), int(self.dtest_config.num_tokens))
         token, node = ring[0]
-        if not DISABLE_VNODES:
+        if self.dtest_config.use_vnodes:
             assert re.match("[0-9A-Fa-f]{32}", token)
         assert node == '127.0.0.1'
 

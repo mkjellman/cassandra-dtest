@@ -1,15 +1,14 @@
 from cassandra.query import SimpleStatement
-from nose.plugins.attrib import attr
 
 from dtest import TRACE, Tester, debug, create_ks
-from tools.decorators import no_vnodes
 
+import pytest
 
-@no_vnodes()
+@pytest.mark.no_vnodes
 class TestPendingRangeMovements(Tester):
 
-    @attr('resource-intensive')
-    def pending_range_test(self):
+    @pytest.mark.resource_intensive
+    def test_pending_range(self):
         """
         @jira_ticket CASSANDRA-10887
         """

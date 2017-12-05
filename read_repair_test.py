@@ -17,7 +17,7 @@ class TestReadRepair(Tester):
         self.cluster.populate(3).start(wait_for_binary_proto=True)
 
     @since('3.0')
-    def alter_rf_and_run_read_repair_test(self):
+    def test_alter_rf_and_run_read_repair(self):
         """
         @jira_ticket CASSANDRA-10655
         @jira_ticket CASSANDRA-10657
@@ -125,7 +125,7 @@ class TestReadRepair(Tester):
         return initial_replica, non_replicas
 
     @since('2.0')
-    def range_slice_query_with_tombstones_test(self):
+    def test_range_slice_query_with_tombstones(self):
         """
         @jira_ticket CASSANDRA-8989
         @jira_ticket CASSANDRA-9502

@@ -2,11 +2,10 @@ import os
 import socket
 import time
 
-from nose.plugins.attrib import attr
+import pytest
 
 from cassandra import ConsistencyLevel
 from dtest import Tester, debug
-from nose.tools import assert_true, assert_equal, assert_greater_equal
 from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
@@ -98,7 +97,7 @@ class TestGossipingPropertyFileSnitch(Tester):
 
 
 class TestDynamicEndpointSnitch(Tester):
-    @attr('resource-intensive')
+    @pytest.mark.resource_intensive
     @since('3.10')
     def test_multidatacenter_local_quorum(self):
         '''
@@ -156,20 +155,18 @@ class TestDynamicEndpointSnitch(Tester):
                 for x in range(0, 300):
                     degraded_reads_before = bad_jmx.read_attribute(read_stage, 'Value')
                     scores_before = jmx.read_attribute(des, 'Scores')
-                    assert_true(no_cross_dc(scores_before, [node4, node5, node6]),
-                                "Cross DC scores were present: " + str(scores_before))
+                    assert no_cross_dc(scores_before, [node4, node5, node6]), "Cross DC scores were present: " + str(scores_before)
                     future = session.execute_async(read_stmt, [x])
                     future.result()
                     scores_after = jmx.read_attribute(des, 'Scores')
-                    assert_true(no_cross_dc(scores_after, [node4, node5, node6]),
-                                "Cross DC scores were present: " + str(scores_after))
+                    assert no_cross_dc(scores_after, [node4, node5, node6]), "Cross DC scores were present: " + str(scores_after)
 
                     if snitchable(scores_before, scores_after,
                                   [coordinator_node, healthy_node, degraded_node]):
                         snitchable_count = snitchable_count + 1
                         # If the DES correctly routed the read around the degraded node,
                         # it shouldn't have another completed read request in metrics
-                        assert_equal(degraded_reads_before,
+                        assert (degraded_reads_before ==
                                      bad_jmx.read_attribute(read_stage, 'Value'))
                     else:
                         # sleep to give dynamic snitch time to recalculate scores
@@ -177,4 +174,4 @@ class TestDynamicEndpointSnitch(Tester):
 
                 # check that most reads were snitchable, with some
                 # room allowed in case score recalculation is slow
-                assert_greater_equal(snitchable_count, 250)
+                assert snitchable_count >= 250

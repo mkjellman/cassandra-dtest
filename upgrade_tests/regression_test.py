@@ -4,7 +4,6 @@ Home for upgrade-related tests that don't fit in with the core upgrade testing i
 from unittest import skipUnless
 
 from cassandra import ConsistencyLevel as CL
-from nose.tools import assert_not_in
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, debug
 from tools.decorators import since
@@ -173,7 +172,7 @@ class TestForRegressions(UpgradeTester):
 
 for path in build_upgrade_pairs():
     gen_class_name = TestForRegressions.__name__ + path.name
-    assert_not_in(gen_class_name, globals())
+    assert gen_class_name not in globals()
     spec = {'UPGRADE_PATH': path,
             '__test__': True}
 

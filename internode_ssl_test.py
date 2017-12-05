@@ -5,7 +5,7 @@ from tools.misc import generate_ssl_stores
 
 class TestInternodeSSL(Tester):
 
-    def putget_with_internode_ssl_test(self):
+    def test_putget_with_internode_ssl(self):
         """
         Simple putget test with internode ssl enabled
         with default 'all' internode compression
@@ -13,7 +13,7 @@ class TestInternodeSSL(Tester):
         """
         self.__putget_with_internode_ssl_test('all')
 
-    def putget_with_internode_ssl_without_compression_test(self):
+    def test_putget_with_internode_ssl_without_compression(self):
         """
         Simple putget test with internode ssl enabled
         without internode compression

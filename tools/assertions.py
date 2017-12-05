@@ -5,8 +5,7 @@ from time import sleep
 from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
                        Unavailable, WriteFailure, WriteTimeout)
 from cassandra.query import SimpleStatement
-from nose.tools import (assert_equal, assert_false, assert_regexp_matches,
-                        assert_true)
+from plugins.assert_tools import assert_regexp_matches
 
 
 """
@@ -57,7 +56,8 @@ def _assert_exception(fun, *args, **kwargs):
             fun(*args)
     except expected as e:
         if matching is not None:
-            assert_regexp_matches(str(e), matching)
+            regex = re.compile(matching)
+            assert regex.match(str(e)) is None
     except Exception as e:
         raise e
     else:
@@ -245,9 +245,8 @@ def assert_length_equal(object_with_length, expected_length):
     Examples:
     assert_length_equal(res, nb_counter)
     """
-    assert_equal(len(object_with_length), expected_length,
-                 "Expected {} to have length {}, but instead is of length {}".format(object_with_length,
-                                                                                     expected_length, len(object_with_length)))
+    assert len(object_with_length) == expected_length, "Expected {} to have length {}, but instead is of length {}".format(object_with_length,
+                                                                                     expected_length, len(object_with_length))
 
 
 def assert_not_running(node):
@@ -260,7 +259,7 @@ def assert_not_running(node):
         sleep(1)
         attempts = attempts + 1
 
-    assert_false(node.is_running())
+    assert not node.is_running()
 
 
 def assert_read_timeout_or_failure(session, query):
@@ -281,9 +280,15 @@ def assert_stderr_clean(err, acceptable_errors=None):
                              "Failed to connect over JMX; not collecting these stats"]
 
     regex_str = "^({}|\s*|\n)*$".format("|".join(acceptable_errors))
-    match = re.search(regex_str, err)
+    err_str = err.decode("utf-8").strip()
+    # empty string, as good as we can get for a clean stderr output!
+    if not err_str:
+        return
 
-    assert_true(match, "Attempted to check that stderr was empty. Instead, stderr is {}, but the regex used to check against stderr is {}".format(err, regex_str))
+    match = re.search(regex_str, err_str)
+
+    assert match, "Attempted to check that stderr was empty. Instead, stderr is {}, but the regex used to check " \
+                  "stderr is {}".format(err_str, regex_str)
 
 
 def assert_bootstrap_state(tester, node, expected_bootstrap_state):
@@ -298,3 +303,4 @@ def assert_bootstrap_state(tester, node, expected_bootstrap_state):
     """
     session = tester.patient_exclusive_cql_connection(node)
     assert_one(session, "SELECT bootstrapped FROM system.local WHERE key='local'", [expected_bootstrap_state])
+    session.shutdown()

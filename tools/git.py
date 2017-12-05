@@ -18,5 +18,5 @@ def cassandra_git_branch(cdir=None):
     # fail if git failed
     if p.returncode != 0:
         raise RuntimeError('Git printed error: {err}'.format(err=err))
-    [current_branch_line] = [line for line in out.splitlines() if line.startswith('*')]
+    [current_branch_line] = [line for line in out.decode("utf-8").splitlines() if line.startswith('*')]
     return current_branch_line[1:].strip()

@@ -1,3 +1,5 @@
+import pytest
+
 import time
 from threading import Thread
 
@@ -6,7 +8,7 @@ from ccmlib.node import ToolError
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import since, no_vnodes
+from tools.decorators import since
 
 
 class TestRebuild(Tester):
@@ -20,7 +22,7 @@ class TestRebuild(Tester):
         r'Streaming error occurred'
     )
 
-    def simple_rebuild_test(self):
+    def test_simple_rebuild(self):
         """
         @jira_ticket CASSANDRA-9119
 
@@ -132,7 +134,7 @@ class TestRebuild(Tester):
             query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
 
     @since('2.2')
-    def resumable_rebuild_test(self):
+    def test_resumable_rebuild(self):
         """
         @jira_ticket CASSANDRA-10810
 
@@ -226,7 +228,7 @@ class TestRebuild(Tester):
         debug('Expected: COMPLETE')
 
     @since('3.6')
-    def rebuild_ranges_test(self):
+    def test_rebuild_ranges(self):
         """
         @jira_ticket CASSANDRA-10406
         """
@@ -291,8 +293,8 @@ class TestRebuild(Tester):
             query_c1c2(session, i, ConsistencyLevel.ONE, tolerate_missing=True, must_be_missing=True)
 
     @since('3.10')
-    @no_vnodes()
-    def disallow_rebuild_nonlocal_range_test(self):
+    @pytest.mark.no_vnodes
+    def test_disallow_rebuild_nonlocal_range(self):
         """
         @jira_ticket CASSANDRA-9875
         Verifies that nodetool rebuild throws an error when an operator
@@ -324,8 +326,8 @@ class TestRebuild(Tester):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
 
     @since('3.10')
-    @no_vnodes()
-    def disallow_rebuild_from_nonreplica_test(self):
+    @pytest.mark.no_vnodes
+    def test_disallow_rebuild_from_nonreplica(self):
         """
         @jira_ticket CASSANDRA-9875
         Verifies that nodetool rebuild throws an error when an operator
@@ -360,8 +362,8 @@ class TestRebuild(Tester):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
 
     @since('3.10')
-    @no_vnodes()
-    def rebuild_with_specific_sources_test(self):
+    @pytest.mark.no_vnodes
+    def test_rebuild_with_specific_sources(self):
         """
         @jira_ticket CASSANDRA-9875
         Verifies that an operator can specify specific sources to use

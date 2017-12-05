@@ -10,7 +10,7 @@ from tools.metadata_wrapper import (UpdatingClusterMetadataWrapper,
 
 
 class UpdatingMetadataWrapperBaseTest(TestCase):
-    def all_subclasses_known_test(self):
+    def test_all_subclasses_known(self):
         """
         Test that all the subclasses of UpdatingMetadataWrapperBase are known
         to this test suite. Basically, this will slap us on the wrist in the
@@ -40,7 +40,7 @@ class UpdatingMetadataWrapperBaseTest(TestCase):
             init_args = [MagicMock() for _ in range(init_arg_len - 1)]
             yield klaus(*init_args)
 
-    def all_subclasses_defer_getattr_test(self):
+    def test_all_subclasses_defer_getattr(self):
         """
         Each subclass should defer its attribute accesses to the wrapped
         object.
@@ -48,7 +48,7 @@ class UpdatingMetadataWrapperBaseTest(TestCase):
         for wrapper in self._each_subclass_instantiated_with_mock_args():
             self.assertIs(wrapper.foo, wrapper._wrapped.foo)
 
-    def all_subclasses_defer_getitem_test(self):
+    def test_all_subclasses_defer_getitem(self):
         """
         Each subclass should defer its item accesses to the wrapped object.
         """
@@ -74,7 +74,7 @@ class UpdatingTableMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=self.max_schema_agreement_wait_sentinel
         )
 
-    def wrapped_access_calls_refresh_test(self):
+    def test_wrapped_access_calls_refresh(self):
         """
         Accessing the wrapped object should call the table-refreshing method on
         the cluster.
@@ -87,7 +87,7 @@ class UpdatingTableMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=self.max_schema_agreement_wait_sentinel
         )
 
-    def default_wrapper_max_schema_agreement_wait_is_None_test(self):
+    def test_default_wrapper_max_schema_agreement_wait_is_None(self):
         wrapper = UpdatingTableMetadataWrapper(
             cluster=self.cluster_mock,
             ks_name=self.ks_name_sentinel,
@@ -100,7 +100,7 @@ class UpdatingTableMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=None
         )
 
-    def wrapped_returns_table_metadata_test(self):
+    def test_wrapped_returns_table_metadata(self):
         """
         The wrapped object is accessed correctly from the internal cluster object.
         """
@@ -125,7 +125,7 @@ class UpdatingTableMetadataWrapperTest(TestCase):
             self.cluster_mock.metadata.keyspaces[self.ks_name_sentinel].tables[self.table_name_sentinel]
         )
 
-    def repr_test(self):
+    def test_repr(self):
         self.assertEqual(
             repr(self.wrapper),
             'UpdatingTableMetadataWrapper(cluster={}, ks_name={}, table_name={}, max_schema_agreement_wait={})'.format(
@@ -145,7 +145,7 @@ class UpdatingKeyspaceMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=self.max_schema_agreement_wait_sentinel
         )
 
-    def wrapped_access_calls_refresh_test(self):
+    def test_wrapped_access_calls_refresh(self):
         """
         Accessing the wrapped object should call the keyspace-refreshing method
         on the cluster.
@@ -157,7 +157,7 @@ class UpdatingKeyspaceMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=self.max_schema_agreement_wait_sentinel
         )
 
-    def default_wrapper_max_schema_agreement_wait_is_None_test(self):
+    def test_default_wrapper_max_schema_agreement_wait_is_None(self):
         wrapper = UpdatingKeyspaceMetadataWrapper(
             cluster=self.cluster_mock,
             ks_name=self.ks_name_sentinel
@@ -168,7 +168,7 @@ class UpdatingKeyspaceMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=None
         )
 
-    def wrapped_returns_keyspace_metadata_test(self):
+    def test_wrapped_returns_keyspace_metadata(self):
         """
         The wrapped object is accessed correctly from the internal cluster object.
         """
@@ -179,7 +179,7 @@ class UpdatingKeyspaceMetadataWrapperTest(TestCase):
         self.assertNotEqual(self.wrapper._wrapped, self.cluster_mock.metadata.keyspaces['foo'])
         self.assertEqual(self.wrapper._wrapped, self.cluster_mock.metadata.keyspaces[self.ks_name_sentinel])
 
-    def repr_test(self):
+    def test_repr(self):
         self.assertEqual(
             repr(self.wrapper),
             'UpdatingKeyspaceMetadataWrapper(cluster={}, ks_name={}, max_schema_agreement_wait={})'.format(
@@ -198,7 +198,7 @@ class UpdatingClusterMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=self.max_schema_agreement_wait_sentinel
         )
 
-    def wrapped_access_calls_refresh_test(self):
+    def test_wrapped_access_calls_refresh(self):
         """
         Accessing the wrapped object should call the schema-refreshing method
         on the cluster.
@@ -209,20 +209,20 @@ class UpdatingClusterMetadataWrapperTest(TestCase):
             max_schema_agreement_wait=self.max_schema_agreement_wait_sentinel
         )
 
-    def default_wrapper_max_schema_agreement_wait_is_None_test(self):
+    def test_default_wrapper_max_schema_agreement_wait_is_None(self):
         wrapper = UpdatingClusterMetadataWrapper(cluster=self.cluster_mock)
         wrapper._wrapped
         self.cluster_mock.refresh_schema_metadata.assert_called_once_with(
             max_schema_agreement_wait=None
         )
 
-    def wrapped_returns_cluster_metadata_test(self):
+    def test_wrapped_returns_cluster_metadata(self):
         """
         The wrapped object is accessed correctly from the internal cluster object.
         """
         self.assertIs(self.wrapper._wrapped, self.cluster_mock.metadata)
 
-    def repr_test(self):
+    def test_repr(self):
         self.assertEqual(
             repr(self.wrapper),
             'UpdatingClusterMetadataWrapper(cluster={}, max_schema_agreement_wait={})'.format(

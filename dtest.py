@@ -1,5 +1,3 @@
-
-
 import configparser
 import copy
 import errno
@@ -17,8 +15,7 @@ import _thread
 import threading
 import time
 import traceback
-import types
-import unittest.case
+import pytest
 from collections import OrderedDict
 from subprocess import CalledProcessError
 from unittest import TestCase
@@ -30,19 +27,12 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster as PyCluster
 from cassandra.cluster import NoHostAvailable
 from cassandra.cluster import ExecutionProfile, EXEC_PROFILE_DEFAULT
-from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy
+from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy, RoundRobinPolicy
 from ccmlib.cluster import Cluster
 from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
 from distutils.version import LooseVersion
-from nose.exc import SkipTest
-from nose.tools import assert_greater_equal
-from six import print_
 
-from plugins.dtestconfig import _CONFIG as CONFIG
-# We don't want test files to know about the plugins module, so we import
-# constants here and re-export them.
-from plugins.dtestconfig import GlobalConfigObject
 from tools.context import log_filter
 from tools.funcutils import merge_dicts
 
@@ -69,28 +59,10 @@ TRACE = os.environ.get('TRACE', '').lower() in ('yes', 'true')
 KEEP_LOGS = os.environ.get('KEEP_LOGS', '').lower() in ('yes', 'true')
 KEEP_TEST_DIR = os.environ.get('KEEP_TEST_DIR', '').lower() in ('yes', 'true')
 PRINT_DEBUG = os.environ.get('PRINT_DEBUG', '').lower() in ('yes', 'true')
-OFFHEAP_MEMTABLES = os.environ.get('OFFHEAP_MEMTABLES', '').lower() in ('yes', 'true')
-NUM_TOKENS = os.environ.get('NUM_TOKENS', '256')
 RECORD_COVERAGE = os.environ.get('RECORD_COVERAGE', '').lower() in ('yes', 'true')
 IGNORE_REQUIRE = os.environ.get('IGNORE_REQUIRE', '').lower() in ('yes', 'true')
-DATADIR_COUNT = os.environ.get('DATADIR_COUNT', '3')
 ENABLE_ACTIVE_LOG_WATCHING = os.environ.get('ENABLE_ACTIVE_LOG_WATCHING', '').lower() in ('yes', 'true')
 RUN_STATIC_UPGRADE_MATRIX = os.environ.get('RUN_STATIC_UPGRADE_MATRIX', '').lower() in ('yes', 'true')
-
-# devault values for configuration from configuration plugin
-_default_config = GlobalConfigObject(
-    vnodes=True,
-)
-
-if CONFIG is None:
-    CONFIG = _default_config
-
-DISABLE_VNODES = not CONFIG.vnodes
-
-
-if os.environ.get('DISABLE_VNODES', '').lower() in ('yes', 'true'):
-    print('DISABLE_VNODES environment variable deprecated. Use `./run_dtests.py --vnodes false` instead.')
-
 
 CURRENT_TEST = ""
 
@@ -111,11 +83,13 @@ def get_sha(repo_dir):
         prefix = 'github:apache/'
         local_repo_location = os.environ.get('LOCAL_GIT_REPO')
         if local_repo_location is not None:
-            prefix = 'local:{}:'.format(local_repo_location)  # local: slugs take the form 'local:/some/path/to/cassandra/:branch_name_or_sha'
+            prefix = 'local:{}:'.format(local_repo_location)
+            # local: slugs take the form 'local:/some/path/to/cassandra/:branch_name_or_sha'
         return "{}{}".format(prefix, output)
     except CalledProcessError as e:
         if re.search('Not a git repository', e.message) is not None:
-            # we tried to get a sha, but repo_dir isn't a git repo. No big deal, must just be working from a non-git install.
+            # we tried to get a sha, but repo_dir isn't a git repo. No big deal, must just be
+            # working from a non-git install.
             return None
         else:
             # git call failed for some unknown reason
@@ -173,20 +147,22 @@ class DtestTimeoutError(Exception):
 
 
 def reset_environment_vars():
+    pytest_current_test = os.environ.get('PYTEST_CURRENT_TEST')
     os.environ.clear()
     os.environ.update(initial_environment)
+    os.environ['PYTEST_CURRENT_TEST'] = pytest_current_test
 
 
 def warning(msg):
-    LOG.warning(CURRENT_TEST + ' - ' + msg)
+    LOG.warning(CURRENT_TEST + ' - ' + str(msg))
     if PRINT_DEBUG:
-        print("WARN: " + msg)
+        print("WARN: %s" % str(msg))
 
 
 def debug(msg):
-    LOG.debug(CURRENT_TEST + ' - ' + msg)
+    LOG.debug(CURRENT_TEST + ' - ' + str(msg))
     if PRINT_DEBUG:
-        print(msg)
+        print("DEBUG: %s" % str(msg))
 
 
 debug("Python driver version in use: {}".format(cassandra.__version__))
@@ -261,8 +237,18 @@ class Runner(threading.Thread):
             i = i + 1
 
     def stop(self):
+        if self.__stopped:
+            return
+
         self.__stopped = True
-        self.join()
+        # pytests may appear to hang forever waiting for cluster tear down. are all driver session objects shutdown?
+        # to debug hang you can add the following at the top of the test
+        #     import faulthandler
+        #     faulthandler.enable()
+        #
+        # and then when the hang occurs send a SIGABRT to the pytest process (e.g. kill -SIGABRT <pytest_pid>)
+        # this will print a python thread dump of all currently alive threads
+        self.join(timeout=30)
         if self.__error is not None:
             raise self.__error
 
@@ -272,11 +258,18 @@ class Runner(threading.Thread):
 
 
 def make_execution_profile(retry_policy=FlakyRetryPolicy(), consistency_level=ConsistencyLevel.ONE, **kwargs):
-    return ExecutionProfile(retry_policy=retry_policy,
-                            consistency_level=consistency_level,
-                            **kwargs)
+    if 'load_balancing_policy' in kwargs:
+        return ExecutionProfile(retry_policy=retry_policy,
+                                consistency_level=consistency_level,
+                                **kwargs)
+    else:
+        return ExecutionProfile(retry_policy=retry_policy,
+                                consistency_level=consistency_level,
+                                load_balancing_policy=RoundRobinPolicy(),
+                                **kwargs)
 
 
+@pytest.mark.usefixtures("fixture_dtest_config")
 class Tester(TestCase):
 
     maxDiff = None
@@ -301,7 +294,7 @@ class Tester(TestCase):
         maybe_cleanup_cluster_from_last_test_file()
 
         self.test_path = get_test_path()
-        self.cluster = create_ccm_cluster(self.test_path, name='test')
+        self.cluster = create_ccm_cluster(self.test_path, name='test', config=self.dtest_config)
 
         self.maybe_begin_active_log_watch()
         maybe_setup_jacoco(self.test_path)
@@ -370,7 +363,7 @@ class Tester(TestCase):
 
         try:
             debug('Errors were just seen in logs, ending test (if not ending already)!')
-            print_("Error details: \n{message}".format(message=message))
+            print("Error details: \n{message}".format(message=message))
             self.test_is_ending  # will raise AttributeError if not present
         except AttributeError:
             self.test_is_ending = True
@@ -501,7 +494,8 @@ class Tester(TestCase):
         if is_win():
             timeout *= 2
 
-        expected_log_lines = ('Control connection failed to connect, shutting down Cluster:', '[control connection] Error connecting to ')
+        expected_log_lines = ('Control connection failed to connect, shutting down Cluster:',
+                              '[control connection] Error connecting to ')
         with log_filter('cassandra.cluster', expected_log_lines):
             session = retry_till_success(
                 self.cql_connection,
@@ -586,7 +580,7 @@ class Tester(TestCase):
             except:
                 pass
 
-        failed = did_fail()
+        failed = False
         try:
             if not self.allow_log_errors and self.check_logs_for_errors():
                 failed = True
@@ -608,7 +602,7 @@ class Tester(TestCase):
                 ['\n'.join(msg) for msg in node.grep_log_for_errors()]))
             if len(errors) is not 0:
                 for error in errors:
-                    print_("Unexpected error in {node_name} log, error: \n{error}".format(node_name=node.name, error=error))
+                    print("Unexpected error in {node_name} log, error: \n{error}".format(node_name=node.name, error=error))
                 return True
 
     def go(self, func):
@@ -616,10 +610,6 @@ class Tester(TestCase):
         self.runners.append(runner)
         runner.start()
         return runner
-
-    def skip(self, msg):
-        if not NO_SKIP:
-            raise SkipTest(msg)
 
     def __filter_errors(self, errors):
         """Filter errors, removing those that match self.ignore_log_patterns"""
@@ -631,10 +621,6 @@ class Tester(TestCase):
                     break
             else:
                 yield e
-
-    # Disable docstrings printing in nosetest output
-    def shortDescription(self):
-        return None
 
     def get_jfr_jvm_args(self):
         """
@@ -724,7 +710,7 @@ def create_ks(session, name, rf):
         # we assume simpleStrategy
         session.execute(query % (name, "'class':'SimpleStrategy', 'replication_factor':%d" % rf))
     else:
-        assert_greater_equal(len(rf), 0, "At least one datacenter/rf pair is needed")
+        assert len(rf) >= 0, "At least one datacenter/rf pair is needed"
         # we assume networkTopologyStrategy
         options = (', ').join(['\'%s\':%d' % (d, r) for d, r in rf.items()])
         session.execute(query % (name, "'class':'NetworkTopologyStrategy', %s" % options))
@@ -797,7 +783,7 @@ def get_test_path():
 get_test_path.__test__ = False
 
 
-def create_ccm_cluster(test_path, name):
+def create_ccm_cluster(test_path, name, config):
     debug("cluster ccm directory: " + test_path)
     version = os.environ.get('CASSANDRA_VERSION')
     cdir = CASSANDRA_DIR
@@ -807,15 +793,15 @@ def create_ccm_cluster(test_path, name):
     else:
         cluster = Cluster(test_path, name, cassandra_dir=cdir)
 
-    if DISABLE_VNODES:
-        cluster.set_configuration_options(values={'num_tokens': None})
+    if config.use_vnodes:
+        cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': config.num_tokens})
     else:
-        cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': NUM_TOKENS})
+        cluster.set_configuration_options(values={'num_tokens': None})
 
-    if OFFHEAP_MEMTABLES:
+    if config.use_off_heap_memtables:
         cluster.set_configuration_options(values={'memtable_allocation_type': 'offheap_objects'})
 
-    cluster.set_datadir_count(DATADIR_COUNT)
+    cluster.set_datadir_count(config.data_dir_count)
     cluster.set_environment_variable('CASSANDRA_LIBJEMALLOC', CASSANDRA_LIBJEMALLOC)
 
     return cluster
@@ -960,14 +946,6 @@ def maybe_setup_jacoco(test_path, cluster_name='test'):
         debug("Jacoco agent not found or is not file. Execution will not be recorded.")
 
 
-def did_fail():
-    if sys.exc_info() == (None, None, None):
-        return False
-
-    exc_class, _, _ = sys.exc_info()
-    return not issubclass(exc_class, unittest.case.SkipTest)
-
-
 class ReusableClusterTester(Tester):
     """
     A Tester designed for reusing the same cluster across multiple
@@ -1011,7 +989,7 @@ class ReusableClusterTester(Tester):
         # test_is_ending prevents active log watching from being able to interrupt the test
         self.test_is_ending = True
 
-        failed = did_fail()
+        failed = False
         try:
             if not self.allow_log_errors and self.check_logs_for_errors():
                 failed = True
@@ -1043,7 +1021,7 @@ class ReusableClusterTester(Tester):
         do so by overriding post_initialize_cluster().
         """
         cls.test_path = get_test_path()
-        cls.cluster = create_ccm_cluster(cls.test_path, name='test')
+        cls.cluster = create_ccm_cluster(cls.test_path, name='test', config=cls.dtest_config)
         cls.init_config()
 
         maybe_setup_jacoco(cls.test_path)

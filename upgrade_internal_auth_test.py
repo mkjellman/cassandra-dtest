@@ -1,11 +1,11 @@
 import time
-from unittest import skipIf
+import pytest
 
 from cassandra import Unauthorized
 from ccmlib.common import is_win
 from ccmlib.node import Node
 
-from dtest import OFFHEAP_MEMTABLES, Tester, debug
+from dtest import Tester, debug
 from tools.assertions import assert_all, assert_invalid
 from tools.decorators import since
 from tools.misc import ImmutableMapping
@@ -22,12 +22,12 @@ class TestAuthUpgrade(Tester):
         r'Can\'t send migration request: node.*is down',
     )
 
-    def upgrade_to_22_test(self):
+    def test_upgrade_to_22(self):
         self.do_upgrade_with_internal_auth("github:apache/cassandra-2.2")
 
     @since('3.0')
-    @skipIf(OFFHEAP_MEMTABLES, 'offheap_objects are not available in 3.0')
-    def upgrade_to_30_test(self):
+    @pytest.mark.no_offheap_memtables
+    def test_upgrade_to_30(self):
         self.do_upgrade_with_internal_auth("github:apache/cassandra-3.0")
 
     @since('2.2', max_version='3.X')
@@ -72,8 +72,10 @@ class TestAuthUpgrade(Tester):
 
         replacement_address = node1.address()
         replacement_node = Node('replacement', cluster=self.cluster, auto_bootstrap=True,
-                                thrift_interface=(replacement_address, 9160), storage_interface=(replacement_address, 7000),
-                                jmx_port='7400', remote_debug_port='0', initial_token=None, binary_interface=(replacement_address, 9042))
+                                thrift_interface=(replacement_address, 9160),
+                                storage_interface=(replacement_address, 7000),
+                                jmx_port='7400', remote_debug_port='0', initial_token=None,
+                                binary_interface=(replacement_address, 9042))
         self.set_node_to_current_version(replacement_node)
 
         cluster.add(replacement_node, True)
