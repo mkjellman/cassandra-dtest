@@ -3,7 +3,7 @@ import pytest
 
 from cassandra import ConsistencyLevel, WriteFailure, WriteTimeout
 
-from dtest import Tester, supports_v5_protocol
+from dtest import Tester
 from thrift_bindings.v22 import ttypes as thrift_types
 from thrift_tests import get_thrift_client
 
@@ -33,7 +33,7 @@ class TestWriteFailures(Tester):
 
     @pytest.fixture(scope="function", autouse=True)
     def fixture_set_test_defauls(self):
-        self.supports_v5_protocol = supports_v5_protocol(self.cluster.version())
+        self.supports_v5_protocol = self.supports_v5_protocol(self.cluster.version())
         self.expected_expt = WriteFailure
         self.protocol_version = 5 if self.supports_v5_protocol else 4
         self.replication_factor = 3

@@ -898,6 +898,3 @@ def run_scenarios(scenarios, handler, deferred_exceptions=tuple()):
     if errors:
         raise MultiError(errors, tracebacks)
 
-
-def supports_v5_protocol(cluster_version):
-    return cluster_version >= LooseVersion('4.0')

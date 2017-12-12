@@ -19,7 +19,7 @@ class TestCompaction(Tester):
     @pytest.fixture(scope='function', autouse=True)
     def parse_dtest_config(self, parse_dtest_config):
         # compaction test for version 2.2.2 and above relies on DEBUG log in debug.log
-        parse_dtest_config.cluster.set_log_level("DEBUG")
+        self.cluster.set_log_level("DEBUG")
         return parse_dtest_config
 
     @since('0', '2.2.X')

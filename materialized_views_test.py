@@ -17,7 +17,7 @@ from cassandra.query import SimpleStatement
 from enum import Enum  # Remove when switching to py3
 
 from distutils.version import LooseVersion
-from dtest import Tester, debug, get_ip_from_node, create_ks, supports_v5_protocol
+from dtest import Tester, debug, get_ip_from_node, create_ks
 from tools.assertions import (assert_all, assert_crc_check_chance_equal,
                               assert_invalid, assert_none, assert_one,
                               assert_unavailable)
@@ -940,7 +940,7 @@ class TestMaterializedViews(Tester):
         while True:
             try:
                 result = list(session.execute("SELECT count(*) FROM t_by_v;"))
-                self.assertNotEqual(result[0].count, 10000)
+                assert result[0].count != 10000
             except AssertionError:
                 debug("MV build process is finished")
                 break
@@ -2409,7 +2409,7 @@ class TestMaterializedViewsLockcontention(Tester):
 
     def _prepare_cluster(self):
         self.cluster.populate(1)
-        self.supports_v5_protocol = supports_v5_protocol(self.cluster.version())
+        self.supports_v5_protocol = self.supports_v5_protocol(self.cluster.version())
         self.protocol_version = 5 if self.supports_v5_protocol else 4
 
         self.cluster.set_configuration_options(values={

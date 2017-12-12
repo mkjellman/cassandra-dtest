@@ -96,8 +96,8 @@ class BaseSStableLoaderTest(Tester):
                     exit_status = p.wait()
                     debug('stdout: {out}'.format(out=p.stdout))
                     debug('stderr: {err}'.format(err=p.stderr))
-                    assert 0 == exit_status,
-                    "sstableloader exited with a non-zero status: {}".format(exit_status)
+                    assert 0 == exit_status, \
+                        "sstableloader exited with a non-zero status: {}".format(exit_status)
 
     def load_sstable_with_configuration(self, pre_compression=None, post_compression=None, ks="ks", create_schema=create_schema):
         """

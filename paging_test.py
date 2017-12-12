@@ -9,7 +9,7 @@ from cassandra.policies import FallthroughRetryPolicy
 from cassandra.query import (SimpleStatement, dict_factory,
                              named_tuple_factory, tuple_factory)
 
-from dtest import Tester, debug, run_scenarios, create_ks, supports_v5_protocol
+from dtest import Tester, debug, run_scenarios, create_ks
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_one)
 from tools.data import rows_to_list
@@ -22,7 +22,7 @@ since = pytest.mark.since
 class BasePagingTester(Tester):
 
     def prepare(self, row_factory=dict_factory):
-        supports_v5 = supports_v5_protocol(self.cluster.version())
+        supports_v5 = self.supports_v5_protocol(self.cluster.version())
         protocol_version = 5 if supports_v5 else None
         cluster = self.cluster
         cluster.populate(3).start(wait_for_binary_proto=True)

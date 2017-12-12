@@ -23,6 +23,7 @@ from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
 
 from dtest import (get_ip_from_node, make_execution_profile, get_auth_provider, get_port_from_node, get_eager_protocol_version)
+from distutils.version import LooseVersion
 
 from tools.context import log_filter
 
@@ -286,3 +287,6 @@ class DTestSetup:
             stdout, stderr = p.communicate()
             logger.debug(stdout)
             logger.debug(stderr)
+
+    def supports_v5_protocol(self, cluster_version):
+        return cluster_version >= LooseVersion('4.0')

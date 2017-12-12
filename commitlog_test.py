@@ -205,7 +205,7 @@ class TestCommitLog(Tester):
 
         debug("Verify commitlog was written before abrupt stop")
         commitlog_files = os.listdir(os.path.join(node1.get_path(), 'commitlogs'))
-        self.assertNotEqual([], commitlog_files)
+        assert [] != commitlog_files
 
         # set a short timeout to ensure lock contention will generally exceed this
         node1.set_configuration_options({'write_request_timeout_in_ms': 30})
@@ -219,7 +219,7 @@ class TestCommitLog(Tester):
             assert [] == matches
 
             replay_complete = node1.grep_log("Log replay complete")
-            assert time.time() - start_time, 120 < "Did not finish commitlog replay within 120 seconds"
+            assert time.time() - start_time < 120, "Did not finish commitlog replay within 120 seconds"
 
         debug("Reconnecting to node")
         session = self.patient_cql_connection(node1)
@@ -277,7 +277,7 @@ class TestCommitLog(Tester):
             for line in replays
         ]
         # assert there were some lines where more than zero mutations were replayed
-        self.assertNotEqual([m for m in num_replayed_mutations if m > 0], [])
+        assert [m for m in num_replayed_mutations if m > 0] != []
 
         debug("Make query and ensure data is present")
         session = self.patient_cql_connection(node1)

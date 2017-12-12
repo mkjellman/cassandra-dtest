@@ -215,7 +215,7 @@ class TestNodetool(Tester):
 
         # validate that schema version changed
         with JolokiaAgent(node) as jmx:
-            self.assertNotEqual(schema_version, jmx.read_attribute(ss, 'SchemaVersion'))
+            assert schema_version != jmx.read_attribute(ss, 'SchemaVersion')
 
         # try an insert with the new column again and validate it succeeds this time
         session.execute('INSERT INTO test.test (pk, ck, val) VALUES (0, 1, 2);')

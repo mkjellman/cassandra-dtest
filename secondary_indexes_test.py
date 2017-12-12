@@ -324,7 +324,7 @@ class TestSecondaryIndexes(Tester):
         block_until_index_is_built(node1, session, 'keyspace1', 'standard1', 'ix_c0')
 
         after_files = self._index_sstables_files(node1, 'keyspace1', 'standard1', 'ix_c0')
-        self.assertNotEqual(before_files, after_files)
+        assert before_files != after_files
         assert 1 == len(list(session.execute(stmt [lookup_value])))
 
         # verify that only the expected row is present in the build indexes table
@@ -375,7 +375,7 @@ class TestSecondaryIndexes(Tester):
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
 
         # Verify that, the index is rebuilt, marked as built, and it can answer queries
-        self.assertNotEqual(before_files, after_files)
+        assert before_files != after_files
         assert_one(session, """SELECT table_name, index_name FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
@@ -398,7 +398,7 @@ class TestSecondaryIndexes(Tester):
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
 
         # Verify that the index is rebuilt, marked as built, and it can answer queries
-        self.assertNotEqual(before_files, after_files)
+        assert before_files != after_files
         assert_one(session, """SELECT table_name, index_name FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
