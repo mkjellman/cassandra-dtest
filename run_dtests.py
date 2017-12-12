@@ -221,12 +221,19 @@ class RunDTests():
             print("\n".join(all_collected_test_modules))
         else:
             while True:
-                output = sp.stdout.readline()
-                output_str = output.decode("utf-8")
-                if output_str == '' and sp.poll() is not None:
+                stdout_output = sp.stdout.readline()
+                stdout_output_str = stdout_output.decode("utf-8")
+                if stdout_output_str == '' and sp.poll() is not None:
                     break
-                if output_str:
-                    print(output_str.strip())
+                if stdout_output_str:
+                    print(stdout_output_str.strip())
+
+                stderr_output = sp.stderr.readline()
+                stderr_output_str = stderr_output.decode("utf-8")
+                if stderr_output_str == '' and sp.poll() is not None:
+                    break
+                if stderr_output_str:
+                    print(stderr_output_str.strip())
 
         exit(sp.returncode)
 
@@ -243,45 +250,79 @@ def collect_test_modules(stdout):
     xml_line_regex_pattern = re.compile("^([\s])*<(Module|Class|Function|Instance) '(.*)'>")
     is_first_module = True
     is_first_class = True
+    has_closed_class = False
+    section_has_instance = False
+    section_has_class = False
     test_collect_xml_lines = []
+
+    test_collect_xml_lines.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+    test_collect_xml_lines.append("<Modules>")
     for line in stdout.decode("utf-8").split('\n'):
         re_ret = re.search(xml_line_regex_pattern, line)
         if re_ret:
             if not is_first_module and re_ret.group(2) == "Module":
+                if section_has_instance:
+                    test_collect_xml_lines.append("    </Instance>")
+                if section_has_class:
+                    test_collect_xml_lines.append("  </Class>")
+
                 test_collect_xml_lines.append("</Module>")
                 is_first_class = True
-            elif re_ret.group(2) == "Module":
+                has_closed_class= False
+                section_has_instance = False
+                section_has_class = False
+                is_first_module = False
+            elif is_first_module and re_ret.group(2) == "Module":
+                if not has_closed_class and section_has_instance:
+                    test_collect_xml_lines.append("    </Instance>")
+                if not has_closed_class and section_has_class:
+                    test_collect_xml_lines.append("  </Class>")
+
                 is_first_class = True
                 is_first_module = False
-                pass
+                has_closed_class = False
+                section_has_instance = False
+                section_has_class = False
+            elif re_ret.group(2) == "Instance":
+                section_has_instance = True
             elif not is_first_class and re_ret.group(2) == "Class":
-                test_collect_xml_lines.append("    </Instance>")
-                test_collect_xml_lines.append("  </Class>")
+                if section_has_instance:
+                    test_collect_xml_lines.append("    </Instance>")
+                if section_has_class:
+                    test_collect_xml_lines.append("  </Class>")
+                has_closed_class = True
+                section_has_class = True
             elif re_ret.group(2) == "Class":
                 is_first_class = False
-                pass
+                section_has_class = True
+                has_closed_class = False
 
             if re_ret.group(2) == "Function":
-                test_collect_xml_lines.append(
-                    "        <Function name=\"{name}\"></Function>".format(name=re_ret.group(3)))
+                test_collect_xml_lines.append("        <Function name=\"{name}\"></Function>"
+                                              .format(name=re_ret.group(3)))
             elif re_ret.group(2) == "Class":
                 test_collect_xml_lines.append("  <Class name=\"{name}\">".format(name=re_ret.group(3)))
             elif re_ret.group(2) == "Module":
                 test_collect_xml_lines.append("<Module name=\"{name}\">".format(name=re_ret.group(3)))
+            elif re_ret.group(2) == "Instance":
+                test_collect_xml_lines.append("    <Instance name=\"\">".format(name=re_ret.group(3)))
             else:
                 test_collect_xml_lines.append(line)
 
     test_collect_xml_lines.append("    </Instance>")
     test_collect_xml_lines.append("  </Class>")
     test_collect_xml_lines.append("</Module>")
+    test_collect_xml_lines.append("</Modules>")
 
     all_collected_test_modules = []
 
     # parse the now valid xml
+    print("\n".join(test_collect_xml_lines))
     test_collect_xml = BeautifulSoup("\n".join(test_collect_xml_lines), "lxml-xml")
 
     # find all Modules (followed by classes in those modules, and then finally functions)
     for pytest_module in test_collect_xml.findAll("Module"):
+        #pytest.set_trace()
         for test_class_name in pytest_module.findAll("Class"):
             for function_name in test_class_name.findAll("Function"):
                 # adds to test list in format like test_file.py::TestClass::test_function for every test function found
