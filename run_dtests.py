@@ -135,6 +135,8 @@ class RunDTests():
         parser.add_argument("--dtest-runner-quiet", action="store_true", default=False)
         parser.add_argument("--dtest-print-tests-only", action="store_true", default=False,
                             help="Print list of all tests found eligible for execution given the provided options.")
+        parser.add_argument("--dtest-print-tests-output", action="store", default=False,
+                            help="Path to file where the output of --dtest-print-tests-only should be written to")
         parser.add_argument("--pytest-options", action="store", default=None,
                             help="Additional command line arguments to proxy directly thru when invoking pytest.")
         parser.add_argument("--dtest-tests", action="store", default=None,
@@ -217,8 +219,14 @@ class RunDTests():
                 exit(result)
 
             all_collected_test_modules = collect_test_modules(stdout)
+            joined_test_modules = "\n".join(all_collected_test_modules)
             #print("Collected %d Test Modules" % len(all_collected_test_modules))
-            print("\n".join(all_collected_test_modules))
+            if args.dtest_print_tests_output is not None:
+                collected_tests_output_file = open(args.dtest_print_tests_output, "w")
+                collected_tests_output_file.write(joined_test_modules)
+                collected_tests_output_file.close()
+
+            print(joined_test_modules)
         else:
             while True:
                 stdout_output = sp.stdout.readline()
@@ -262,11 +270,11 @@ def collect_test_modules(stdout):
         if re_ret:
             if not is_first_module and re_ret.group(2) == "Module":
                 if section_has_instance:
-                    test_collect_xml_lines.append("    </Instance>")
+                    test_collect_xml_lines.append("      </Instance>")
                 if section_has_class:
-                    test_collect_xml_lines.append("  </Class>")
+                    test_collect_xml_lines.append("    </Class>")
 
-                test_collect_xml_lines.append("</Module>")
+                test_collect_xml_lines.append("  </Module>")
                 is_first_class = True
                 has_closed_class= False
                 section_has_instance = False
@@ -274,9 +282,9 @@ def collect_test_modules(stdout):
                 is_first_module = False
             elif is_first_module and re_ret.group(2) == "Module":
                 if not has_closed_class and section_has_instance:
-                    test_collect_xml_lines.append("    </Instance>")
+                    test_collect_xml_lines.append("      </Instance>")
                 if not has_closed_class and section_has_class:
-                    test_collect_xml_lines.append("  </Class>")
+                    test_collect_xml_lines.append("    </Class>")
 
                 is_first_class = True
                 is_first_module = False
@@ -287,9 +295,9 @@ def collect_test_modules(stdout):
                 section_has_instance = True
             elif not is_first_class and re_ret.group(2) == "Class":
                 if section_has_instance:
-                    test_collect_xml_lines.append("    </Instance>")
+                    test_collect_xml_lines.append("      </Instance>")
                 if section_has_class:
-                    test_collect_xml_lines.append("  </Class>")
+                    test_collect_xml_lines.append("    </Class>")
                 has_closed_class = True
                 section_has_class = True
             elif re_ret.group(2) == "Class":
@@ -298,20 +306,20 @@ def collect_test_modules(stdout):
                 has_closed_class = False
 
             if re_ret.group(2) == "Function":
-                test_collect_xml_lines.append("        <Function name=\"{name}\"></Function>"
+                test_collect_xml_lines.append("          <Function name=\"{name}\"></Function>"
                                               .format(name=re_ret.group(3)))
             elif re_ret.group(2) == "Class":
-                test_collect_xml_lines.append("  <Class name=\"{name}\">".format(name=re_ret.group(3)))
+                test_collect_xml_lines.append("    <Class name=\"{name}\">".format(name=re_ret.group(3)))
             elif re_ret.group(2) == "Module":
-                test_collect_xml_lines.append("<Module name=\"{name}\">".format(name=re_ret.group(3)))
+                test_collect_xml_lines.append("  <Module name=\"{name}\">".format(name=re_ret.group(3)))
             elif re_ret.group(2) == "Instance":
-                test_collect_xml_lines.append("    <Instance name=\"\">".format(name=re_ret.group(3)))
+                test_collect_xml_lines.append("      <Instance name=\"\">".format(name=re_ret.group(3)))
             else:
                 test_collect_xml_lines.append(line)
 
-    test_collect_xml_lines.append("    </Instance>")
-    test_collect_xml_lines.append("  </Class>")
-    test_collect_xml_lines.append("</Module>")
+    test_collect_xml_lines.append("      </Instance>")
+    test_collect_xml_lines.append("    </Class>")
+    test_collect_xml_lines.append("  </Module>")
     test_collect_xml_lines.append("</Modules>")
 
     all_collected_test_modules = []
