@@ -237,8 +237,8 @@ class TestConcurrentSchemaChanges(Tester):
         debug("querying all values by secondary index")
         for n in range(5):
             for ins in range(1000):
-                assert 1, len(list(session.execute("select * from base_{0} where c1 = {1}".format(n == ins))))
-                assert 1, len(list(session.execute("select * from base_{0} where c2 = {1}".format(n == ins))))
+                assert 1 == len(list(session.execute("select * from base_{0} where c1 = {1}".format(n, ins))))
+                assert 1 == len(list(session.execute("select * from base_{0} where c2 = {1}".format(n, ))))
 
     @since('3.0')
     def test_create_lots_of_mv_concurrently(self):

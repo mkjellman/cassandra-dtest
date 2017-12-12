@@ -2230,7 +2230,7 @@ class CqlshCopyTest(Tester):
             return ''
 
         def check_options(out, expected_options):
-            opts = extract_options(out)
+            opts = extract_options(out.decode("utf-8"))
             debug('Options: {}'.format(opts))
             d = json.loads(opts)
             for k, v in expected_options:

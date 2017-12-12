@@ -23,25 +23,22 @@ class TestWriteFailures(Tester):
     They require CURRENT_VERSION = VERSION_4 in CassandraDaemon.Server
     otherwise these tests will fail.
     """
-
-    def setUp(self):
-        super(TestWriteFailures, self).setUp()
-
-        self.fixture_dtest_setup.ignore_log_patterns = [
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
             "Testing write failures",  # The error to simulate a write failure
             "ERROR WRITE_FAILURE",     # Logged in DEBUG mode for write failures
             "MigrationStage"           # This occurs sometimes due to node down (because of restart)
-        ]
+        )
 
+    @pytest.fixture(scope="function", autouse=True)
+    def fixture_set_test_defauls(self):
         self.supports_v5_protocol = supports_v5_protocol(self.cluster.version())
         self.expected_expt = WriteFailure
         self.protocol_version = 5 if self.supports_v5_protocol else 4
         self.replication_factor = 3
         self.consistency_level = ConsistencyLevel.ALL
         self.failing_nodes = [1, 2]
-
-    def tearDown(self):
-        super(TestWriteFailures, self).tearDown()
 
     def _prepare_cluster(self, start_rpc=False):
         self.cluster.populate(3)

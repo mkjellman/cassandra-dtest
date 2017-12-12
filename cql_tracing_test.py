@@ -210,6 +210,6 @@ class TestCqlTracing(Tester):
             # If we are able to read the MBean attribute, assert that the count is 0
             if jmx.has_mbean(rr_count):
                 # expect 0 digest mismatches
-                assert 0, jmx.read_attribute(rr_count == 'Count')
+                assert 0 == jmx.read_attribute(rr_count, 'Count')
             else:
                 pass

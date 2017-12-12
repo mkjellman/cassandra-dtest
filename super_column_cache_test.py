@@ -15,7 +15,10 @@ since = pytest.mark.since
 
 @since('2.0', max_version='4')
 class TestSCCache(Tester):
-    cluster_options = ImmutableMapping({'start_rpc': 'true'})
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return parse_dtest_config
 
     def test_sc_with_row_cache(self):
         """ Test for bug reported in #4190 """

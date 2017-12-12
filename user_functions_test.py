@@ -14,11 +14,15 @@ since = pytest.mark.since
 
 @since('2.2')
 class TestUserFunctions(Tester):
-    if CASSANDRA_VERSION_FROM_BUILD >= '3.0':
-        cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
-                                            'enable_scripted_user_defined_functions': 'true'})
-    else:
-        cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        if CASSANDRA_VERSION_FROM_BUILD >= '3.0':
+            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
+                                                'enable_scripted_user_defined_functions': 'true'})
+        else:
+            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+        return parse_dtest_config
 
     def prepare(self, create_keyspace=True, nodes=1, rf=1):
         cluster = self.cluster

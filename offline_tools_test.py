@@ -248,7 +248,7 @@ class TestOfflineTools(Tester):
         # map over each line of out and replace Java-normalized paths with Python equivalents.
         outlines = [re.sub("(?<=path=').*(?=')",
                                            lambda match: os.path.normcase(match.group(0)),
-                                           line) for line in out.splitlines()]
+                                           line) for line in out.decode("utf-8").splitlines()]
 
         # check output is correct for each sstable
         sstables = self._get_final_sstables(node1, "keyspace1", "standard1")

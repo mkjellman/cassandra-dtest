@@ -189,7 +189,10 @@ class TestSnapshot(SnapshotTester):
 
 
 class TestArchiveCommitlog(SnapshotTester):
-    cluster_options = ImmutableMapping({'commitlog_segment_size_in_mb': 1})
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return parse_dtest_config
 
     def make_snapshot(self, node, ks, cf, name):
         debug("Making snapshot....")

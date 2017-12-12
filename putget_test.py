@@ -14,7 +14,11 @@ since = pytest.mark.since
 
 
 class TestPutGet(Tester):
-    cluster_options = ImmutableMapping({'start_rpc': 'true'})
+
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return parse_dtest_config
 
     def test_putget(self):
         """ Simple put/get on a single row, hitting multiple sstables """

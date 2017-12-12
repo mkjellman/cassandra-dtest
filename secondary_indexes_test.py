@@ -317,7 +317,7 @@ class TestSecondaryIndexes(Tester):
         block_until_index_is_built(node1, session, 'keyspace1', 'standard1', 'ix_c0')
 
         stmt = session.prepare('select * from standard1 where "C0" = ?')
-        assert 1, len(list(session.execute(stmt == [lookup_value])))
+        assert 1 == len(list(session.execute(stmt, [lookup_value])))
         before_files = self._index_sstables_files(node1, 'keyspace1', 'standard1', 'ix_c0')
 
         node1.nodetool("rebuild_index keyspace1 standard1 ix_c0")
@@ -325,7 +325,7 @@ class TestSecondaryIndexes(Tester):
 
         after_files = self._index_sstables_files(node1, 'keyspace1', 'standard1', 'ix_c0')
         self.assertNotEqual(before_files, after_files)
-        assert 1, len(list(session.execute(stmt == [lookup_value])))
+        assert 1 == len(list(session.execute(stmt [lookup_value])))
 
         # verify that only the expected row is present in the build indexes table
         assert 1 == len(list(session.execute("""SELECT * FROM system."IndexInfo";""")))
@@ -917,13 +917,13 @@ class TestSecondaryIndexesOnCollections(Tester):
         session.execute("INSERT INTO map_tbl (id, amap) values (uuid(), {'faz': 1, 'baz': 2});")
 
         value_search = list(session.execute("SELECT * FROM map_tbl WHERE amap CONTAINS 1"))
-        assert 2, len(value_search) == "incorrect number of rows when querying on map values"
+        assert 2 == len(value_search), "incorrect number of rows when querying on map values"
 
         key_search = list(session.execute("SELECT * FROM map_tbl WHERE amap CONTAINS KEY 'foo'"))
-        assert 1, len(key_search) == "incorrect number of rows when querying on map keys"
+        assert 1 == len(key_search), "incorrect number of rows when querying on map keys"
 
         entries_search = list(session.execute("SELECT * FROM map_tbl WHERE amap['foo'] = 1"))
-        assert 1, len(entries_search) == "incorrect number of rows when querying on map entries"
+        assert 1 == len(entries_search), "incorrect number of rows when querying on map entries"
 
         session.cluster.refresh_schema_metadata()
         table_meta = session.cluster.metadata.keyspaces["map_double_index"].tables["map_tbl"]
@@ -1067,7 +1067,7 @@ class TestSecondaryIndexesOnCollections(Tester):
                     ).format(unshared_uuid2=log_entry['unshared_uuid2'])
 
             rows = list(session.execute(stmt))
-            assert 1, len(rows) == rows
+            assert 1 == len(rows), rows
 
             db_user_id, db_email, db_uuids = rows[0]
             assert db_user_id == log_entry['user_id']
@@ -1147,7 +1147,7 @@ class TestPreJoinCallback(Tester):
 
     @pytest.fixture(autouse=True)
     def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
-        fixture_dtest_setup.fixture_dtest_setup.ignore_log_patterns = [
+        fixture_dtest_setup.ignore_log_patterns = [
             # ignore all streaming errors during bootstrap
             r'Exception encountered during startup',
             r'Streaming error occurred',

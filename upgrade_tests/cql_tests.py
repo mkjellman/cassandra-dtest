@@ -1584,7 +1584,7 @@ class TestCQL(UpgradeTester):
                 # sanity check on the query
                 fetch_slice = SlicePredicate(slice_range=SliceRange('', '', False, 100))
                 row = client.get_slice(key, ColumnParent(column_family='cf'), fetch_slice, ThriftConsistencyLevel.ALL)
-                assert 6, len(row) == row
+                assert 6 == len(row), row
                 cols = OrderedDict([(cosc.column.name, cosc.column.value) for cosc in row])
                 debug(cols)
                 assert ['a', 'b', 'c', 'd', 'e', 'static1'] == list(cols.keys())
@@ -1600,7 +1600,7 @@ class TestCQL(UpgradeTester):
 
                 # check remaining columns
                 row = client.get_slice(key, ColumnParent(column_family='cf'), fetch_slice, ThriftConsistencyLevel.ALL)
-                assert 3, len(row) == row
+                assert 3 == len(row), row
                 cols = OrderedDict([(cosc.column.name, cosc.column.value) for cosc in row])
                 debug(cols)
                 assert ['a', 'e', 'static1'] == list(cols.keys())

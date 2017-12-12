@@ -1101,7 +1101,7 @@ class TestConsistency(Tester):
         srp = make_mbean('metrics', type='Table', name='ShortReadProtectionRequests', keyspace='test', scope='test')
         with JolokiaAgent(node1) as jmx:
             # 4 srp requests for node1 and 5 for node2, total of 9
-            assert 9, jmx.read_attribute(srp == 'Count')
+            assert 9 == jmx.read_attribute(srp, 'Count')
 
     @since('3.0')
     def test_12872(self):

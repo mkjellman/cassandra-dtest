@@ -195,7 +195,7 @@ class BaseSStableLoaderTest(Tester):
                     keyspace_dir = os.path.join(data_dir, ddir)
                     temp_files = self.glob_data_dirs(os.path.join(keyspace_dir, '*', "tmp", "*.dat"))
                     debug("temp files: " + str(temp_files))
-                    assert 0, len(temp_files) == "Temporary files were not cleaned up."
+                    assert 0 == len(temp_files), "Temporary files were not cleaned up."
 
 
 class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):

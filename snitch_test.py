@@ -87,7 +87,7 @@ class TestGossipingPropertyFileSnitch(Tester):
         assert original_rows == new_rows
 
         out, err, _ = node1.nodetool('gossipinfo')
-        assert 0, len(err) == err
+        assert 0 == len(err), err
         debug(out)
 
         assert "/{}".format(NODE1_BROADCAST_ADDRESS) in out

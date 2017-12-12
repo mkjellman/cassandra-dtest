@@ -85,7 +85,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        assert 1, len(warning) == "Cannot find the gc_grace_seconds warning message."
+        assert 1 == len(warning), "Cannot find the gc_grace_seconds warning message."
 
     @since('3.0')
     def test_logged_batch_gcgs_below_threshold_multi_table(self):
@@ -112,7 +112,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        assert 1, len(warning) == "Cannot find the gc_grace_seconds warning message."
+        assert 1 == len(warning), "Cannot find the gc_grace_seconds warning message."
 
     @since('3.0')
     def test_unlogged_batch_gcgs_below_threshold_should_not_print_warning(self):
@@ -128,7 +128,7 @@ class TestBatch(Tester):
         node1 = self.cluster.nodelist()[0]
         warning = node1.grep_log("setting a too low gc_grace_seconds on tables involved in an atomic batch")
         debug(warning)
-        assert 0, len(warning) == "Cannot find the gc_grace_seconds warning message."
+        assert 0 == len(warning), "Cannot find the gc_grace_seconds warning message."
 
     def test_logged_batch_rejects_counter_mutations(self):
         """ Test that logged batch rejects counter mutations """

@@ -579,14 +579,14 @@ class TestSchemaMetadata(Tester):
 
     @since('2.2')
     def test_creating_and_dropping_udf(self):
-        assert 0, len(self._keyspace_meta().functions) == "expected to start with no indexes"
+        assert 0 == len(self._keyspace_meta().functions), "expected to start with no indexes"
         self.session.execute("""
                 CREATE OR REPLACE FUNCTION ks.wasteful_function (input double)
                     CALLED ON NULL INPUT
                     RETURNS double
                     LANGUAGE java AS 'return Double.valueOf(Math.log(input.doubleValue()));';
             """)
-        assert 1, len(self._keyspace_meta().functions) == "udf count should be 1"
+        assert 1 == len(self._keyspace_meta().functions), "udf count should be 1"
         udf_meta = self._keyspace_meta().functions['wasteful_function(double)']
         assert 'ks' == udf_meta.keyspace
         assert 'wasteful_function' == udf_meta.name
@@ -597,12 +597,12 @@ class TestSchemaMetadata(Tester):
         assert 'return Double.valueOf(Math.log(input.doubleValue()));' == udf_meta.body
         assert udf_meta.called_on_null_input
         self.session.execute("DROP FUNCTION ks.wasteful_function")
-        assert 0, len(self._keyspace_meta().functions) == "expected udf list to be back to zero"
+        assert 0 == len(self._keyspace_meta().functions), "expected udf list to be back to zero"
 
     @since('2.2')
     def test_creating_and_dropping_uda(self):
-        assert 0, len(self._keyspace_meta().functions) == "expected to start with no indexes"
-        assert 0, len(self._keyspace_meta().aggregates) == "expected to start with no aggregates"
+        assert 0 == len(self._keyspace_meta().functions), "expected to start with no indexes"
+        assert 0 == len(self._keyspace_meta().aggregates), "expected to start with no aggregates"
         self.session.execute('''
                 CREATE FUNCTION ks.max_val(current int, candidate int)
                 CALLED ON NULL INPUT
@@ -615,8 +615,8 @@ class TestSchemaMetadata(Tester):
                 STYPE int
                 INITCOND -1
             ''')
-        assert 1, len(self._keyspace_meta().functions) == "udf count should be 1"
-        assert 1, len(self._keyspace_meta().aggregates) == "uda count should be 1"
+        assert 1 == len(self._keyspace_meta().functions), "udf count should be 1"
+        assert 1 == len(self._keyspace_meta().aggregates), "uda count should be 1"
         udf_meta = self._keyspace_meta().functions['max_val(int,int)']
         uda_meta = self._keyspace_meta().aggregates['kind_of_max_agg(int)']
 
@@ -639,9 +639,9 @@ class TestSchemaMetadata(Tester):
         assert 'int' == uda_meta.return_type
 
         self.session.execute("DROP AGGREGATE ks.kind_of_max_agg")
-        assert 0, len(self._keyspace_meta().aggregates) == "expected uda list to be back to zero"
+        assert 0 == len(self._keyspace_meta().aggregates), "expected uda list to be back to zero"
         self.session.execute("DROP FUNCTION ks.max_val")
-        assert 0, len(self._keyspace_meta().functions) == "expected udf list to be back to zero"
+        assert 0 == len(self._keyspace_meta().functions), "expected udf list to be back to zero"
 
     def test_basic_table_datatype(self):
         establish_basic_datatype_table(self.cluster.version(), self.session)

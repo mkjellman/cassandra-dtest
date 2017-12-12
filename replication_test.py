@@ -332,12 +332,12 @@ class SnitchConfigurationUpdateTest(Tester):
             while time.time() < wait_expire:
                 out, err, _ = node.nodetool("status")
 
-                debug(out)
-                if len(err.strip()) > 0:
-                    debug("Error trying to run nodetool status: {}".format(err))
+                debug(out.decode("utf-8"))
+                if len(err.decode("utf-8").strip()) > 0:
+                    debug("Error trying to run nodetool status: {}".format(err.decode("utf-8")))
 
                 racks = []
-                for line in out.split(os.linesep):
+                for line in out.decode("utf-8").split(os.linesep):
                     m = regex.match(line)
                     if m:
                         racks.append(m.group(1))

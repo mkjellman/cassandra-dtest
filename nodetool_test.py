@@ -52,9 +52,9 @@ class TestNodetool(Tester):
 
         for i, node in enumerate(cluster.nodelist()):
             out, err, _ = node.nodetool('info')
-            assert 0, len(err) == err
-            debug(out)
-            for line in out.split(os.linesep):
+            assert 0 == len(err), err
+            debug(out.decode("utf-8"))
+            for line in out.decide("utf-8").split(os.linesep):
                 if line.startswith('Data Center'):
                     assert line.endswith(node.data_center,
                                     "Expected dc {} for {} but got {}".format(node.data_center, node.address(), line.rsplit(None, 1)[-1]))
@@ -82,19 +82,19 @@ class TestNodetool(Tester):
         # read all of the timeouts, make sure we get a sane response
         for timeout_type in types:
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
-            assert 0, len(err) == err
+            assert 0 == len(err), err
             debug(out)
             self.assertRegex(out, r'.* \d+ ms')
 
         # set all of the timeouts to 123
         for timeout_type in types:
             _, err, _ = node.nodetool('settimeout {} 123'.format(timeout_type))
-            assert 0, len(err) == err
+            assert 0 == len(err), err
 
         # verify that they're all reported as 123
         for timeout_type in types:
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
-            assert 0, len(err) == err
+            assert 0 == len(err), err
             debug(out)
             self.assertRegex(out, r'.* 123 ms')
 
@@ -117,7 +117,7 @@ class TestNodetool(Tester):
 
         # Do a first try without any keypace, we shouldn't have the notice
         out, err, _ = node.nodetool('status')
-        assert 0, len(err) == err
+        assert 0 == len(err), err
         self.assertNotRegexpMatches(out, notice_message)
 
         session = self.patient_cql_connection(node)
@@ -125,21 +125,21 @@ class TestNodetool(Tester):
 
         # With 1 keyspace, we should still not get the notice
         out, err, _ = node.nodetool('status')
-        assert 0, len(err) == err
+        assert 0 == len(err), err
         self.assertNotRegexpMatches(out, notice_message)
 
         session.execute("CREATE KEYSPACE ks2 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':1}")
 
         # With 2 keyspaces with the same settings, we should not get the notice
         out, err, _ = node.nodetool('status')
-        assert 0, len(err) == err
+        assert 0 == len(err), err
         self.assertNotRegexpMatches(out, notice_message)
 
         session.execute("CREATE KEYSPACE ks3 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':3}")
 
         # With a keyspace without the same replication factor, we should get the notice
         out, err, _ = node.nodetool('status')
-        assert 0, len(err) == err
+        assert 0 == len(err), err
         self.assertRegex(out, notice_message)
 
     @since('4.0')

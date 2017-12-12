@@ -109,7 +109,7 @@ class TestPushedNotifications(Tester):
         for waiter in waiters:
             debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(60.0)
-            assert 1, len(notifications) == notifications
+            assert 1 == len(notifications), notifications
             notification = notifications[0]
             change_type = notification["change_type"]
             address, port = notification["address"]
@@ -217,7 +217,7 @@ class TestPushedNotifications(Tester):
         # check that node1 did not send UP or DOWN notification for node2
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=30.0, num_notifications=2)
-        assert 0, len(notifications) == notifications
+        assert 0 == len(notifications), notifications
 
     @since("2.2")
     def test_add_and_remove_node(self):
@@ -247,7 +247,7 @@ class TestPushedNotifications(Tester):
         node2.start(wait_other_notice=True)
         debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-        assert 2, len(notifications) == notifications
+        assert 2 == len(notifications), notifications
         for notification in notifications:
             assert get_ip_from_node(node2) == notification["address"][0]
             assert "NEW_NODE" == notifications[0]["change_type"]
@@ -259,7 +259,7 @@ class TestPushedNotifications(Tester):
         node2.stop(gently=False)
         debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-        assert 2, len(notifications) == notifications
+        assert 2 == len(notifications), notifications
         for notification in notifications:
             assert get_ip_from_node(node2) == notification["address"][0]
             assert "REMOVED_NODE" == notifications[0]["change_type"]
@@ -308,7 +308,7 @@ class TestPushedNotifications(Tester):
 
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=8)
-        assert 8, len(notifications) == notifications
+        assert 8 == len(notifications), notifications
         self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'KEYSPACE'}, notifications[0])
         self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 't'}, notifications[1])
         self.assertDictContainsSubset({'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 't'}, notifications[2])

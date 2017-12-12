@@ -64,7 +64,7 @@ class SSTableUtilTest(Tester):
         self._create_data(node, KeyspaceName, TableName, numrecords)
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
         assert len(finalfiles) > 0, "Expected to find some final files"
-        assert 0, len(tmpfiles) == "Expected no tmp files"
+        assert 0 == len(tmpfiles), "Expected no tmp files"
 
         t = InterruptCompaction(node, TableName, filename=log_file_name, delay=2)
         t.start()

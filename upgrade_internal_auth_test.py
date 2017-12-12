@@ -15,13 +15,20 @@ since = pytest.mark.since
 @pytest.mark.upgrade_test
 @since('2.2')
 class TestAuthUpgrade(Tester):
-    cluster_options = ImmutableMapping({'authenticator': 'PasswordAuthenticator',
+
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        parse_dtest_config.cluster_options = ImmutableMapping({'authenticator': 'PasswordAuthenticator',
                                         'authorizer': 'CassandraAuthorizer'})
-    ignore_log_patterns = (
-        # This one occurs if we do a non-rolling upgrade, the node
-        # it's trying to send the migration to hasn't started yet,
-        # and when it does, it gets replayed and everything is fine.
-        r'Can\'t send migration request: node.*is down',
+        return parse_dtest_config
+
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            # This one occurs if we do a non-rolling upgrade, the node
+            # it's trying to send the migration to hasn't started yet,
+            # and when it does, it gets replayed and everything is fine.
+            r'Can\'t send migration request: node.*is down',
     )
 
     def test_upgrade_to_22(self):

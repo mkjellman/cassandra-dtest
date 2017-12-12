@@ -17,8 +17,10 @@ since = pytest.mark.since
 class TestTTL(Tester):
     """ Test Time To Live Feature """
 
-    def setUp(self):
-        super(TestTTL, self).setUp()
+    @pytest.fixture(scope='function', autouse=True)
+    def fixture_ttl_test_setup(self, fixture_dtest_setup):
+        self.cluster = fixture_dtest_setup.cluster
+        self.fixture_dtest_setup = fixture_dtest_setup
         self.cluster.populate(1).start()
         [node1] = self.cluster.nodelist()
         self.session1 = self.patient_cql_connection(node1)

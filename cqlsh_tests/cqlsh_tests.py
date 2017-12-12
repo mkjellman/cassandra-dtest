@@ -1516,7 +1516,7 @@ Tracing session:""")
 
         session.execute('DROP TABLE test_ks.lcs_describe')
 
-        create_statement = 'USE test_ks; ' + ' '.join(describe_out.splitlines())
+        create_statement = 'USE test_ks; ' + ' '.join(describe_out.decode("utf-8").splitlines())
         create_out, create_err = self.run_cqlsh(node1, create_statement)
 
         # these statements shouldn't fall down
@@ -1524,7 +1524,7 @@ Tracing session:""")
         session.execute('INSERT INTO lcs_describe (key) VALUES (1)')
 
         # the table created before and after should be the same
-        assert reloaded_describe_out == describe_out
+        assert reloaded_describe_out.decode("utf-8") == describe_out.decode("utf-8")
 
     @since('3.0')
     def test_materialized_view(self):
@@ -1552,30 +1552,38 @@ Tracing session:""")
         session.execute(insert_stmt + "('user4', 'ch@ngem3d', 'm', 'TX', 1974);")
 
         describe_out, err = self.run_cqlsh(node1, 'DESCRIBE MATERIALIZED VIEW test.users_by_state')
-        assert 0, len(err) == err
+        describe_out_str = describe_out.decode("utf-8")
+        err_str = err.decode("utf-8")
+        assert 0 == len(err_str), err_str
 
         select_out, err = self.run_cqlsh(node1, "SELECT * FROM test.users_by_state")
-        assert 0, len(err) == err
+        err_str = err.decode("utf-8")
+        assert 0 == len(err_str), err_str
         debug(select_out)
 
         out, err = self.run_cqlsh(node1, "DROP MATERIALIZED VIEW test.users_by_state; DESCRIBE KEYSPACE test; DESCRIBE table test.users")
-        assert 0, len(err) == err
+        err_str = err.decode("utf-8")
+        assert 0 == len(err_str), err_str
         assert "CREATE MATERIALIZED VIEW users_by_state" not in out
 
         out, err = self.run_cqlsh(node1, 'DESCRIBE MATERIALIZED VIEW test.users_by_state')
-        assert 0, len(out.strip()) == out
+        describe_out_str = describe_out.decode("utf-8")
+        assert 0 == len(describe_out_str.strip()), describe_out_str
         assert "Materialized view 'users_by_state' not found" in err
 
-        create_statement = 'USE test; ' + ' '.join(describe_out.splitlines()).strip()[:-1]
+        create_statement = 'USE test; ' + ' '.join(describe_out_str.splitlines()).strip()[:-1]
         out, err = self.run_cqlsh(node1, create_statement)
-        assert 0, len(err) == err
+        err_str = err.decode("utf-8")
+        assert 0 == len(err_str), err_str
 
         reloaded_describe_out, err = self.run_cqlsh(node1, 'DESCRIBE MATERIALIZED VIEW test.users_by_state')
-        assert 0, len(err) == err
-        assert describe_out == reloaded_describe_out
+        err_str = err.decode("utf-8")
+        assert 0 == len(err_str), err_str
+        assert describe_out_str == reloaded_describe_out
 
         reloaded_select_out, err = self.run_cqlsh(node1, "SELECT * FROM test.users_by_state")
-        assert 0, len(err) == err
+        err_str = err.decode("utf-8")
+        assert 0 == len(err_str), err_str
         assert select_out == reloaded_select_out
 
     @since('3.0')
@@ -1637,8 +1645,8 @@ Tracing session:""")
             CREATE TABLE excelsior.data (id int primary key);
             BEGIN BATCH INSERT INTO excelsior.data (id) VALUES (0); APPLY BATCH""")
 
-        assert 0, len(stderr) == stderr
-        assert 0, len(stdout) == stdout
+        assert 0 == len(stderr), stderr
+        assert 0 == len(stdout), stdout
 
     def run_cqlsh(self, node, cmds, cqlsh_options=None, env_vars=None):
         if env_vars is None:
