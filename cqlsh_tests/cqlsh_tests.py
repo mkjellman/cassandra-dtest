@@ -1867,9 +1867,7 @@ class CqlshSmokeTest(Tester):
 
         new_columns = get_ks_columns()
         assert old_column_spec not in new_columns
-        self.assertIn(['test', 'i',
-                       'text'],
-                      new_columns)
+        assert ['test', 'i', 'text'] in new_columns
 
     def test_use_keyspace(self):
         # ks1 contains ks1table, ks2 contains ks2table

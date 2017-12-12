@@ -15,6 +15,7 @@ from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
 from tools.data import rows_to_list
 from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.paging import PageAssertionMixin, PageFetcher
+from plugins.assert_tools import assert_raises_regex
 
 since = pytest.mark.since
 
@@ -226,7 +227,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         assert pf.all_data() == expected_data
 
         # make sure we don't allow paging over multiple partitions with order because that's weird
-        with pytest.raisesRegex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
+        with assert_raises_regex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
             stmt = SimpleStatement("select * from paging_test where id in (1,2) order by value asc", consistency_level=CL.ALL)
             session.execute(stmt)
 
@@ -3038,7 +3039,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         # stop a node and make sure we get an error trying to page the rest
         node1.stop()
-        with pytest.raisesRegex(RuntimeError, 'Requested pages were not delivered before timeout'):
+        with assert_raises_regex(RuntimeError, 'Requested pages were not delivered before timeout'):
             pf.request_all()
 
         # TODO: can we resume the node and expect to get more results from the result set or is it done?
@@ -3297,7 +3298,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
         Test multiple row deletions.
         This test should be finished when CASSANDRA-6237 is done.
         """
-        self.skipTest("Feature In Development")
+        pytest.skip("Feature In Development")
         self.session = self.prepare()
         expected_data = self.setup_data()
 

@@ -10,6 +10,7 @@ from dtest import Tester, debug
 from tools.jmxutils import (JolokiaAgent, enable_jmx_ssl, make_mbean,
                             remove_perf_disable_shared_mem)
 from tools.misc import generate_ssl_stores
+from plugins.assert_tools import assert_raises_regex
 
 since = pytest.mark.since
 
@@ -28,7 +29,7 @@ class TestJMX(Tester):
         node1.flush()
         node1.stop(gently=False)
 
-        with pytest.raisesRegex(ToolError, "ConnectException: 'Connection refused( \(Connection refused\))?'."):
+        with assert_raises_regex(ToolError, "ConnectException: 'Connection refused( \(Connection refused\))?'."):
             node1.nodetool('netstats')
 
         # don't wait; we're testing for when nodetool is called on a node mid-startup
@@ -141,24 +142,24 @@ class TestJMX(Tester):
                                  missing_metric_message.format("ViewLockAcquireTime", "testtable"))
             assert jmx.read_attribute(mv_memtable_size is not None, "Value",
                                  missing_metric_message.format("AllMemtablesHeapSize", "testmv"))
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
 
         node.run_cqlsh(cmds="DROP KEYSPACE mvtest;")
         with JolokiaAgent(node) as jmx:
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_memtable_size, attribute="Value", verbose=False)
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_lock_time, attribute="Count", verbose=False)
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_read_time, attribute="Count", verbose=False)
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_memtable_size, attribute="Value", verbose=False)
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
-            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            assert_raises_regex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
 
     def test_compactionstats(self):
@@ -315,7 +316,7 @@ class TestJMXSSL(Tester):
         self.assert_insecure_connection_rejected(node)
 
         # specifying only the truststore containing the server cert should fail
-        with pytest.raisesRegex(ToolError, ".*SSLHandshakeException.*"):
+        with assert_raises_regex(ToolError, ".*SSLHandshakeException.*"):
             node.nodetool("info --ssl -Djavax.net.ssl.trustStore={ts} -Djavax.net.ssl.trustStorePassword={ts_pwd}"
                           .format(ts=self.truststore(), ts_pwd=self.truststore_password))
 

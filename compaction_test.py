@@ -148,7 +148,7 @@ class TestCompaction(Tester):
         debug("bloom filter size is: {}".format(bfSize))
         debug("size factor = {}".format(size_factor))
         assert bfSize >= size_factor * min_bf_size
-        self.assertLessEqual(bfSize, size_factor * max_bf_size)
+        assert bfSize <= size_factor * max_bf_size
 
     def test_sstable_deletion(self):
         """
@@ -194,7 +194,7 @@ class TestCompaction(Tester):
         if not hasattr(self, 'strategy'):
             self.strategy = 'DateTieredCompactionStrategy'
         elif self.strategy != 'DateTieredCompactionStrategy':
-            self.skipTest('Not implemented unless DateTieredCompactionStrategy is used')
+            pytest.skip('Not implemented unless DateTieredCompactionStrategy is used')
 
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
@@ -511,7 +511,7 @@ class TestCompaction(Tester):
         @jira_ticket CASSANDRA-11550
         """
         if not hasattr(self, 'strategy') or self.strategy != 'LeveledCompactionStrategy':
-            self.skipTest('Not implemented unless LeveledCompactionStrategy is used')
+            pytest.skip('Not implemented unless LeveledCompactionStrategy is used')
 
         cluster = self.cluster
         cluster.populate(1).start(wait_for_binary_proto=True)
@@ -555,7 +555,7 @@ class TestCompaction(Tester):
 
     def skip_if_no_major_compaction(self):
         if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':
-            self.skipTest('major compaction not implemented for LCS in this version of Cassandra')
+            pytest.skip('major compaction not implemented for LCS in this version of Cassandra')
 
 
 def grep_sstables_in_each_level(node, table_name):

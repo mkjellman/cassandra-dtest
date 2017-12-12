@@ -983,9 +983,8 @@ class TestRepair(BaseRepairTest):
         rows = list(session.execute("SELECT activity FROM system_traces.events"))
         # This check assumes that the only (or at least first) thing to write to `system_traces.events.activity` is
         # the repair task triggered in the test.
-        self.assertIn('job threads: {}'.format(job_thread_count),
-                      rows[0][0],
-                      'Expected {} job threads in repair options. Instead we saw {}'.format(job_thread_count, rows[0][0]))
+        assert 'job threads: {}'.format(job_thread_count) in rows[0][0], \
+            'Expected {} job threads in repair options. Instead we saw {}'.format(job_thread_count, rows[0][0])
 
     @since('2.2')
     def test_thread_count_repair(self):
@@ -1031,9 +1030,8 @@ class TestRepair(BaseRepairTest):
             rows = list(session.execute("SELECT activity FROM system_traces.events"))
             # This check assumes that the only (or at least first) thing to write to `system_traces.events.activity` is
             # the repair task triggered in the test.
-            self.assertIn('job threads: {}'.format(job_thread_count),
-                          rows[0][0],
-                          'Expected {} job threads in repair options. Instead we saw {}'.format(job_thread_count, rows[0][0]))
+            assert 'job threads: {}'.format(job_thread_count) in rows[0][0], \
+                'Expected {} job threads in repair options. Instead we saw {}'.format(job_thread_count, rows[0][0])
 
     @pytest.mark.no_vnodes
     def test_multiple_concurrent_repairs(self):

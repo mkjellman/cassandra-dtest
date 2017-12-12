@@ -80,7 +80,7 @@ class TestPaxos(Tester):
         session.execute("INSERT INTO test (k, v) VALUES (6, 6) IF NOT EXISTS")
 
     def test_contention_multi_iterations(self):
-        self.skipTest("Hanging the build")
+        pytest.skip("Hanging the build")
         self._contention_test(8, 100)
 
     # Warning, this test will require you to raise the open

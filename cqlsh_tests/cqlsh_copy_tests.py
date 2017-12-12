@@ -2164,7 +2164,7 @@ class CqlshCopyTest(Tester):
             # and that the last line indicates all rows were processed
             lines = [line.rstrip('\n') for line in open(ratefile.name)]
             debug(lines)
-            self.assertLessEqual(10, len(lines), "Expected at least 10 lines but got {} lines".format(len(lines)))
+            assert 10 <= len(lines), "Expected at least 10 lines but got {} lines".format(len(lines))
             assert lines[-1].startswith('Processed: {} rows;'.format(num_rows))
 
         self.prepare()

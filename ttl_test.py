@@ -382,7 +382,7 @@ class TestDistributedTTL(Tester):
 
         # since the two queries are not executed simultaneously, the remaining
         # TTLs can differ by one second
-        self.assertLessEqual(abs(ttl_session1[0][0] - ttl_session2[0][0]), 1)
+        assert abs(ttl_session1[0][0] - ttl_session2[0][0]) <= 1
 
         time.sleep(7)
 
@@ -428,7 +428,7 @@ class TestDistributedTTL(Tester):
 
         debug("ttl_1 is {}:".format(ttl_1))
         debug("ttl_2 is {}:".format(ttl_2))
-        self.assertLessEqual(abs(ttl_1 - ttl_2), 1)
+        assert abs(ttl_1 - ttl_2) <= 1
 
     def test_ttl_is_respected_on_repair(self):
         """ Test that ttl is respected on repair """

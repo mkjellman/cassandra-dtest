@@ -183,9 +183,8 @@ class TestCqlTracing(Tester):
             check_for_errs_in = errs[0][1]
         else:
             check_for_errs_in = err
-        self.assertIn("Default constructor for Tracing class "
-                      "'org.apache.cassandra.tracing.TracingImpl' is inaccessible.",
-                      check_for_errs_in)
+        assert "Default constructor for Tracing class 'org.apache.cassandra.tracing.TracingImpl' is inaccessible." \
+               in check_for_errs_in
 
     @since('3.0')
     def test_tracing_does_not_interfere_with_digest_calculation(self):

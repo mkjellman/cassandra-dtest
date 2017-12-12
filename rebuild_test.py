@@ -7,6 +7,7 @@ from ccmlib.node import ToolError
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
+from plugins.assert_tools import assert_raises_regex
 
 since = pytest.mark.since
 
@@ -323,7 +324,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with pytest.raisesRegex(ToolError, 'is not a range that is owned by this node'):
+        with assert_raises_regex(ToolError, 'is not a range that is owned by this node'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
 
     @since('3.10')
@@ -359,7 +360,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with pytest.raisesRegex(ToolError, 'Unable to find sufficient sources for streaming range'):
+        with assert_raises_regex(ToolError, 'Unable to find sufficient sources for streaming range'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
 
     @since('3.10')

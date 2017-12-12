@@ -137,7 +137,7 @@ class TestCommitLog(Tester):
             except AssertionError as e:
                 # the last segment may be smaller
                 if not smaller_found:
-                    self.assertLessEqual(size, segment_size)
+                    assert size <= segment_size
                     smaller_found = True
                 else:
                     raise e
@@ -171,7 +171,7 @@ class TestCommitLog(Tester):
         """
         cluster_ver = self.cluster.version()
         if LooseVersion('3.1') <= cluster_ver < LooseVersion('3.7'):
-            self.skipTest("Fixed in 3.0.7 and 3.7")
+            pytest.skip("Fixed in 3.0.7 and 3.7")
 
         node1 = self.node1
         node1.set_batch_commitlog(enabled=True)

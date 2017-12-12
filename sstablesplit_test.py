@@ -72,13 +72,13 @@ class TestSSTableSplit(Tester):
         # get the sstables post-split and their total size
         sstables = node.get_sstables(keyspace, '')
         debug("Number of sstables after split: %s. expected %s" % (len(sstables), expected_num_sstables))
-        self.assertLessEqual(expected_num_sstables, len(sstables) + 1)
-        self.assertLessEqual(1, len(sstables))
+        assert expected_num_sstables <= len(sstables) + 1
+        assert 1 <= len(sstables)
 
         # make sure none of the tables are bigger than the max expected size
         sstable_sizes = [getsize(sstable) for sstable in sstables]
         # add a bit extra for overhead
-        self.assertLessEqual(max(sstable_sizes), expected_sstable_size + 512)
+        assert max(sstable_sizes) <= expected_sstable_size + 512
         # make sure node can start with changed sstables
         node.start(wait_for_binary_proto=True)
 
