@@ -102,8 +102,8 @@ class TestCrcCheckChanceUpgrade(Tester):
         session.cluster.refresh_schema_metadata(0)
         meta = session.cluster.metadata.keyspaces['ks'].tables['cf1']
         debug(meta.options['compression_parameters'])
-        self.assertEqual('{"crc_check_chance":"0.6","sstable_compression":"org.apache.cassandra.io.compress.DeflateCompressor","chunk_length_kb":"256"}',
-                         meta.options['compression_parameters'])
+        assert '{"crc_check_chance":"0.6","sstable_compression":"org.apache.cassandra.io.compress.DeflateCompressor","chunk_length_kb":"256"}' \
+               == meta.options['compression_parameters']
         session.shutdown()
 
     def verify_new_crc_check_chance(self, node):

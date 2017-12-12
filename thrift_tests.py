@@ -2279,10 +2279,8 @@ class TestMutations(ThriftTester):
         slice_predicate = SlicePredicate(slice_range=SliceRange('', '', False, 100))
         results = client.get_slice('key1', ColumnParent('StandardComposite'), slice_predicate, ConsistencyLevel.ONE)
         columns = [result.column.name for result in results]
-        self.assertEqual(
-            columns,
-            [composite('0', '0'), composite('1', '1'), composite('2', '2'),
-             composite('6', '6'), composite('7', '7'), composite('8', '8'), composite('9', '9')])
+        assert columns == [composite('0', '0'), composite('1', '1'), composite('2', '2'),
+             composite('6', '6'), composite('7', '7'), composite('8', '8'), composite('9', '9')]
 
     @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', reason="Test doesn't run on 3.9")
     def test_range_deletion_eoc_0(self):
@@ -2310,12 +2308,10 @@ class TestMutations(ThriftTester):
         slice_predicate = SlicePredicate(slice_range=SliceRange('', '', False, 100))
         results = client.get_slice('key1', ColumnParent('StandardComposite'), slice_predicate, ConsistencyLevel.ONE)
         columns = [result.column.name for result in results]
-        self.assertEqual(
-            columns,
-            [composite('0', '0'), composite('1', '1'), composite('2', '2'), composite('3', '3'), composite('4', '4'), composite('5', '5'),
+        assert columns == [composite('0', '0'), composite('1', '1'), composite('2', '2'), composite('3', '3'), composite('4', '4'), composite('5', '5'),
              composite('6'),
              composite('6', '6'),
-             composite('7', '7'), composite('8', '8'), composite('9', '9')])
+             composite('7', '7'), composite('8', '8'), composite('9', '9')]
 
         # do a slice deletion with (6, ) as the end
         delete_slice = SlicePredicate(slice_range=SliceRange(composite('3', eoc='\xff'), composite('6', '\x00'), False, 100))
@@ -2326,11 +2322,9 @@ class TestMutations(ThriftTester):
         # check the columns post-deletion, ('6', ) because it is an exact much but not (6, 6)
         results = client.get_slice('key1', ColumnParent('StandardComposite'), slice_predicate, ConsistencyLevel.ONE)
         columns = [result.column.name for result in results]
-        self.assertEqual(
-            columns,
-            [composite('0', '0'), composite('1', '1'), composite('2', '2'),
+        assert columns == [composite('0', '0'), composite('1', '1'), composite('2', '2'),
              composite('6', '6'),
-             composite('7', '7'), composite('8', '8'), composite('9', '9')])
+             composite('7', '7'), composite('8', '8'), composite('9', '9')]
 
         # do another slice deletion, but make the end (6, 6) this time
         delete_slice = SlicePredicate(slice_range=SliceRange(composite('3', eoc='\xff'), composite('6', '6', '\x00'), False, 100))
@@ -2341,10 +2335,8 @@ class TestMutations(ThriftTester):
         # check the columns post-deletion, now (6, 6) is also gone
         results = client.get_slice('key1', ColumnParent('StandardComposite'), slice_predicate, ConsistencyLevel.ONE)
         columns = [result.column.name for result in results]
-        self.assertEqual(
-            columns,
-            [composite('0', '0'), composite('1', '1'), composite('2', '2'),
-             composite('7', '7'), composite('8', '8'), composite('9', '9')])
+        assert columns == [composite('0', '0'), composite('1', '1'), composite('2', '2'),
+             composite('7', '7'), composite('8', '8'), composite('9', '9')]
 
     def test_incr_decr_standard_slice(self):
         _set_keyspace('Keyspace1')
