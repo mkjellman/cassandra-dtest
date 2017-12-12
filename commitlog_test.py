@@ -24,18 +24,20 @@ class TestCommitLog(Tester):
     """
     CommitLog Tests
     """
-    allow_log_errors = True
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.allow_log_errors = True
 
-    def setUp(self):
-        super(TestCommitLog, self).setUp()
-        self.cluster.populate(1)
-        [self.node1] = self.cluster.nodelist()
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        parse_dtest_config.cluster.populate(1)
+        [self.node1] = parse_dtest_config.cluster.nodelist()
 
-    def tearDown(self):
+        yield parse_dtest_config
+
         # Some of the tests change commitlog permissions to provoke failure
         # so this changes them back so we can delete them.
         self._change_commitlog_perms(stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
-        super(TestCommitLog, self).tearDown()
 
     def prepare(self, configuration=None, create_test_keyspace=True, **kwargs):
         if configuration is None:
@@ -110,7 +112,7 @@ class TestCommitLog(Tester):
         time.sleep(1)
 
         commitlogs = self._get_commitlog_files()
-        assert len(commitlogs), 0 > 'No commit log files were created'
+        assert len(commitlogs) > 0, 'No commit log files were created'
 
         # the most recently-written segment of the commitlog may be smaller
         # than the expected size, so we allow exactly one segment to be smaller

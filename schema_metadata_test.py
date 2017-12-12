@@ -495,10 +495,9 @@ def _cql_name_builder(prefix, table_name):
 
 
 class TestSchemaMetadata(Tester):
-
-    def setUp(self):
-        Tester.setUp(self)
-        cluster = self.cluster
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        cluster = parse_dtest_config.cluster
         cluster.schema_event_refresh_window = 0
 
         if cluster.version() >= '3.0':
@@ -508,8 +507,9 @@ class TestSchemaMetadata(Tester):
             cluster.set_configuration_options({'enable_user_defined_functions': 'true'})
         cluster.populate(1).start()
 
-        self.session = self.patient_cql_connection(cluster.nodelist()[0])
+        self.session = parse_dtest_config.patient_cql_connection(cluster.nodelist()[0])
         create_ks(self.session, 'ks', 1)
+        return parse_dtest_config
 
     def _keyspace_meta(self, keyspace_name="ks"):
         self.session.cluster.refresh_schema_metadata()

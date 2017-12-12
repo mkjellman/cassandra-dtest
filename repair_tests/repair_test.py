@@ -1236,21 +1236,21 @@ class TestRepairDataSystemTable(Tester):
     to a cluster, then ensuring these tables are in valid states before and
     after running repair.
     """
-
-    def setUp(self):
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
         """
         Prepares a cluster for tests of the repair history tables by starting
         a 5-node cluster, then inserting 5000 values with RF=3.
         """
-
-        Tester.setUp(self)
-        self.cluster.populate(5).start(wait_for_binary_proto=True)
+        parse_dtest_config.cluster.populate(5).start(wait_for_binary_proto=True)
         self.node1 = self.cluster.nodelist()[0]
-        self.session = self.patient_cql_connection(self.node1)
+        self.session = parse_dtest_config.patient_cql_connection(self.node1)
 
         self.node1.stress(stress_options=['write', 'n=5K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=3)'])
 
-        self.cluster.flush()
+        parse_dtest_config.cluster.flush()
+        return parse_dtest_config
+
 
     def repair_table_contents(self, node, include_system_keyspaces=True):
         """

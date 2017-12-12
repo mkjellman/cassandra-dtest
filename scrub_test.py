@@ -19,15 +19,17 @@ KEYSPACE = 'ks'
 
 class TestHelper(Tester):
 
-    def setUp(self):
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
         """
         disable JBOD configuration for scrub tests.
         range-aware JBOD can skip generation in SSTable,
         and some tests rely on generation numbers/
         (see CASSANDRA-11693 and increase_sstable_generations)
         """
-        super(TestHelper, self).setUp()
-        self.cluster.set_datadir_count(1)
+        parse_dtest_config.cluster.set_datadir_count(1)
+        return parse_dtest_config
+
 
     def get_table_paths(self, table):
         """

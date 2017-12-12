@@ -16,12 +16,11 @@ since = pytest.mark.since
 
 class TestCompaction(Tester):
 
-    __test__ = False
-
-    def setUp(self):
-        Tester.setUp(self)
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
         # compaction test for version 2.2.2 and above relies on DEBUG log in debug.log
-        self.cluster.set_log_level("DEBUG")
+        parse_dtest_config.cluster.set_log_level("DEBUG")
+        return parse_dtest_config
 
     @since('0', '2.2.X')
     def test_compaction_delete(self):
@@ -504,8 +503,8 @@ class TestCompaction(Tester):
         node1.nodetool('compact --user-defined {}'.format(sstable_files))
 
         sstable_files = node1.get_sstable_data_files('keyspace1', 'standard1')
-        assert len(node1.data_directories()) == len(sstable_files,
-                          'Expected one sstable data file per node directory but got {}'.format(sstable_files))
+        assert len(node1.data_directories()) == len(sstable_files), \
+            'Expected one sstable data file per node directory but got {}'.format(sstable_files)
 
     @since('3.10')
     def test_fanout_size(self):

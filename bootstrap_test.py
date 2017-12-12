@@ -28,14 +28,14 @@ class TestBootstrap(Tester):
     def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
         fixture_dtest_setup.allow_log_errors = True
         fixture_dtest_setup.ignore_log_patterns = (
-        # This one occurs when trying to send the migration to a
-        # node that hasn't started yet, and when it does, it gets
-        # replayed and everything is fine.
-        r'Can\'t send migration request: node.*is down',
-        # ignore streaming error during bootstrap
-        r'Exception encountered during startup',
-        r'Streaming error occurred'
-    )
+            # This one occurs when trying to send the migration to a
+            # node that hasn't started yet, and when it does, it gets
+            # replayed and everything is fine.
+            r'Can\'t send migration request: node.*is down',
+            # ignore streaming error during bootstrap
+            r'Exception encountered during startup',
+            r'Streaming error occurred'
+        )
 
     def _base_bootstrap_test(self, bootstrap=None, bootstrap_from_version=None,
                              enable_ssl=None):

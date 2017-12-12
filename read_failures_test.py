@@ -15,19 +15,21 @@ class TestReadFailures(Tester):
     Tests for read failures in the replicas, introduced as a part of
     @jira_ticket CASSANDRA-12311.
     """
-    ignore_log_patterns = (
-        "Scanned over [1-9][0-9]* tombstones",  # This is expected when testing read failures due to tombstones
-    )
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            "Scanned over [1-9][0-9]* tombstones",  # This is expected when testing read failures due to tombstones
+        )
+        return fixture_dtest_setup
 
-    def setUp(self):
-        super(TestReadFailures, self).setUp()
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
         self.tombstone_failure_threshold = 500
         self.replication_factor = 3
         self.consistency_level = ConsistencyLevel.ALL
         self.expected_expt = ReadFailure
 
-    def tearDown(self):
-        super(TestReadFailures, self).tearDown()
+        return parse_dtest_config
 
     def _prepare_cluster(self):
         self.cluster.set_configuration_options(

@@ -334,12 +334,14 @@ class TestTTL(Tester):
 class TestDistributedTTL(Tester):
     """ Test Time To Live Feature in a distributed environment """
 
-    def setUp(self):
-        super(TestDistributedTTL, self).setUp()
-        self.cluster.populate(2).start()
-        [self.node1, self.node2] = self.cluster.nodelist()
-        self.session1 = self.patient_cql_connection(self.node1)
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        parse_dtest_config.cluster.populate(2).start()
+        [self.node1, self.node2] = parse_dtest_config.cluster.nodelist()
+        self.session1 = parse_dtest_config.patient_cql_connection(self.node1)
         create_ks(self.session1, 'ks', 2)
+
+        return parse_dtest_config
 
     def prepare(self, default_time_to_live=None):
         self.session1.execute("DROP TABLE IF EXISTS ttl_table;")

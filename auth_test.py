@@ -1146,7 +1146,6 @@ class TestAuthRoles(Tester):
                                                 'enable_scripted_user_defined_functions': 'true'})
         else:
             parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
-
         return parse_dtest_config
 
     def test_create_drop_role(self):
