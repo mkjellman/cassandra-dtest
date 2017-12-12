@@ -29,21 +29,18 @@ class TestDeletion(Tester):
         session.execute('insert into cf (key, c1) values (2,1)')
         node1.flush()
 
-        self.assertEqual(rows_to_list(session.execute('select * from cf;')),
-                         [[1, 1], [2, 1]])
+        assert rows_to_list(session.execute('select * from cf;')) == [[1, 1], [2, 1]]
 
         session.execute('delete from cf where key=1')
 
-        self.assertEqual(rows_to_list(session.execute('select * from cf;')),
-                         [[2, 1]])
+        assert rows_to_list(session.execute('select * from cf;')) == [[2, 1]]
 
         node1.flush()
         time.sleep(.5)
         node1.compact()
         time.sleep(.5)
 
-        self.assertEqual(rows_to_list(session.execute('select * from cf;')),
-                         [[2, 1]])
+        assert rows_to_list(session.execute('select * from cf;')) == [[2, 1]]
 
     def test_tombstone_size(self):
         self.cluster.populate(1)

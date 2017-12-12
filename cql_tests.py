@@ -750,9 +750,7 @@ class MiscellaneousCQLTester(CQLTester):
 
         for session in sessions:
             res = session.execute("SELECT * from test_drop_compact_storage")
-            self.assertEqual(rows_to_list(res), [[1, 1],
-                                                 [2, 2],
-                                                 [3, 3]])
+            assert rows_to_list(res) == [[1, 1], [2, 2], [3, 3]]
 
         session1.execute("ALTER TABLE test_drop_compact_storage DROP COMPACT STORAGE")
 

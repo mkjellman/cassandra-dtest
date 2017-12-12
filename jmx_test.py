@@ -236,7 +236,7 @@ class TestJMX(Tester):
         node1, node2, node3 = cluster.nodelist()
 
         stdout = node1.nodetool("failuredetector").stdout
-        phivalues = stdout.decode("utf-8").splitlines()
+        phivalues = stdout.splitlines()
         endpoint1values = phivalues[1].split()
         endpoint2values = phivalues[2].split()
 

@@ -233,10 +233,10 @@ class TestHelper(Tester):
         statement = SimpleStatement("SELECT * from counters WHERE id = {}".format(id), consistency_level=consistency)
         ret = rows_to_list(session.execute(statement))
         if check_ret:
-            self.assertEqual(ret[0][1], val, "Got {} from {}, expected {} at {}".format(ret[0][1],
+            assert ret[0][1] == val, "Got {} from {}, expected {} at {}".format(ret[0][1],
                                                                                         session.cluster.contact_points,
                                                                                         val,
-                                                                                        consistency_value_to_name(consistency)))
+                                                                                        consistency_value_to_name(consistency))
         return ret[0][1] if ret else 0
 
 

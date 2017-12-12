@@ -533,10 +533,4 @@ class TestCDC(Tester):
         # Then we assert that the CDC data that we expect to be there is there.
         # All data that was in CDC tables should have been copied to cdc_raw,
         # then used in commitlog replay, so it should be back in the cluster.
-        self.assertEqual(
-            inserted_rows,
-            data_in_cdc_table_after_restart,
-            # The message on failure is too long, since cdc_data is thousands
-            # of items, so we print something else here
-            msg='not all expected data selected'
-        )
+        assert inserted_rows == data_in_cdc_table_after_restart, 'not all expected data selected'

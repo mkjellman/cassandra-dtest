@@ -351,10 +351,7 @@ class TestMaterializedViews(Tester):
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(
-            len(result), 1,
-            "Expecting {} materialized view, got {}".format(1, len(result))
-        )
+        assert len(result) == 1, "Expecting {} materialized view, got {}".format(1, len(result))
 
         assert_invalid(
             session,
@@ -364,20 +361,14 @@ class TestMaterializedViews(Tester):
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(
-            len(result), 1,
-            "Expecting {} materialized view, got {}".format(1, len(result))
-        )
+        assert len(result) == 1, "Expecting {} materialized view, got {}".format(1, len(result))
 
         session.execute("DROP MATERIALIZED VIEW ks.users_by_state;")
         session.execute("DROP TABLE ks.users;")
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(
-            len(result), 0,
-            "Expecting {} materialized view, got {}".format(1, len(result))
-        )
+        assert len(result) == 0, "Expecting {} materialized view, got {}".format(1, len(result))
 
     def test_clustering_column(self):
         """Test that we can use clustering columns as primary key for a materialized view"""
