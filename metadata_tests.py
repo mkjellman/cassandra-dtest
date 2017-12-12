@@ -1,6 +1,5 @@
 import threading
 import time
-from unittest import skip
 
 from dtest import Tester
 
@@ -24,7 +23,7 @@ class TestMetadata(Tester):
         node1.stress(['read', 'no-warmup', 'n=30000', '-schema', 'replication(factor=2)', 'compression=LZ4Compressor',
                       '-rate', 'threads=1'])
 
-    @skip('hangs CI')
+    @pytest.mark.skip(reason='hangs CI')
     def test_metadata_reset_while_compact(self):
         """
         Resets the schema while a compact, read and repair happens.

@@ -6,7 +6,6 @@ import traceback
 import pytest
 from functools import partial
 from multiprocessing import Process, Queue
-from unittest import skip, skipIf
 
 from cassandra import ConsistencyLevel, WriteFailure
 from cassandra.cluster import NoHostAvailable
@@ -2220,7 +2219,7 @@ def thread_session(ip, queue, start, end, rows, num_partitions):
 
 
 @since('3.0')
-@skipIf(sys.platform == 'win32', 'Bug in python on Windows: https://bugs.python.org/issue10128')
+@pytest.mark.skipif(sys.platform == 'win32', reason='Bug in python on Windows: https://bugs.python.org/issue10128')
 class TestMaterializedViewsConsistency(Tester):
 
     def prepare(self, user_table=False):
@@ -2302,7 +2301,7 @@ class TestMaterializedViewsConsistency(Tester):
         for row in data:
             self.rows[(row.a, row.b)] = row.c
 
-    @skip('awaiting CASSANDRA-11290')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-11290')
     def test_single_partition_consistent_reads_after_write(self):
         """
         Tests consistency of multiple writes to a single partition

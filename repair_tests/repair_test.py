@@ -6,7 +6,6 @@ import re
 import pytest
 from collections import namedtuple
 from threading import Thread
-from unittest import skip, skipIf
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -182,7 +181,7 @@ class TestRepair(BaseRepairTest):
         for node in cluster.nodelist():
             assert not node.grep_log("Starting anticompaction")
 
-    @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
     def test_nonexistent_table_repair(self):
         """
         * Check that repairing a non-existent table fails
@@ -1276,7 +1275,7 @@ class TestRepairDataSystemTable(Tester):
         return RepairTableContents(parent_repair_history=parent_repair_history,
                                    repair_history=repair_history)
 
-    @skip('hangs CI')
+    @pytest.mark.skip(reason='hangs CI')
     def test_initial_empty_repair_tables(self):
         debug('repair tables:')
         debug(self.repair_table_contents(node=self.node1, include_system_keyspaces=False))

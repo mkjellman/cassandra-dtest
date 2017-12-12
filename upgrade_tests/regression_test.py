@@ -7,8 +7,6 @@ import re
 import time
 import pytest
 
-from unittest import skipUnless
-
 from cassandra import ConsistencyLevel as CL
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, debug
@@ -180,4 +178,6 @@ for path in build_upgrade_pairs():
             '__test__': True}
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or path.upgrade_meta.matches_current_env_version_family
-    globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (TestForRegressions,), spec))
+    if not upgrade_applies_to_env:
+        pytest.skip(msg='test not applicable to env.')
+    globals()[gen_class_name] = type(gen_class_name, (TestForRegressions,), spec)

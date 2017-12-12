@@ -2,7 +2,6 @@ import itertools
 import time
 import uuid
 import pytest
-from unittest import skipUnless
 
 from cassandra import ConsistencyLevel as CL
 from cassandra import InvalidRequest
@@ -1530,4 +1529,6 @@ for klaus in BasePagingTester.__subclasses__():
         assert gen_class_name not in globals()
 
         upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
-        globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (klaus,), spec))
+        if not upgrade_applies_to_env:
+            pytest.skip(msg='test not applicable to env.')
+        globals()[gen_class_name] = type(gen_class_name, (klaus,), spec)

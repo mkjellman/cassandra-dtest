@@ -8,7 +8,6 @@ import uuid
 from collections import defaultdict, namedtuple
 from multiprocessing import Process, Queue
 from queue import Empty, Full
-from unittest import skipUnless
 
 import pytest
 
@@ -769,13 +768,13 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
     print("  to run these tests alone, use `nosetests {}.py:{}`".format(__name__, clsname))
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or version_metas[-1].matches_current_env_version_family
-
-    newcls = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(
-        type(
+    if not upgrade_applies_to_env:
+        pytest.skip(msg='test not applicable to env.')
+    newcls = type(
             clsname,
             parent_classes,
             {'test_version_metas': version_metas, '__test__': True, 'protocol_version': protocol_version, 'extra_config': extra_config}
-        ))
+        )
 
     if clsname in globals():
         raise RuntimeError("Class by name already exists!")

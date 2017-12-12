@@ -3,7 +3,6 @@ import pytest
 from datetime import datetime
 from collections import Counter, namedtuple
 from re import findall, compile
-from unittest import skip
 from uuid import UUID, uuid1
 
 from cassandra import ConsistencyLevel
@@ -554,7 +553,7 @@ class TestIncRepair(Tester):
             node1.nodetool("repair -full keyspace1 standard1")
 
     @pytest.mark.env("long")
-    @skip('hangs CI')
+    @pytest.mark.skip(reason='hangs CI')
     def test_multiple_subsequent_repair(self):
         """
         @jira_ticket CASSANDRA-8366

@@ -1,6 +1,5 @@
 import itertools
 import pytest
-from unittest import skipUnless
 
 from cassandra.query import dict_factory
 
@@ -425,4 +424,6 @@ for spec in specs:
     assert gen_class_name not in globals()
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
-    globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (TestThrift,), spec))
+    if not upgrade_applies_to_env:
+        pytest.skip(msg='test not applicable to env.')
+    globals()[gen_class_name] = type(gen_class_name, (TestThrift,), spec)

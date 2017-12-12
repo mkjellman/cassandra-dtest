@@ -6,7 +6,6 @@ import time
 import pytest
 from random import randrange
 from threading import Thread
-from unittest import skip
 
 from cassandra.concurrent import execute_concurrent
 from ccmlib.node import Node
@@ -24,7 +23,7 @@ def wait(delay=2):
     time.sleep(delay)
 
 
-@skip('awaiting CASSANDRA-10699')
+@pytest.mark.skip(reason='awaiting CASSANDRA-10699')
 class TestConcurrentSchemaChanges(Tester):
     allow_log_errors = True
 

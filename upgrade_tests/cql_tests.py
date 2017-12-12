@@ -6,7 +6,6 @@ import time
 import pytest
 from collections import OrderedDict
 from distutils.version import LooseVersion
-from unittest import skip, skipUnless
 from uuid import UUID, uuid4
 
 from cassandra import ConsistencyLevel, InvalidRequest
@@ -5082,7 +5081,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT writetime(v) FROM TEST WHERE k = 1", [-42])
 
     @since('2.2')
-    @skip('awaiting CASSANDRA-7396')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-7396')
     def test_select_map_key_single_row(self):
         cursor = self.prepare()
 
@@ -5110,7 +5109,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT sizeof(v) FROM test where k = 0", [4])
 
     @since('2.2')
-    @skip('awaiting CASSANDRA-7396')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-7396')
     def test_select_set_key_single_row(self):
         cursor = self.prepare()
 
@@ -5141,7 +5140,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT sizeof(v) FROM test where k = 0", [4])
 
     @since('2.2')
-    @skip('awaiting CASSANDRA-7396')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-7396')
     def test_select_list_key_single_row(self):
         cursor = self.prepare()
 
@@ -5169,7 +5168,7 @@ class TestCQL(UpgradeTester):
             assert_one(cursor, "SELECT sizeof(v) FROM test where k = 0", [4])
 
     @since('2.2')
-    @skip('awaiting CASSANDRA-7396')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-7396')
     def test_select_map_key_multi_row(self):
         cursor = self.prepare()
 
@@ -5198,7 +5197,7 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT sizeof(v) FROM test", [[4], [4]])
 
     @since('2.2')
-    @skip('awaiting CASSANDRA-7396')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-7396')
     def test_select_set_key_multi_row(self):
         cursor = self.prepare()
 
@@ -5229,7 +5228,7 @@ class TestCQL(UpgradeTester):
             assert_all(cursor, "SELECT sizeof(v) FROM test", [[4], [4]])
 
     @since('2.2')
-    @skip('awaiting CASSANDRA-7396')
+    @pytest.mark.skip(reason='awaiting CASSANDRA-7396')
     def test_select_list_key_multi_row(self):
         cursor = self.prepare()
 
@@ -5399,4 +5398,6 @@ for spec in specs:
     assert gen_class_name not in globals()
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
-    globals()[gen_class_name] = skipUnless(upgrade_applies_to_env, 'test not applicable to env.')(type(gen_class_name, (TestCQL,), spec))
+    if not upgrade_applies_to_env:
+        pytest.skip('test not applicable to env.')
+    globals()[gen_class_name] = type(gen_class_name, (TestCQL,), spec)

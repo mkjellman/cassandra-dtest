@@ -2,7 +2,6 @@ import re
 import time
 import pytest
 from threading import Thread
-from unittest import skip
 
 from cassandra import ConsistencyLevel
 from ccmlib.node import TimeoutError, ToolError
@@ -152,7 +151,7 @@ class TestTopology(Tester):
         # described in 9912. Do not remove it.
         time.sleep(10)
 
-    @skip('Hangs on CI for 2.1')
+    @pytest.mark.skip(reason='Hangs on CI for 2.1')
     def test_concurrent_decommission_not_allowed(self):
         """
         Test concurrent decommission is not allowed
