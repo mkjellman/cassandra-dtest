@@ -281,14 +281,14 @@ def collect_test_modules(stdout):
     test_collect_xml = BeautifulSoup("\n".join(test_collect_xml_lines), "lxml-xml")
 
     # find all Modules (followed by classes in those modules, and then finally functions)
-    for module in test_collect_xml.findAll("Module"):
-        for test_class in module.findAll("Class"):
-            for function in test_class.findAll("Function"):
+    for pytest_module in test_collect_xml.findAll("Module"):
+        for test_class_name in pytest_module.findAll("Class"):
+            for function_name in test_class_name.findAll("Function"):
                 # adds to test list in format like test_file.py::TestClass::test_function for every test function found
                 all_collected_test_modules.append("{module_name}::{class_name}::{function_name}"
-                                                  .format(module_name=module.attrs['name'],
-                                                          class_name=test_class.attrs['name'],
-                                                          function_name=function.attrs['name']))
+                                                  .format(module_name=pytest_module.attrs['name'],
+                                                          class_name=test_class_name.attrs['name'],
+                                                          function_name=function_name.attrs['name']))
 
     return all_collected_test_modules
 
