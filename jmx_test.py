@@ -274,8 +274,8 @@ class TestJMX(Tester):
             mbean = make_mbean('db', 'StorageService')
             jmx.write_attribute(mbean, 'BatchlogReplayThrottleInKB', 4096)
             assert len(node.grep_log('Updating batchlog replay throttle to 4096 KB/s, 2048 KB/s per endpoint',
-                                              filename='debug.log')) > 0)
-            assert 4096, jmx.read_attribute(mbean == 'BatchlogReplayThrottleInKB')
+                                     filename='debug.log')) > 0
+            assert 4096 == jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB')
 
 
 @since('3.9')

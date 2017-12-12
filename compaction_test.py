@@ -21,7 +21,7 @@ class TestCompaction(Tester):
         # compaction test for version 2.2.2 and above relies on DEBUG log in debug.log
         fixture_dtest_setup.cluster.set_log_level("DEBUG")
 
-    @since('0', '2.2.X')
+    @since('0', max_version='2.2.X')
     def test_compaction_delete(self):
         """
         Test that executing a delete properly tombstones a row.
