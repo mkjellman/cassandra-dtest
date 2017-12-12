@@ -218,7 +218,7 @@ class RunDTests():
 
             all_collected_test_modules = collect_test_modules(stdout)
             #print("Collected %d Test Modules" % len(all_collected_test_modules))
-            print(" ".join(all_collected_test_modules))
+            print("\n".join(all_collected_test_modules))
         else:
             while True:
                 output = sp.stdout.readline()
