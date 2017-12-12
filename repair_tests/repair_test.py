@@ -217,11 +217,11 @@ class TestRepair(BaseRepairTest):
             node1.watch_log_for("Unknown keyspace/cf pair", timeout=60)
         # Repair only finishes with error status after CASSANDRA-12508 on 3.0+
         if self.cluster.version() >= '3.0':
-            assert 'nodetool_error' in globals() and isinstance(nodetool_error, ToolError,
-                            'Repair thread on inexistent table did not throw exception')
-            debug(nodetool_error.message)
-            self.assertTrue('Unknown keyspace/cf pair' in nodetool_error.message,
-                            'Repair thread on inexistent table did not detect inexistent table.')
+            assert 'nodetool_error' in globals() and isinstance(nodetool_error, ToolError), \
+                'Repair thread on inexistent table did not throw exception'
+            debug(repr(nodetool_error))
+            assert 'Unknown keyspace/cf pair' in repr(nodetool_error),\
+                'Repair thread on inexistent table did not detect inexistent table.'
 
     @since('2.2.1', '4')
     def test_no_anticompaction_after_hostspecific_repair(self):

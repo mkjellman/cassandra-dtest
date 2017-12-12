@@ -161,8 +161,7 @@ class TestNodetool(Tester):
 
         # Set and get throttle with nodetool, ensuring that the rate change is logged
         node.nodetool('setbatchlogreplaythrottle 2048')
-        self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint',
-                                          filename='debug.log')) > 0)
+        assert len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint', filename='debug.log')) >= 0
         assert 'Batchlog replay throttle: 2048 KB/s' in node.nodetool('getbatchlogreplaythrottle').stdout
 
     @since('3.0')

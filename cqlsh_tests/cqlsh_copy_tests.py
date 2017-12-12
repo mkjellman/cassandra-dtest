@@ -1222,8 +1222,7 @@ class CqlshCopyTest(Tester):
             debug("Imported {}".format(num_rows_imported))
             if max_insert_errors < chunk_size:
                 assert 'Exceeded maximum number of insert errors {}'.format(max_insert_errors) in err
-                self.assertTrue(num_rows_imported <= num_expected_rows,
-                                "{} < {}".format(num_rows_imported, num_expected_rows))
+                assert num_rows_imported <= num_expected_rows, "{} < {}".format(num_rows_imported, num_expected_rows)
             else:
                 assert 'Exceeded maximum number of insert errors {}'.format(max_insert_errors) not in err
                 assert 'Failed to process {} rows'.format(chunk_size) in err
