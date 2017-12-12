@@ -1,6 +1,6 @@
 import sys
 import time
-from unittest import skipIf
+import pytest
 
 from cassandra import ConsistencyLevel, Timeout, Unavailable
 from cassandra.query import SimpleStatement
@@ -8,9 +8,10 @@ from cassandra.query import SimpleStatement
 from dtest import Tester, create_ks, debug
 from tools.assertions import (assert_all, assert_invalid, assert_one,
                               assert_unavailable)
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
+
+since = pytest.mark.since
 
 
 class TestBatch(Tester):
@@ -25,7 +26,7 @@ class TestBatch(Tester):
             APPLY BATCH;
         """)
         for node in self.cluster.nodelist():
-            self.assertEqual(0, len(node.grep_log_for_errors()))
+            assert 0 == len(node.grep_log_for_errors())
 
     def test_counter_batch_accepts_counter_mutations(self):
         """ Test that counter batch accepts counter mutations """
@@ -84,7 +85,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        self.assertEqual(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        assert 1, len(warning) == "Cannot find the gc_grace_seconds warning message."
 
     @since('3.0')
     def test_logged_batch_gcgs_below_threshold_multi_table(self):
@@ -111,7 +112,7 @@ class TestBatch(Tester):
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
         debug(warning)
-        self.assertEqual(1, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        assert 1, len(warning) == "Cannot find the gc_grace_seconds warning message."
 
     @since('3.0')
     def test_unlogged_batch_gcgs_below_threshold_should_not_print_warning(self):
@@ -127,7 +128,7 @@ class TestBatch(Tester):
         node1 = self.cluster.nodelist()[0]
         warning = node1.grep_log("setting a too low gc_grace_seconds on tables involved in an atomic batch")
         debug(warning)
-        self.assertEqual(0, len(warning), "Cannot find the gc_grace_seconds warning message.")
+        assert 0, len(warning) == "Cannot find the gc_grace_seconds warning message."
 
     def test_logged_batch_rejects_counter_mutations(self):
         """ Test that logged batch rejects counter mutations """
@@ -255,7 +256,6 @@ class TestBatch(Tester):
 
     def test_multi_table_batch_for_10554(self):
         """ Test a batch on 2 tables having different columns, restarting the node afterwards, to reproduce CASSANDRA-10554 """
-
         session = self.prepare()
 
         # prepare() adds users and clicks but clicks is a counter table, so adding a random other table for this test.
@@ -306,7 +306,7 @@ class TestBatch(Tester):
         self._batchlog_replay_compatibility_test(0, 1, 'github:apache/cassandra-2.2', 2, 4)
 
     @since('3.0', max_version='3.x')
-    @skipIf(sys.platform == 'win32', 'Windows production support only on 2.2+')
+    @pytest.mark.skipif(sys.platform == 'win32', reason='Windows production support only on 2.2+')
     def test_logged_batch_compatibility_2(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
@@ -316,7 +316,7 @@ class TestBatch(Tester):
         self._logged_batch_compatibility_test(0, 1, 'github:apache/cassandra-2.1', 2, 3)
 
     @since('3.0', max_version='3.x')
-    @skipIf(sys.platform == 'win32', 'Windows production support only on 2.2+')
+    @pytest.mark.skipif(sys.platform == 'win32', reason='Windows production support only on 2.2+')
     def test_logged_batch_compatibility_3(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
@@ -344,7 +344,7 @@ class TestBatch(Tester):
         self._batchlog_replay_compatibility_test(2, 2, 'github:apache/cassandra-2.2', 1, 4)
 
     @since('3.0', max_version='3.x')
-    @skipIf(sys.platform == 'win32', 'Windows production support only on 2.2+')
+    @pytest.mark.skipif(sys.platform == 'win32', reason='Windows production support only on 2.2+')
     def test_logged_batch_compatibility_5(self):
         """
         @jira_ticket CASSANDRA-9673, test that logged batches still work with a mixed version cluster.
@@ -364,7 +364,7 @@ class TestBatch(Tester):
         session.execute(query)
         rows = session.execute("SELECT id, firstname, lastname FROM users")
         res = sorted(rows)
-        self.assertEqual([[0, 'Jack', 'Sparrow'], [1, 'Will', 'Turner']], [list(res[0]), list(res[1])])
+        assert [[0, 'Jack', 'Sparrow'], [1, 'Will', 'Turner']], [list(res[0]) == list(res[1])]
 
     def _batchlog_replay_compatibility_test(self, coordinator_idx, current_nodes, previous_version, previous_nodes, protocol_version):
         session = self.prepare_mixed(coordinator_idx, current_nodes, previous_version, previous_nodes,
@@ -408,7 +408,7 @@ class TestBatch(Tester):
         for node in self.cluster.nodelist():
             session = self.patient_exclusive_cql_connection(node, protocol_version=protocol_version)
             rows = sorted(session.execute('SELECT id, firstname, lastname FROM ks.users'))
-            self.assertEqual([[0, 'Jack', 'Sparrow'], [1, 'Will', 'Turner']], [list(rows[0]), list(rows[1])])
+            assert [[0, 'Jack', 'Sparrow'], [1, 'Will', 'Turner']], [list(rows[0]) == list(rows[1])]
 
     def assert_timedout(self, session, query, cl, acknowledged_by=None,
                         received_responses=None):
@@ -419,12 +419,12 @@ class TestBatch(Tester):
             if received_responses is not None:
                 msg = "Expecting received_responses to be {}, got: {}".format(
                     received_responses, e.received_responses,)
-                self.assertEqual(e.received_responses, received_responses, msg)
+                assert e.received_responses, received_responses == msg
         except Unavailable as e:
             if received_responses is not None:
                 msg = "Expecting alive_replicas to be {}, got: {}".format(
                     received_responses, e.alive_replicas,)
-                self.assertEqual(e.alive_replicas, received_responses, msg)
+                assert e.alive_replicas, received_responses == msg
         except Exception as e:
             assert False, "Expecting TimedOutException, got:" + str(e)
         else:

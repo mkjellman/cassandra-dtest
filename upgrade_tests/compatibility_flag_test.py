@@ -1,8 +1,12 @@
+import pytest
+
 from dtest import Tester, debug
 from tools.assertions import assert_all
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
+@pytest.mark.upgrade_test
 class CompatibilityFlagTest(Tester):
     """
     Test 30 protocol compatibility flag
@@ -56,7 +60,6 @@ class CompatibilityFlagTest(Tester):
         """
         Test compatibility between post-13004 nodes, one of which is in compatibility mode
         """
-
         cluster = self.cluster
         cluster.populate(2)
         node1, node2 = cluster.nodelist()
@@ -71,7 +74,6 @@ class CompatibilityFlagTest(Tester):
         """
         Test compatibility between post-13004 nodes
         """
-
         cluster = self.cluster
         cluster.populate(2)
         node1, node2 = cluster.nodelist()

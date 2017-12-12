@@ -1,3 +1,5 @@
+import pytest
+
 from distutils.version import LooseVersion
 
 from cassandra import ConsistencyLevel
@@ -6,9 +8,10 @@ from ccmlib.common import is_win
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_length_equal
 from tools.data import insert_c1c2
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
+
+since = pytest.mark.since
 
 
 @since("2.2", max_version="4")
@@ -28,13 +31,13 @@ class TestDeprecatedRepairAPI(Tester):
         """
         opt = self._deprecated_repair_jmx("forceRepairAsync(java.lang.String,boolean,java.util.Collection,java.util.Collection,boolean,boolean,[Ljava.lang.String;)",
                                           ['ks', True, [], [], False, False, ["cf"]])
-        self.assertEqual(opt["parallelism"], "parallel" if is_win() else "sequential", opt)
-        self.assertEqual(opt["primary_range"], "false", opt)
-        self.assertEqual(opt["incremental"], "true", opt)
-        self.assertEqual(opt["job_threads"], "1", opt)
-        self.assertEqual(opt["data_centers"], "[]", opt)
-        self.assertEqual(opt["hosts"], "[]", opt)
-        self.assertEqual(opt["column_families"], "[cf]", opt)
+        assert opt["parallelism"], "parallel" if is_win() else "sequential" == opt
+        assert opt["primary_range"], "false" == opt
+        assert opt["incremental"], "true" == opt
+        assert opt["job_threads"], "1" == opt
+        assert opt["data_centers"], "[]" == opt
+        assert opt["hosts"], "[]" == opt
+        assert opt["column_families"], "[cf]" == opt
 
     def test_force_repair_async_2(self):
         """
@@ -45,13 +48,13 @@ class TestDeprecatedRepairAPI(Tester):
         """
         opt = self._deprecated_repair_jmx("forceRepairAsync(java.lang.String,int,java.util.Collection,java.util.Collection,boolean,boolean,[Ljava.lang.String;)",
                                           ['ks', 1, [], [], True, True, []])
-        self.assertEqual(opt["parallelism"], "parallel", opt)
-        self.assertEqual(opt["primary_range"], "true", opt)
-        self.assertEqual(opt["incremental"], "false", opt)
-        self.assertEqual(opt["job_threads"], "1", opt)
-        self.assertEqual(opt["data_centers"], "[]", opt)
-        self.assertEqual(opt["hosts"], "[]", opt)
-        self.assertEqual(opt["column_families"], "[]", opt)
+        assert opt["parallelism"], "parallel" == opt
+        assert opt["primary_range"], "true" == opt
+        assert opt["incremental"], "false" == opt
+        assert opt["job_threads"], "1" == opt
+        assert opt["data_centers"], "[]" == opt
+        assert opt["hosts"], "[]" == opt
+        assert opt["column_families"], "[]" == opt
 
     def test_force_repair_async_3(self):
         """
@@ -61,13 +64,13 @@ class TestDeprecatedRepairAPI(Tester):
         """
         opt = self._deprecated_repair_jmx("forceRepairAsync(java.lang.String,boolean,boolean,boolean,boolean,[Ljava.lang.String;)",
                                           ['ks', False, False, False, False, ["cf"]])
-        self.assertEqual(opt["parallelism"], "parallel", opt)
-        self.assertEqual(opt["primary_range"], "false", opt)
-        self.assertEqual(opt["incremental"], "true", opt)
-        self.assertEqual(opt["job_threads"], "1", opt)
-        self.assertEqual(opt["data_centers"], "[]", opt)
-        self.assertEqual(opt["hosts"], "[]", opt)
-        self.assertEqual(opt["column_families"], "[cf]", opt)
+        assert opt["parallelism"], "parallel" == opt
+        assert opt["primary_range"], "false" == opt
+        assert opt["incremental"], "true" == opt
+        assert opt["job_threads"], "1" == opt
+        assert opt["data_centers"], "[]" == opt
+        assert opt["hosts"], "[]" == opt
+        assert opt["column_families"], "[cf]" == opt
 
     def test_force_repair_range_async_1(self):
         """
@@ -79,14 +82,14 @@ class TestDeprecatedRepairAPI(Tester):
         """
         opt = self._deprecated_repair_jmx("forceRepairRangeAsync(java.lang.String,java.lang.String,java.lang.String,boolean,java.util.Collection,java.util.Collection,boolean,[Ljava.lang.String;)",
                                           ["0", "1000", "ks", True, ["dc1"], [], False, ["cf"]])
-        self.assertEqual(opt["parallelism"], "parallel" if is_win() else "sequential", opt)
-        self.assertEqual(opt["primary_range"], "false", opt)
-        self.assertEqual(opt["incremental"], "true", opt)
-        self.assertEqual(opt["job_threads"], "1", opt)
-        self.assertEqual(opt["data_centers"], "[dc1]", opt)
-        self.assertEqual(opt["hosts"], "[]", opt)
-        self.assertEqual(opt["ranges"], "1", opt)
-        self.assertEqual(opt["column_families"], "[cf]", opt)
+        assert opt["parallelism"], "parallel" if is_win() else "sequential" == opt
+        assert opt["primary_range"], "false" == opt
+        assert opt["incremental"], "true" == opt
+        assert opt["job_threads"], "1" == opt
+        assert opt["data_centers"], "[dc1]" == opt
+        assert opt["hosts"], "[]" == opt
+        assert opt["ranges"], "1" == opt
+        assert opt["column_families"], "[cf]" == opt
 
     def test_force_repair_range_async_2(self):
         """
@@ -98,14 +101,14 @@ class TestDeprecatedRepairAPI(Tester):
         """
         opt = self._deprecated_repair_jmx("forceRepairRangeAsync(java.lang.String,java.lang.String,java.lang.String,int,java.util.Collection,java.util.Collection,boolean,[Ljava.lang.String;)",
                                           ["0", "1000", "ks", 2, [], [], True, ["cf"]])
-        self.assertEqual(opt["parallelism"], "parallel" if is_win() else "dc_parallel", opt)
-        self.assertEqual(opt["primary_range"], "false", opt)
-        self.assertEqual(opt["incremental"], "false", opt)
-        self.assertEqual(opt["job_threads"], "1", opt)
-        self.assertEqual(opt["data_centers"], "[]", opt)
-        self.assertEqual(opt["hosts"], "[]", opt)
-        self.assertEqual(opt["ranges"], "1", opt)
-        self.assertEqual(opt["column_families"], "[cf]", opt)
+        assert opt["parallelism"], "parallel" if is_win() else "dc_parallel" == opt
+        assert opt["primary_range"], "false" == opt
+        assert opt["incremental"], "false" == opt
+        assert opt["job_threads"], "1" == opt
+        assert opt["data_centers"], "[]" == opt
+        assert opt["hosts"], "[]" == opt
+        assert opt["ranges"], "1" == opt
+        assert opt["column_families"], "[cf]" == opt
 
     def test_force_repair_range_async_3(self):
         """
@@ -116,14 +119,14 @@ class TestDeprecatedRepairAPI(Tester):
         """
         opt = self._deprecated_repair_jmx("forceRepairRangeAsync(java.lang.String,java.lang.String,java.lang.String,boolean,boolean,boolean,[Ljava.lang.String;)",
                                           ["0", "1000", "ks", True, True, True, ["cf"]])
-        self.assertEqual(opt["parallelism"], "parallel" if is_win() else "sequential", opt)
-        self.assertEqual(opt["primary_range"], "false", opt)
-        self.assertEqual(opt["incremental"], "false", opt)
-        self.assertEqual(opt["job_threads"], "1", opt)
-        self.assertEqual(opt["data_centers"], "[dc1]", opt)
-        self.assertEqual(opt["hosts"], "[]", opt)
-        self.assertEqual(opt["ranges"], "1", opt)
-        self.assertEqual(opt["column_families"], "[cf]", opt)
+        assert opt["parallelism"], "parallel" if is_win() else "sequential" == opt
+        assert opt["primary_range"], "false" == opt
+        assert opt["incremental"], "false" == opt
+        assert opt["job_threads"], "1" == opt
+        assert opt["data_centers"], "[dc1]" == opt
+        assert opt["hosts"], "[]" == opt
+        assert opt["ranges"], "1" == opt
+        assert opt["column_families"], "[cf]" == opt
 
     def _deprecated_repair_jmx(self, method, arguments):
         """
@@ -152,7 +155,7 @@ class TestDeprecatedRepairAPI(Tester):
         mbean = make_mbean('db', 'StorageService')
         with JolokiaAgent(node1) as jmx:
             # assert repair runs and returns valid cmd number
-            self.assertEqual(jmx.execute_method(mbean, method, arguments), 1)
+            assert jmx.execute_method(mbean, method, arguments) == 1
         # wait for log to start
         node1.watch_log_for("Starting repair command")
         # get repair parameters from the log
@@ -165,7 +168,7 @@ class TestDeprecatedRepairAPI(Tester):
         line, m = l[0]
 
         if supports_pull_repair:
-            self.assertEqual(m.group("pullrepair"), "false", "Pull repair cannot be enabled through the deprecated API so the pull repair option should always be false.")
+            assert m.group("pullrepair"), "false" == "Pull repair cannot be enabled through the deprecated API so the pull repair option should always be false."
 
         return {"parallelism": m.group("parallelism"),
                 "primary_range": m.group("pr"),

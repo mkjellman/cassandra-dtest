@@ -61,8 +61,8 @@ class TestDeletion(Tester):
         for i in range(100):
             session.execute(stmt, [i])
 
-        self.assertEqual(memtable_count(node1, 'ks', 'test'), 100)
-        self.assertGreater(memtable_size(node1, 'ks', 'test'), 0)
+        assert memtable_count(node1, 'ks', 'test') == 100
+        assert memtable_size(node1, 'ks', 'test') > 0
 
 
 def memtable_size(node, keyspace, table):

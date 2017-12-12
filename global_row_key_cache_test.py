@@ -108,38 +108,38 @@ class TestGlobalRowKeyCache(Tester):
             rows = list(session.execute("SELECT * FROM %s" % (cf,)))
 
             # one row gets deleted each validation round
-            self.assertEqual(100 - (validation_round + 1), len(rows))
+            assert 100 - (validation_round + 1) == len(rows)
 
             # adjust enumeration start to account for row deletions
             for i, row in enumerate(sorted(rows), start=(validation_round + 1)):
-                self.assertEqual(i, row.k)
-                self.assertEqual(i, row.v1)
+                assert i == row.k
+                assert i == row.v1
 
                 # updated rows will have different values
                 expected_value = validation_round if i < num_updates else i
-                self.assertEqual(expected_value, row.v2)
+                assert expected_value == row.v2
 
         # check values of counter tables
         rows = list(session.execute("SELECT * FROM test_counter"))
-        self.assertEqual(100, len(rows))
+        assert 100 == len(rows)
         for i, row in enumerate(sorted(rows)):
-            self.assertEqual(i, row.k)
+            assert i == row.k
 
             # updated rows will get incremented once each round
             expected_value = i
             if i < num_updates:
                 expected_value += validation_round + 1
 
-            self.assertEqual(expected_value, row.v1)
+            assert expected_value == row.v1
 
         rows = list(session.execute("SELECT * FROM test_counter_clustering"))
-        self.assertEqual(100, len(rows))
+        assert 100 == len(rows)
         for i, row in enumerate(sorted(rows)):
-            self.assertEqual(i, row.k)
-            self.assertEqual(i, row.v1)
+            assert i == row.k
+            assert i == row.v1
 
             expected_value = i
             if i < num_updates:
                 expected_value += validation_round + 1
 
-            self.assertEqual(expected_value, row.v2)
+            assert expected_value == row.v2

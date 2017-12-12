@@ -1,4 +1,5 @@
 import time
+import pytest
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -6,7 +7,8 @@ from cassandra.query import SimpleStatement
 from tools.assertions import assert_one
 from dtest import PRINT_DEBUG, Tester, debug, create_ks
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class TestReadRepair(Tester):
@@ -86,7 +88,7 @@ class TestReadRepair(Tester):
             session = self.patient_exclusive_cql_connection(n)
             res = rows_to_list(session.execute(cl_one_stmt))
             # Column a must be 1 everywhere, and column b must be either 1 or None everywhere
-            self.assertIn(res[0][:2], [[1, 1], [1, None]])
+            assert res[0][:2], [[1, 1], [1 in None]]
 
         # Now query selecting all columns
         query = "SELECT * FROM alter_rf_test.t1 WHERE k=1"
@@ -120,7 +122,7 @@ class TestReadRepair(Tester):
             else:
                 non_replicas.append(node)
 
-        self.assertIsNotNone(initial_replica, "Couldn't identify initial replica")
+        assert initial_replica is not None, "Couldn't identify initial replica"
 
         return initial_replica, non_replicas
 
@@ -174,9 +176,9 @@ class TestReadRepair(Tester):
         for trace_event in trace.events:
             # Step 1, find coordinator node:
             activity = trace_event.description
-            self.assertNotIn("Appending to commitlog", activity)
-            self.assertNotIn("Adding to cf memtable", activity)
-            self.assertNotIn("Acquiring switchLock read lock", activity)
+            assert "Appending to commitlog" not in activity
+            assert "Adding to cf memtable" not in activity
+            assert "Acquiring switchLock read lock" not in activity
 
     @since('3.0')
     def test_gcable_tombstone_resurrection_on_range_slice_query(self):
@@ -221,7 +223,7 @@ class TestReadRepair(Tester):
         self.pprint_trace(trace)
         for trace_event in trace.events:
             activity = trace_event.description
-            self.assertNotIn("Sending READ_REPAIR message", activity)
+            assert "Sending READ_REPAIR message" not in activity
 
     def pprint_trace(self, trace):
         """Pretty print a trace"""

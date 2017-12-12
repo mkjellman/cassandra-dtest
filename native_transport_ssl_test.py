@@ -1,12 +1,14 @@
 import os
+import pytest
 
 from cassandra import ConsistencyLevel
 from cassandra.cluster import NoHostAvailable
 
 from dtest import Tester, create_ks, create_cf
 from tools.data import putget
-from tools.decorators import since
 from tools.misc import generate_ssl_stores
+
+since = pytest.mark.since
 
 
 class NativeTransportSSL(Tester):
@@ -30,10 +32,10 @@ class NativeTransportSSL(Tester):
         except NoHostAvailable:
             pass
 
-        self.assertGreater(len(node1.grep_log("io.netty.handler.ssl.NotSslRecordException.*")), 0, "Missing SSL handshake exception while connecting with non-SSL enabled client")
+        assert len(node1.grep_log("io.netty.handler.ssl.NotSslRecordException.*")), 0 > "Missing SSL handshake exception while connecting with non-SSL enabled client"
 
         # enabled ssl on the client and try again (this should work)
-        session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.test_path, 'ccm_node.cer')})
+        session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.fixture_dtest_setup.test_path, 'ccm_node.cer')})
         self._putget(cluster, session)
 
     def test_connect_to_ssl_optional(self):
@@ -50,14 +52,13 @@ class NativeTransportSSL(Tester):
         self._putget(cluster, session)
 
         # enabled ssl on the client and try again (this should work)
-        session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.test_path, 'ccm_node.cer')})
+        session = self.patient_cql_connection(node1, ssl_opts={'ca_certs': os.path.join(self.fixture_dtest_setup.test_path, 'ccm_node.cer')})
         self._putget(cluster, session, ks='ks2')
 
     def test_use_custom_port(self):
         """
         Connect to non-default native transport port
         """
-
         cluster = self._populateCluster(nativePort=9567)
         node1 = cluster.nodelist()[0]
 
@@ -77,7 +78,6 @@ class NativeTransportSSL(Tester):
         Connect to additional ssl enabled native transport port
         @jira_ticket CASSANDRA-9590
         """
-
         cluster = self._populateCluster(enableSSL=True, nativePortSSL=9666)
         node1 = cluster.nodelist()[0]
         cluster.start()
@@ -87,14 +87,14 @@ class NativeTransportSSL(Tester):
         self._putget(cluster, session)
 
         # connect to additional dedicated ssl port
-        session = self.patient_cql_connection(node1, port=9666, ssl_opts={'ca_certs': os.path.join(self.test_path, 'ccm_node.cer')})
+        session = self.patient_cql_connection(node1, port=9666, ssl_opts={'ca_certs': os.path.join(self.fixture_dtest_setup.test_path, 'ccm_node.cer')})
         self._putget(cluster, session, ks='ks2')
 
     def _populateCluster(self, enableSSL=False, nativePort=None, nativePortSSL=None, sslOptional=False):
         cluster = self.cluster
 
         if enableSSL:
-            generate_ssl_stores(self.test_path)
+            generate_ssl_stores(self.fixture_dtest_setup.test_path)
             # C* versions before 3.0 (CASSANDRA-10559) do not know about
             # 'client_encryption_options.optional' - so we must not add that parameter
             if sslOptional:
@@ -102,7 +102,7 @@ class NativeTransportSSL(Tester):
                     'client_encryption_options': {
                         'enabled': True,
                         'optional': sslOptional,
-                        'keystore': os.path.join(self.test_path, 'keystore.jks'),
+                        'keystore': os.path.join(self.fixture_dtest_setup.test_path, 'keystore.jks'),
                         'keystore_password': 'cassandra'
                     }
                 })
@@ -110,7 +110,7 @@ class NativeTransportSSL(Tester):
                 cluster.set_configuration_options({
                     'client_encryption_options': {
                         'enabled': True,
-                        'keystore': os.path.join(self.test_path, 'keystore.jks'),
+                        'keystore': os.path.join(self.fixture_dtest_setup.test_path, 'keystore.jks'),
                         'keystore_password': 'cassandra'
                     }
                 })

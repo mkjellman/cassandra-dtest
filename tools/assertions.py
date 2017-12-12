@@ -5,7 +5,6 @@ from time import sleep
 from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
                        Unavailable, WriteFailure, WriteTimeout)
 from cassandra.query import SimpleStatement
-from plugins.assert_tools import assert_regexp_matches
 
 
 """
@@ -57,7 +56,7 @@ def _assert_exception(fun, *args, **kwargs):
     except expected as e:
         if matching is not None:
             regex = re.compile(matching)
-            assert regex.match(str(e)) is None
+            assert regex.match(repr(e)) is None
     except Exception as e:
         raise e
     else:
@@ -165,7 +164,7 @@ def assert_all(session, query, expected, cl=None, ignore_order=False, timeout=No
     res = session.execute(simple_query) if timeout is None else session.execute(simple_query, timeout=timeout)
     list_res = _rows_to_list(res)
     if ignore_order:
-        expected = sorted(expected)
+        expected = sorted([(x or "") for x in expected])
         list_res = sorted(list_res)
     assert list_res == expected, "Expected {} from {}, but got {}".format(expected, query, list_res)
 

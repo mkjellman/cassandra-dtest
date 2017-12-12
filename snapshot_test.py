@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import time
+import pytest
 
 from cassandra.concurrent import execute_concurrent_with_args
 
@@ -13,7 +14,8 @@ from tools.assertions import assert_one
 from tools.files import replace_in_file, safe_mkdtemp
 from tools.hacks import advance_to_next_cl_segment
 from tools.misc import ImmutableMapping
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class SnapshotTester(Tester):
@@ -96,13 +98,13 @@ class TestSnapshot(SnapshotTester):
         # away when we restore:
         self.insert_rows(session, 100, 200)
         rows = session.execute('SELECT count(*) from ks.cf')
-        self.assertEqual(rows[0][0], 200)
+        assert rows[0][0] == 200
 
         # Drop the keyspace, make sure we have no data:
         session.execute('DROP KEYSPACE ks')
         self.create_schema(session)
         rows = session.execute('SELECT count(*) from ks.cf')
-        self.assertEqual(rows[0][0], 0)
+        assert rows[0][0] == 0
 
         # Restore data from snapshot:
         self.restore_snapshot(snapshot_dir, node1, 'ks', 'cf')
@@ -113,7 +115,7 @@ class TestSnapshot(SnapshotTester):
         debug("removing snapshot_dir: " + snapshot_dir)
         shutil.rmtree(snapshot_dir)
 
-        self.assertEqual(rows[0][0], 100)
+        assert rows[0][0] == 100
 
     @since('3.0')
     def test_snapshot_and_restore_drop_table_remove_dropped_column(self):
@@ -340,7 +342,7 @@ class TestArchiveCommitlog(SnapshotTester):
 
             rows = session.execute('SELECT count(*) from ks.cf')
             # Make sure we have the same amount of rows as when we snapshotted:
-            self.assertEqual(rows[0][0], 65000)
+            assert rows[0][0] == 65000
 
             # Check that there are at least one commit log backed up that
             # is not one of the active commit logs:
@@ -362,9 +364,9 @@ class TestArchiveCommitlog(SnapshotTester):
             debug("tmp_commitlog contents after stopping: " + str(os.listdir(tmp_commitlog)))
 
             self.copy_logs(self.cluster, name=self.id().split(".")[0] + "_pre-restore")
-            cleanup_cluster(self.cluster, self.test_path)
-            self.test_path = get_test_path()
-            cluster = self.cluster = create_ccm_cluster(self.test_path, name='test', config=self.dtest_config)
+            cleanup_cluster(self.cluster, self.fixture_dtest_setup.test_path)
+            self.self.fixture_dtest_setup.test_path = self.fixture_dtest_setup.get_test_path()
+            cluster = self.cluster = create_ccm_cluster(self.fixture_dtest_setup.test_path, name='test', config=self.dtest_config)
             cluster.populate(1)
             node1, = cluster.nodelist()
 
@@ -400,7 +402,7 @@ class TestArchiveCommitlog(SnapshotTester):
 
             rows = session.execute('SELECT count(*) from ks.cf')
             # Make sure we have the same amount of rows as when we snapshotted:
-            self.assertEqual(rows[0][0], 30000)
+            assert rows[0][0] == 30000
 
             # Edit commitlog_archiving.properties. Remove the archive
             # command  and set a restore command and restore_directories:
@@ -428,11 +430,11 @@ class TestArchiveCommitlog(SnapshotTester):
             # Now we should have 30000 rows from the snapshot + 30000 rows
             # from the commitlog backups:
             if not restore_archived_commitlog:
-                self.assertEqual(rows[0][0], 30000)
+                assert rows[0][0] == 30000
             elif restore_point_in_time:
-                self.assertEqual(rows[0][0], 60000)
+                assert rows[0][0] == 60000
             else:
-                self.assertEqual(rows[0][0], 65000)
+                assert rows[0][0] == 65000
 
         finally:
             # clean up
@@ -461,7 +463,6 @@ class TestArchiveCommitlog(SnapshotTester):
         Run archive commit log restoration test repeatedly to make sure it is idempotent
         and doesn't fail if done repeatedly
         """
-
         cluster = self.cluster
         cluster.populate(1)
         node1 = cluster.nodelist()[0]
@@ -514,7 +515,7 @@ class TestArchiveCommitlog(SnapshotTester):
             session = self.patient_cql_connection(node1)
 
             rows = session.execute('SELECT count(*) from ks.cf')
-            self.assertEqual(rows[0][0], 60000)
+            assert rows[0][0] == 60000
         finally:
             debug("removing tmp_commitlog: " + tmp_commitlog)
             shutil.rmtree(tmp_commitlog)

@@ -1,10 +1,12 @@
 import time
+import pytest
 
 from cassandra.concurrent import execute_concurrent_with_args
 
 from tools.assertions import assert_invalid, assert_all, assert_one
-from tools.decorators import since
 from dtest import Tester, create_ks
+
+since = pytest.mark.since
 
 
 class TestSchema(Tester):
@@ -42,13 +44,13 @@ class TestSchema(Tester):
         rows = session.execute("select * from tbl_o_churn")
         for row in rows:
             if row.id < rows_to_insert * 5:
-                self.assertEqual(row.c1, 'bbb')
-                self.assertIsNone(row.c2)
-                self.assertFalse(hasattr(row, 'c0'))
+                assert row.c1 == 'bbb'
+                assert row.c2 is None
+                assert not hasattr(row, 'c0')
             else:
-                self.assertEqual(row.c1, 'ccc')
-                self.assertEqual(row.c2, 'ddd')
-                self.assertFalse(hasattr(row, 'c0'))
+                assert row.c1 == 'ccc'
+                assert row.c2 == 'ddd'
+                assert not hasattr(row, 'c0')
 
     @since("2.0", max_version="3.X")  # Compact Storage
     def test_drop_column_compact(self):

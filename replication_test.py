@@ -1,15 +1,15 @@
 import os
 import re
 import time
-from collections import defaultdict
-
 import pytest
+from collections import defaultdict
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
 from dtest import PRINT_DEBUG, DtestTimeoutError, Tester, debug, create_ks
-from tools.decorators import since
+
+since = pytest.mark.since
 
 TRACE_DETERMINE_REPLICAS = re.compile('Determining replicas for mutation')
 TRACE_SEND_MESSAGE = re.compile('Sending (?:MUTATION|REQUEST_RESPONSE) message to /([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)')
@@ -227,10 +227,10 @@ class ReplicationTest(Tester):
             debug('replicas were: %s' % stats['replicas'])
 
             # Make sure the correct nodes are replicas:
-            self.assertEqual(stats['replicas'], replicas_should_be)
+            assert stats['replicas'] == replicas_should_be
             # Make sure that each replica node was contacted and
             # acknowledged the write:
-            self.assertEqual(stats['nodes_sent_write'], stats['nodes_responded_write'])
+            assert stats['nodes_sent_write'] == stats['nodes_responded_write']
 
     @pytest.mark.resource_intensive
     def test_network_topology(self):
@@ -271,24 +271,24 @@ class ReplicationTest(Tester):
             for node_contacted in stats['nodes_contacted'][node1.address()]:
                 if ip_nodes[node_contacted].data_center != node1.data_center:
                     num_in_other_dcs_contacted += 1
-            self.assertEqual(num_in_other_dcs_contacted, 1)
+            assert num_in_other_dcs_contacted == 1
 
             # Record the forwarder used for each INSERT:
             forwarders_used = forwarders_used.union(stats['forwarders'])
 
             try:
                 # Make sure the correct nodes are replicas:
-                self.assertEqual(stats['replicas'], replicas_should_be)
+                assert stats['replicas'] == replicas_should_be
                 # Make sure that each replica node was contacted and
                 # acknowledged the write:
-                self.assertEqual(stats['nodes_sent_write'], stats['nodes_responded_write'])
+                assert stats['nodes_sent_write'] == stats['nodes_responded_write']
             except AssertionError as e:
                 debug("Failed on key %s and token %s." % (key, token))
                 raise e
 
         # Given a diverse enough keyset, each node in the second
         # datacenter should get a chance to be a forwarder:
-        self.assertEqual(len(forwarders_used), 3)
+        assert len(forwarders_used) == 3
 
 
 class SnitchConfigurationUpdateTest(Tester):
@@ -320,7 +320,7 @@ class SnitchConfigurationUpdateTest(Tester):
             debug(out)
             ips_found = re.findall('(\d+\.\d+\.\d+\.\d+)', out)
 
-            self.assertEqual(len(ips_found), expected_count, "wrong number of endpoints found ({}), should be: {}".format(len(ips_found), expected_count))
+            assert len(ips_found) == expected_count, "wrong number of endpoints found ({}), should be: {}".format(len(ips_found), expected_count)
 
     def wait_for_nodes_on_racks(self, nodes, expected_racks):
         """
@@ -724,7 +724,7 @@ class SnitchConfigurationUpdateTest(Tester):
         """
         expected_error = (r"Cannot start node if snitch's data center (.*) differs from previous data center (.*)\. "
                           "Please fix the snitch configuration, decommission and rebootstrap this node or use the flag -Dcassandra.ignore_dc=true.")
-        self.ignore_log_patterns = [expected_error]
+        self.fixture_dtest_setup.ignore_log_patterns = [expected_error]
 
         cluster = self.cluster
         cluster.populate(1)

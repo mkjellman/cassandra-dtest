@@ -4,13 +4,15 @@ import os
 import re
 import subprocess
 import sys
+import pytest
 from distutils.version import LooseVersion
 
 from ccmlib import common
 from ccmlib.common import is_win
 
 from dtest import Tester
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=None):

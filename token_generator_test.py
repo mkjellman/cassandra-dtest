@@ -1,15 +1,16 @@
-# coding: utf-8
 import os
 import subprocess
 import time
-
+import pytest
 import parse
+
 from cassandra.util import sortedset
 from ccmlib import common
 
 from dtest import Tester, debug
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since('2.0.16', max_version='3.0.0')
@@ -44,19 +45,19 @@ class TestTokenGenerator(Tester):
         for line in lines:
             if line.startswith("DC #"):
                 if dc_tokens is not None:
-                    self.assertGreater(dc_tokens.__len__(), 0, "dc_tokens is empty from token-generator {}".format(args))
+                    assert dc_tokens.__len__(), 0 > "dc_tokens is empty from token-generator {}".format(args)
                     generated_tokens.append(dc_tokens)
                 dc_tokens = []
             else:
                 if line:
                     m = parse.search('Node #{node_num:d}:{:s}{node_token:d}', line)
-                    self.assertIsNotNone(m, "Line \"{}\" does not match pattern from token-generator {}".format(line, args))
+                    assert m, "Line \"{}\" does not match pattern from token-generator {}".format(line is not None, args)
                     node_num = int(m.named['node_num'])
                     node_token = int(m.named['node_token'])
                     dc_tokens.append(node_token)
-                    self.assertEqual(node_num, dc_tokens.__len__(), "invalid token count from token-generator {}".format(args))
-        self.assertIsNotNone(dc_tokens, "No tokens from token-generator {}".format(args))
-        self.assertGreater(dc_tokens.__len__(), 0, "No tokens from token-generator {}".format(args))
+                    assert node_num, dc_tokens.__len__() == "invalid token count from token-generator {}".format(args)
+        assert dc_tokens is not None, "No tokens from token-generator {}".format(args)
+        assert dc_tokens.__len__(), 0 > "No tokens from token-generator {}".format(args)
         generated_tokens.append(dc_tokens)
 
         return generated_tokens
@@ -80,7 +81,7 @@ class TestTokenGenerator(Tester):
         if self.dtest_config.use_vnodes:
             cluster._config_options.__delitem__('initial_token')
 
-        self.assertTrue(not cluster.nodelist(), "nodelist() already initialized")
+        assert not cluster.nodelist(), "nodelist() already initialized"
         cluster.populate(nodes, use_vnodes=False, tokens=generated_tokens[0]).start(wait_for_binary_proto=True)
         time.sleep(0.2)
 
@@ -95,22 +96,22 @@ class TestTokenGenerator(Tester):
 
         tokens = []
         local_tokens = rows_to_list(session.execute("SELECT tokens FROM system.local"))[0]
-        self.assertEqual(local_tokens.__len__(), 1, "too many tokens for peer")
+        assert local_tokens.__len__(), 1 == "too many tokens for peer"
         for tok in local_tokens:
             tokens += tok
 
         rows = rows_to_list(session.execute("SELECT tokens FROM system.peers"))
-        self.assertEqual(rows.__len__(), nodes - 1)
+        assert rows.__len__() == nodes - 1
         for row in rows:
             peer_tokens = row[0]
-            self.assertEqual(peer_tokens.__len__(), 1, "too many tokens for peer")
+            assert peer_tokens.__len__(), 1 == "too many tokens for peer"
             for tok in peer_tokens:
                 tokens.append(tok)
 
-        self.assertEqual(tokens.__len__(), dc_tokens.__len__())
+        assert tokens.__len__() == dc_tokens.__len__()
         for cluster_token in tokens:
             tok = int(cluster_token)
-            self.assertGreaterEqual(dc_tokens.index(tok), 0, "token in cluster does not match generated tokens")
+            assert dc_tokens.index(tok), 0 >= "token in cluster does not match generated tokens"
 
     def token_gen_def_test(self, nodes=3):
         """ Validate token-generator with Murmur3Partitioner with default token-generator behavior """
@@ -148,17 +149,17 @@ class TestTokenGenerator(Tester):
             all_tokens = sortedset()
             node_count = 0
             generated_tokens = self.call_token_generator(self.cluster.get_install_dir(), random, dc_nodes)
-            self.assertEqual(dc_nodes.__len__(), generated_tokens.__len__())
+            assert dc_nodes.__len__() == generated_tokens.__len__()
             for n in range(0, dc_nodes.__len__()):
                 nodes = dc_nodes[n]
                 node_count += nodes
                 tokens = generated_tokens[n]
-                self.assertEqual(nodes, tokens.__len__())
+                assert nodes == tokens.__len__()
                 for tok in tokens:
-                    self.assertTrue(t_min <= tok < t_max, "Generated token %r out of Murmur3Partitioner range %r..%r" % (tok, t_min, t_max - 1))
-                    self.assertTrue(not all_tokens.__contains__(tok), "Duplicate token %r for nodes-counts %r" % (tok, dc_nodes))
+                    assert t_min <= tok < t_max, "Generated token %r out of Murmur3Partitioner range %r..%r" % (tok, t_min, t_max - 1)
+                    assert not all_tokens.__contains__(tok), "Duplicate token %r for nodes-counts %r" % (tok, dc_nodes)
                     all_tokens.add(tok)
-            self.assertEqual(all_tokens.__len__(), node_count, "Number of tokens %r and number of nodes %r does not match for %r" % (all_tokens.__len__(), node_count, dc_nodes))
+            assert all_tokens.__len__() == node_count, "Number of tokens %r and number of nodes %r does not match for %r" % (all_tokens.__len__(), node_count, dc_nodes)
 
     def test_multi_dc_tokens_default(self):
         self._multi_dc_tokens()

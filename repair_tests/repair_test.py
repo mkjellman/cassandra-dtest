@@ -3,11 +3,10 @@ import os.path
 import threading
 import time
 import re
+import pytest
 from collections import namedtuple
 from threading import Thread
 from unittest import skip, skipIf
-
-import pytest
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -15,7 +14,8 @@ from ccmlib.node import ToolError
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, FlakyRetryPolicy, Tester, debug, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 def _repair_options(version, ks='', cf=None, sequential=True):
@@ -72,7 +72,7 @@ class BaseRepairTest(Tester):
 
         session = self.patient_exclusive_cql_connection(node_to_check, 'ks')
         result = list(session.execute("SELECT * FROM cf LIMIT {}".format(rows * 2)))
-        self.assertEqual(len(result), rows)
+        assert len(result) == rows
 
         for k in found:
             query_c1c2(session, k, ConsistencyLevel.ONE)
@@ -80,7 +80,7 @@ class BaseRepairTest(Tester):
         for k in missings:
             query = SimpleStatement("SELECT c1, c2 FROM cf WHERE key='k{}'".format(k), consistency_level=ConsistencyLevel.ONE)
             res = list(session.execute(query))
-            self.assertEqual(len([x for x in res if len(x) != 0]), 0, res)
+            assert len([x for x in res if len(x) != 0]), 0 == res
 
         if restart:
             for node in stopped_nodes:
@@ -138,22 +138,21 @@ class BaseRepairTest(Tester):
         # Validate that only one range was transfered
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
 
-        self.assertEqual(len(out_of_sync_logs), 2, "Lines matching: " + str([elt[0] for elt in out_of_sync_logs]))
+        assert len(out_of_sync_logs), 2 == "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
 
         valid_out_of_sync_pairs = [{node1.address(), node3.address()},
                                    {node2.address(), node3.address()}]
 
         for line, m in out_of_sync_logs:
             num_out_of_sync_ranges, out_of_sync_nodes = m.group(3), {m.group(1), m.group(2)}
-            self.assertEqual(int(num_out_of_sync_ranges), 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, line))
-            self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
+            assert int(num_out_of_sync_ranges) == 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes == num_out_of_sync_ranges)
+            assert out_of_sync_nodes, valid_out_of_sync_pairs in str(out_of_sync_nodes)
 
         # Check node3 now has the key
         self.check_rows_on_node(node3, 2001, found=[1000], restart=False)
 
 
 class TestRepair(BaseRepairTest):
-    __test__ = True
 
     @since('2.2.1', '4')
     def test_no_anticompaction_after_dclocal_repair(self):
@@ -172,16 +171,16 @@ class TestRepair(BaseRepairTest):
         node1_1, node2_1, node1_2, node2_2 = cluster.nodelist()
         node1_1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=4)', '-rate', 'threads=50'])
         node1_1.nodetool("repair -local keyspace1 standard1")
-        self.assertTrue(node1_1.grep_log("Not a global repair"))
-        self.assertTrue(node2_1.grep_log("Not a global repair"))
+        assert node1_1.grep_log("Not a global repair")
+        assert node2_1.grep_log("Not a global repair")
 
         # dc2 should not see these messages:
-        self.assertFalse(node1_2.grep_log("Not a global repair"))
-        self.assertFalse(node2_2.grep_log("Not a global repair"))
+        assert not node1_2.grep_log("Not a global repair")
+        assert not node2_2.grep_log("Not a global repair")
 
         # and no nodes should do anticompaction:
         for node in cluster.nodelist():
-            self.assertFalse(node.grep_log("Starting anticompaction"))
+            assert not node.grep_log("Starting anticompaction")
 
     @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
     def test_nonexistent_table_repair(self):
@@ -189,7 +188,7 @@ class TestRepair(BaseRepairTest):
         * Check that repairing a non-existent table fails
         @jira_ticket CASSANDRA-12279
         """
-        self.ignore_log_patterns = [r'Unknown keyspace/cf pair']
+        self.fixture_dtest_setup.ignore_log_patterns = [r'Unknown keyspace/cf pair']
         cluster = self.cluster
         debug('Starting nodes')
         cluster.populate(2).start(wait_for_binary_proto=True)
@@ -212,13 +211,13 @@ class TestRepair(BaseRepairTest):
         t.start()
 
         t.join(timeout=60)
-        self.assertFalse(t.isAlive(), 'Repair thread on inexistent table is still running')
+        assert not t.isAlive(), 'Repair thread on inexistent table is still running'
 
         if self.cluster.version() >= '2.2':
             node1.watch_log_for("Unknown keyspace/cf pair", timeout=60)
         # Repair only finishes with error status after CASSANDRA-12508 on 3.0+
         if self.cluster.version() >= '3.0':
-            self.assertTrue('nodetool_error' in globals() and isinstance(nodetool_error, ToolError),
+            assert 'nodetool_error' in globals() and isinstance(nodetool_error, ToolError,
                             'Repair thread on inexistent table did not throw exception')
             debug(nodetool_error.message)
             self.assertTrue('Unknown keyspace/cf pair' in nodetool_error.message,
@@ -241,9 +240,9 @@ class TestRepair(BaseRepairTest):
         node1_1.stress(stress_options=['write', 'n=100K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=4)', '-rate', 'threads=50'])
         node1_1.nodetool("repair -hosts 127.0.0.1,127.0.0.2,127.0.0.3,127.0.0.4 keyspace1 standard1")
         for node in cluster.nodelist():
-            self.assertTrue(node.grep_log("Not a global repair"))
+            assert node.grep_log("Not a global repair")
         for node in cluster.nodelist():
-            self.assertFalse(node.grep_log("Starting anticompaction"))
+            assert not node.grep_log("Starting anticompaction")
 
     @since('2.2.4', '4')
     def test_no_anticompaction_after_subrange_repair(self):
@@ -262,9 +261,9 @@ class TestRepair(BaseRepairTest):
         node1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=3)', '-rate', 'threads=50'])
         node1.nodetool("repair -st 0 -et 1000 keyspace1 standard1")
         for node in cluster.nodelist():
-            self.assertTrue(node.grep_log("Not a global repair"))
+            assert node.grep_log("Not a global repair")
         for node in cluster.nodelist():
-            self.assertFalse(node.grep_log("Starting anticompaction"))
+            assert not node.grep_log("Starting anticompaction")
 
     def _get_repaired_data(self, node, keyspace):
         """
@@ -282,8 +281,8 @@ class TestRepair(BaseRepairTest):
         names = [m.group(1) for m in matches(_sstable_name)]
         repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
 
-        self.assertTrue(names)
-        self.assertTrue(repaired_times)
+        assert names
+        assert repaired_times
         return [_sstable_data(*a) for a in zip(names, repaired_times)]
 
     @since('2.2.10', '4')
@@ -295,7 +294,6 @@ class TestRepair(BaseRepairTest):
         * Verify that none of the already repaired sstables have been anti-compacted again
         @jira_ticket CASSANDRA-13153
         """
-
         cluster = self.cluster
         debug("Starting cluster..")
         # disable JBOD conf since the test expects sstables to be on the same disk
@@ -310,7 +308,7 @@ class TestRepair(BaseRepairTest):
         node1.nodetool("repair keyspace1 standard1")
         meta = self._get_repaired_data(node1, 'keyspace1')
         repaired = set([m for m in meta if m.repaired > 0])
-        self.assertEqual(len(repaired), len(meta))
+        assert len(repaired) == len(meta)
 
         # stop node2, stress and start full repair to find out how synced ranges affect repairedAt values
         node2.stop(wait_other_notice=True)
@@ -321,7 +319,7 @@ class TestRepair(BaseRepairTest):
         meta = self._get_repaired_data(node1, 'keyspace1')
         repairedAfterFull = set([m for m in meta if m.repaired > 0])
         # already repaired sstables must remain untouched
-        self.assertEqual(repaired.intersection(repairedAfterFull), repaired)
+        assert repaired.intersection(repairedAfterFull) == repaired
 
     @since('2.2.1', '4')
     def test_anticompaction_after_normal_repair(self):
@@ -338,7 +336,7 @@ class TestRepair(BaseRepairTest):
         node1_1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=4)'])
         node1_1.nodetool("repair keyspace1 standard1")
         for node in cluster.nodelist():
-            self.assertTrue("Starting anticompaction")
+            assert "Starting anticompaction"
 
     def test_simple_sequential_repair(self):
         """
@@ -513,14 +511,14 @@ class TestRepair(BaseRepairTest):
             for i in range(0, 10):
                 query = SimpleStatement("SELECT c1, c2 FROM {} WHERE key='k{}'".format(cf, i), consistency_level=ConsistencyLevel.ALL)
                 res = list(session.execute(query))
-                self.assertEqual(len([x for x in res if len(x) != 0]), 0, res)
+                assert len([x for x in res if len(x) != 0]), 0 == res
 
         # check log for no repair happened for gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for cf1")
-        self.assertEqual(len(out_of_sync_logs), 0, "GC-able data does not need to be repaired with empty data: " + str([elt[0] for elt in out_of_sync_logs]))
+        assert len(out_of_sync_logs), 0 == "GC-able data does not need to be repaired with empty data: " + str([elt[0] for elt in out_of_sync_logs])
         # check log for actual repair for non gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for cf2")
-        self.assertGreater(len(out_of_sync_logs), 0, "Non GC-able data should be repaired")
+        assert len(out_of_sync_logs), 0 > "Non GC-able data should be repaired"
 
     def _range_tombstone_digest(self, sequential):
         """
@@ -596,7 +594,7 @@ class TestRepair(BaseRepairTest):
 
         # check log for no repair happened for gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for table1")
-        self.assertEqual(len(out_of_sync_logs), 0, "Digest mismatch for range tombstone: {}".format(str([elt[0] for elt in out_of_sync_logs])))
+        assert len(out_of_sync_logs), 0 == "Digest mismatch for range tombstone: {}".format(str([elt[0] for elt in out_of_sync_logs]))
 
     def test_local_dc_repair(self):
         """
@@ -615,14 +613,14 @@ class TestRepair(BaseRepairTest):
 
         # Verify that only nodes in dc1 are involved in repair
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        self.assertEqual(len(out_of_sync_logs), 1, "Lines matching: {}".format(len(out_of_sync_logs)))
+        assert len(out_of_sync_logs), 1 == "Lines matching: {}".format(len(out_of_sync_logs))
 
         line, m = out_of_sync_logs[0]
         num_out_of_sync_ranges, out_of_sync_nodes = m.group(3), {m.group(1), m.group(2)}
 
-        self.assertEqual(int(num_out_of_sync_ranges), 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, line))
+        assert int(num_out_of_sync_ranges) == 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, num_out_of_sync_ranges)
         valid_out_of_sync_pairs = {node1.address(), node2.address()}
-        self.assertEqual(out_of_sync_nodes, valid_out_of_sync_pairs, "Unrelated node found in local repair: {}, expected {}".format(out_of_sync_nodes, valid_out_of_sync_pairs))
+        assert out_of_sync_nodes == valid_out_of_sync_pairs, "Unrelated node found in local repair: {}, expected {}".format(out_of_sync_nodes, valid_out_of_sync_pairs)
         # Check node2 now has the key
         self.check_rows_on_node(node2, 2001, found=[1000], restart=False)
 
@@ -644,14 +642,14 @@ class TestRepair(BaseRepairTest):
 
         # Verify that only nodes in dc1 and dc2 are involved in repair
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        self.assertEqual(len(out_of_sync_logs), 2, "Lines matching: " + str([elt[0] for elt in out_of_sync_logs]))
+        assert len(out_of_sync_logs), 2 == "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
         valid_out_of_sync_pairs = [{node1.address(), node2.address()},
                                    {node2.address(), node3.address()}]
 
         for line, m in out_of_sync_logs:
             num_out_of_sync_ranges, out_of_sync_nodes = m.group(3), {m.group(1), m.group(2)}
-            self.assertEqual(int(num_out_of_sync_ranges), 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, line))
-            self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
+            assert int(num_out_of_sync_ranges) == 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes , num_out_of_sync_ranges)
+            assert out_of_sync_nodes, valid_out_of_sync_pairs in str(out_of_sync_nodes)
 
         # Check node2 now has the key
         self.check_rows_on_node(node2, 2001, found=[1000], restart=False)
@@ -674,23 +672,23 @@ class TestRepair(BaseRepairTest):
 
         # Verify that only nodes in dc1 and dc2 are involved in repair
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        self.assertEqual(len(out_of_sync_logs), 2, "Lines matching: " + str([elt[0] for elt in out_of_sync_logs]))
+        assert len(out_of_sync_logs), 2 == "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
         valid_out_of_sync_pairs = [{node1.address(), node2.address()},
                                    {node2.address(), node3.address()}]
 
         for line, m in out_of_sync_logs:
             num_out_of_sync_ranges, out_of_sync_nodes = m.group(3), {m.group(1), m.group(2)}
-            self.assertEqual(int(num_out_of_sync_ranges), 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, line))
-            self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
+            assert int(num_out_of_sync_ranges) == 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, num_out_of_sync_ranges)
+            assert out_of_sync_nodes, valid_out_of_sync_pairs in str(out_of_sync_nodes)
 
         # Check node2 now has the key
         self.check_rows_on_node(node2, 2001, found=[1000], restart=False)
 
         # Check the repair was a dc parallel repair
         if self.cluster.version() >= '2.2':
-            self.assertEqual(len(node1.grep_log('parallelism: dc_parallel')), 1, str(node1.grep_log('parallelism')))
+            assert len(node1.grep_log('parallelism: dc_parallel')), 1 == str(node1.grep_log('parallelism'))
         else:
-            self.assertEqual(len(node1.grep_log('parallelism=PARALLEL')), 1, str(node1.grep_log('parallelism')))
+            assert len(node1.grep_log('parallelism=PARALLEL')), 1 == str(node1.grep_log('parallelism'))
 
     def _setup_multi_dc(self):
         """
@@ -740,7 +738,7 @@ class TestRepair(BaseRepairTest):
         Tests that multiple parallel repairs on the same table isn't
         causing reference leaks.
         """
-        self.ignore_log_patterns = [
+        self.fixture_dtest_setup.ignore_log_patterns = [
             "Cannot start multiple repair sessions over the same sstables",  # The message we are expecting
             "Validation failed in",                                          # Expecting validation to fail
             "RMI Runtime",                                                   # JMX Repair failures
@@ -772,7 +770,7 @@ class TestRepair(BaseRepairTest):
             if len(node.grep_log("Cannot start multiple repair sessions over the same sstables")) > 0:
                 found_message = True
                 break
-        self.assertTrue(found_message)
+        assert found_message
 
     @pytest.mark.no_vnodes
     def test_token_range_repair(self):
@@ -830,22 +828,22 @@ class TestRepair(BaseRepairTest):
         opts = ['-st', str(node3.initial_token), '-et', str(node1.initial_token), ]
         opts += _repair_options(self.cluster.version(), ks='keyspace1', cf='counter1', sequential=False)
         node1.repair(opts)
-        self.assertEqual(len(node1.grep_log('are consistent for standard1')), 0, "Nodes 1 and 2 should not be consistent.")
-        self.assertEqual(len(node3.grep_log('Repair command')), 0, "Node 3 should not have been involved in the repair.")
+        assert len(node1.grep_log('are consistent for standard1')), 0 == "Nodes 1 and 2 should not be consistent."
+        assert len(node3.grep_log('Repair command')), 0 == "Node 3 should not have been involved in the repair."
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        self.assertEqual(len(out_of_sync_logs), 0, "We repaired the wrong CF, so things should still be broke")
+        assert len(out_of_sync_logs) == 0, "We repaired the wrong CF == so things should still be broke"
 
         # Repair only the range node 1 owns on the right  CF, assert everything is fixed
         opts = ['-st', str(node3.initial_token), '-et', str(node1.initial_token), ]
         opts += _repair_options(self.cluster.version(), ks='keyspace1', cf='standard1', sequential=False)
         node1.repair(opts)
-        self.assertEqual(len(node1.grep_log('are consistent for standard1')), 0, "Nodes 1 and 2 should not be consistent.")
-        self.assertEqual(len(node3.grep_log('Repair command')), 0, "Node 3 should not have been involved in the repair.")
+        assert len(node1.grep_log('are consistent for standard1')), 0 == "Nodes 1 and 2 should not be consistent."
+        assert len(node3.grep_log('Repair command')), 0 == "Node 3 should not have been involved in the repair."
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
         _, matches = out_of_sync_logs[0]
         out_of_sync_nodes = {matches.group(1), matches.group(2)}
         valid_out_of_sync_pairs = [{node1.address(), node2.address()}]
-        self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
+        assert out_of_sync_nodes, valid_out_of_sync_pairs in str(out_of_sync_nodes)
 
     @pytest.mark.no_vnodes
     def test_partitioner_range_repair(self):
@@ -895,14 +893,14 @@ class TestRepair(BaseRepairTest):
         self._parameterized_range_repair(repair_opts=['--pull', '--in-hosts', node1_address + ',' + node2_address, '-st', str(node3.initial_token), '-et', str(node1.initial_token)])
 
         # Node 1 should only receive files (as we ran a pull repair on node1)
-        self.assertTrue(len(node1.grep_log("Receiving [1-9][0-9]* files")) > 0)
-        self.assertEqual(len(node1.grep_log("sending [1-9][0-9]* files")), 0)
-        self.assertTrue(len(node1.grep_log("sending 0 files")) > 0)
+        assert len(node1.grep_log("Receiving [1-9][0-9]* files")) > 0
+        assert len(node1.grep_log("sending [1-9][0-9]* files")) == 0
+        assert len(node1.grep_log("sending 0 files")) > 0
 
         # Node 2 should only send files (as we ran a pull repair on node1)
-        self.assertEqual(len(node2.grep_log("Receiving [1-9][0-9]* files")), 0)
-        self.assertTrue(len(node2.grep_log("Receiving 0 files")) > 0)
-        self.assertTrue(len(node2.grep_log("sending [1-9][0-9]* files")) > 0)
+        assert len(node2.grep_log("Receiving [1-9][0-9]* files")) == 0
+        assert len(node2.grep_log("Receiving 0 files")) > 0
+        assert len(node2.grep_log("sending [1-9][0-9]* files")) > 0
 
     def _parameterized_range_repair(self, repair_opts):
         """
@@ -935,8 +933,8 @@ class TestRepair(BaseRepairTest):
         opts += _repair_options(self.cluster.version(), ks='keyspace1', cf='standard1', sequential=False)
         node1.repair(opts)
 
-        self.assertEqual(len(node1.grep_log('are consistent for standard1')), 0, "Nodes 1 and 2 should not be consistent.")
-        self.assertEqual(len(node3.grep_log('Repair command')), 0, "Node 3 should not have been involved in the repair.")
+        assert len(node1.grep_log('are consistent for standard1')), 0 == "Nodes 1 and 2 should not be consistent."
+        assert len(node3.grep_log('Repair command')), 0 == "Node 3 should not have been involved in the repair."
 
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
         _, matches = out_of_sync_logs[0]
@@ -944,7 +942,7 @@ class TestRepair(BaseRepairTest):
 
         valid_out_of_sync_pairs = [{node1.address(), node2.address()}]
 
-        self.assertIn(out_of_sync_nodes, valid_out_of_sync_pairs, str(out_of_sync_nodes))
+        assert out_of_sync_nodes, valid_out_of_sync_pairs in str(out_of_sync_nodes)
 
     @since('2.2')
     def test_trace_repair(self):
@@ -1062,7 +1060,7 @@ class TestRepair(BaseRepairTest):
         node1.stop(wait_other_notice=True)
         node3.stop(wait_other_notice=True)
         _, _, rc = node2.stress(['read', 'n=1M', 'no-warmup', '-rate', 'threads=30'], whitelist=True)
-        self.assertEqual(rc, 0)
+        assert rc == 0
 
     @since('4.0')
     def test_wide_row_repair(self):
@@ -1145,7 +1143,7 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         # We are not interested in specific errors, but
         # that the repair session finishes on node failure without hanging
-        self.ignore_log_patterns = [
+        self.fixture_dtest_setup.ignore_log_patterns = [
             "Endpoint .* died",
             "Streaming error occurred",
             "StreamReceiveTask",
@@ -1213,8 +1211,8 @@ class TestRepair(BaseRepairTest):
 
         debug("Killed {}, now waiting repair to finish".format(node_to_kill.name))
         t.join(timeout=60)
-        self.assertFalse(t.isAlive(), 'Repair still running after sync {} was killed'
-                                      .format("initiator" if initiator else "participant"))
+        assert not t.isAlive, 'Repair still running after sync {} was killed'\
+            .format("initiator" if initiator else "participant")
 
         if cluster.version() < '4.0' or phase != 'sync':
             # the log entry we're watching for in the sync task came from the
@@ -1288,7 +1286,7 @@ class TestRepairDataSystemTable(Tester):
         debug(self.repair_table_contents(node=self.node1, include_system_keyspaces=False))
         repair_tables_dict = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)._asdict()
         for table_name, table_contents in list(repair_tables_dict.items()):
-            self.assertFalse(table_contents, '{} is non-empty'.format(table_name))
+            assert not table_contents, '{} is non-empty'.format(table_name)
 
     def test_repair_parent_table(self):
         """
@@ -1300,7 +1298,7 @@ class TestRepairDataSystemTable(Tester):
         """
         self.node1.repair()
         parent_repair_history, _ = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)
-        self.assertTrue(len(parent_repair_history))
+        assert len(parent_repair_history)
 
     def test_repair_table(self):
         """
@@ -1312,4 +1310,4 @@ class TestRepairDataSystemTable(Tester):
         """
         self.node1.repair()
         _, repair_history = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)
-        self.assertTrue(len(repair_history))
+        assert len(repair_history)

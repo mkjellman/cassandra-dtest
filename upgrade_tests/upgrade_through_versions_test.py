@@ -221,6 +221,7 @@ def counter_checker(tester, to_verify_queue, verification_done_queue):
                 pass
 
 
+@pytest.mark.upgrade_test
 @pytest.mark.resource_intensive
 class UpgradeTester(Tester):
     """
@@ -241,10 +242,6 @@ class UpgradeTester(Tester):
         # Normal occurance. See CASSANDRA-12026. Likely won't be needed after C* 4.0.
         r'Unknown column cdc during deserialization',
     )
-
-    def __init__(self, *args, **kwargs):
-        self.subprocs = []
-        Tester.__init__(self, *args, **kwargs)
 
     def setUp(self):
         debug("Upgrade test beginning, setting CASSANDRA_VERSION to {}, and jdk to {}. (Prior values will be restored after test)."
@@ -302,8 +299,8 @@ class UpgradeTester(Tester):
 
         if internode_ssl:
             debug("***using internode ssl***")
-            generate_ssl_stores(self.test_path)
-            self.cluster.enable_internode_ssl(self.test_path)
+            generate_ssl_stores(self.fixture_dtest_setup.test_path)
+            self.cluster.enable_internode_ssl(self.fixture_dtest_setup.test_path)
 
         if populate:
             # Start with 3 node cluster
@@ -344,7 +341,7 @@ class UpgradeTester(Tester):
 
                     self.upgrade_to_version(version_meta, partial=True, nodes=(node,), internode_ssl=internode_ssl)
 
-                    self._check_on_subprocs(self.subprocs)
+                    self._check_on_subprocs(self.fixture_dtest_setup.subprocs)
                     debug('Successfully upgraded %d of %d nodes to %s' %
                           (num + 1, len(self.cluster.nodelist()), version_meta.version))
 
@@ -402,7 +399,7 @@ class UpgradeTester(Tester):
             raise RuntimeError(message)
 
     def _terminate_subprocs(self):
-        for s in self.subprocs:
+        for s in self.fixture_dtest_setup.subprocs:
             if s.is_alive():
                 try:
                     psutil.Process(s.pid).kill()  # with fire damnit
@@ -509,8 +506,8 @@ class UpgradeTester(Tester):
                 query = SimpleStatement("SELECT k,v FROM cf WHERE k=%d" % x, consistency_level=consistency_level)
                 result = session.execute(query)
                 k, v = result[0]
-                self.assertEqual(x, k)
-                self.assertEqual(str(x), v)
+                assert x == k
+                assert str(x) == v
 
     def _wait_until_queue_condition(self, label, queue, opfunc, required_len, max_wait_s=600):
         """
@@ -559,7 +556,7 @@ class UpgradeTester(Tester):
         writer = Process(target=data_writer, args=(self, to_verify_queue, verification_done_queue, 25))
         # daemon subprocesses are killed automagically when the parent process exits
         writer.daemon = True
-        self.subprocs.append(writer)
+        self.fixture_dtest_setup.subprocs.append(writer)
         writer.start()
 
         if wait_for_rowcount > 0:
@@ -568,7 +565,7 @@ class UpgradeTester(Tester):
         verifier = Process(target=data_checker, args=(self, to_verify_queue, verification_done_queue))
         # daemon subprocesses are killed automagically when the parent process exits
         verifier.daemon = True
-        self.subprocs.append(verifier)
+        self.fixture_dtest_setup.subprocs.append(verifier)
         verifier.start()
 
         return writer, verifier, to_verify_queue
@@ -588,7 +585,7 @@ class UpgradeTester(Tester):
         incrementer = Process(target=data_writer, args=(self, to_verify_queue, verification_done_queue, 25))
         # daemon subprocesses are killed automagically when the parent process exits
         incrementer.daemon = True
-        self.subprocs.append(incrementer)
+        self.fixture_dtest_setup.subprocs.append(incrementer)
         incrementer.start()
 
         if wait_for_rowcount > 0:
@@ -597,7 +594,7 @@ class UpgradeTester(Tester):
         count_verifier = Process(target=data_checker, args=(self, to_verify_queue, verification_done_queue))
         # daemon subprocesses are killed automagically when the parent process exits
         count_verifier.daemon = True
-        self.subprocs.append(count_verifier)
+        self.fixture_dtest_setup.subprocs.append(count_verifier)
         count_verifier.start()
 
         return incrementer, count_verifier, to_verify_queue
@@ -628,7 +625,7 @@ class UpgradeTester(Tester):
             if fail_count > 100:
                 break
 
-        self.assertLess(fail_count, 100, "Too many counter increment failures")
+        assert fail_count, 100 < "Too many counter increment failures"
 
     def _check_counters(self):
         debug("Checking counter values...")
@@ -649,7 +646,7 @@ class UpgradeTester(Tester):
                     # counter wasn't found
                     actual_value = None
 
-                self.assertEqual(actual_value, expected_value)
+                assert actual_value == expected_value
 
     def _check_select_count(self, consistency_level=ConsistencyLevel.ALL):
         debug("Checking SELECT COUNT(*)")
@@ -663,7 +660,7 @@ class UpgradeTester(Tester):
 
         if result is not None:
             actual_num_rows = result[0][0]
-            self.assertEqual(actual_num_rows, expected_num_rows, "SELECT COUNT(*) returned %s when expecting %s" % (actual_num_rows, expected_num_rows))
+            assert actual_num_rows == expected_num_rows, "SELECT COUNT(*) returned %s when expecting %s" % (actual_num_rows, expected_num_rows)
         else:
             self.fail("Count query did not return")
 

@@ -1,8 +1,9 @@
-
+import pytest
 
 from dtest import Tester
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since('3.0')

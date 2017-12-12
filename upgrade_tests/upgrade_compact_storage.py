@@ -1,18 +1,19 @@
-# coding: utf-8
-
 import time
+import pytest
 
 from cassandra.query import dict_factory
 from ccmlib.node import NodeError
 
 from dtest import Tester, debug
 from cassandra.protocol import ConfigurationException
-from tools.decorators import since
+
+since = pytest.mark.since
 
 VERSION_311 = 'github:apache/cassandra-3.11'
 VERSION_TRUNK = 'github:apache/trunk'
 
 
+@pytest.mark.upgrade_test
 @since('4.0')
 class UpgradeSuperColumnsThrough(Tester):
     def upgrade_to_version(self, tag, start_rpc=True, wait=True, nodes=None):

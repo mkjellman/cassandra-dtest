@@ -1,4 +1,5 @@
 import time
+import pytest
 from collections import OrderedDict
 
 from cassandra import ConsistencyLevel
@@ -8,7 +9,8 @@ from cassandra.util import sortedset
 from dtest import Tester, debug, create_ks
 from tools.assertions import (assert_all, assert_almost_equal, assert_none,
                               assert_row_count, assert_unavailable)
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since('2.0')
@@ -53,7 +55,6 @@ class TestTTL(Tester):
 
     def test_default_ttl(self):
         """ Test default_time_to_live specified on a table """
-
         self.prepare(default_time_to_live=1)
         start = time.time()
         self.session1.execute("INSERT INTO ttl_table (key, col1) VALUES (%d, %d)" % (1, 1))
@@ -64,7 +65,6 @@ class TestTTL(Tester):
 
     def test_insert_ttl_has_priority_on_defaut_ttl(self):
         """ Test that a ttl specified during an insert has priority on the default table ttl """
-
         self.prepare(default_time_to_live=1)
 
         start = time.time()
@@ -78,7 +78,6 @@ class TestTTL(Tester):
 
     def test_insert_ttl_works_without_default_ttl(self):
         """ Test that a ttl specified during an insert works even if a table has no default ttl """
-
         self.prepare()
 
         start = time.time()
@@ -90,7 +89,6 @@ class TestTTL(Tester):
 
     def test_default_ttl_can_be_removed(self):
         """ Test that default_time_to_live can be removed """
-
         self.prepare(default_time_to_live=1)
 
         start = time.time()
@@ -103,7 +101,6 @@ class TestTTL(Tester):
 
     def test_removing_default_ttl_does_not_affect_existing_rows(self):
         """ Test that removing a default_time_to_live doesn't affect the existings rows """
-
         self.prepare(default_time_to_live=1)
 
         self.session1.execute("ALTER TABLE ttl_table WITH default_time_to_live = 10;")
@@ -125,7 +122,6 @@ class TestTTL(Tester):
 
     def test_update_single_column_ttl(self):
         """ Test that specifying a TTL on a single column works """
-
         self.prepare()
 
         self.session1.execute("""
@@ -139,7 +135,6 @@ class TestTTL(Tester):
 
     def test_update_multiple_columns_ttl(self):
         """ Test that specifying a TTL on multiple columns works """
-
         self.prepare()
 
         self.session1.execute("""
@@ -158,7 +153,6 @@ class TestTTL(Tester):
         Test that specifying a column ttl works when a default ttl is set.
         This test specify a lower ttl for the column than the default ttl.
         """
-
         self.prepare(default_time_to_live=8)
 
         start = time.time()
@@ -194,7 +188,6 @@ class TestTTL(Tester):
         """
         Test that removing a column ttl works.
         """
-
         self.prepare()
 
         start = time.time()
@@ -211,7 +204,6 @@ class TestTTL(Tester):
         Test that we can remove the default ttl by setting the ttl explicitly to zero.
         CASSANDRA-11207
         """
-
         self.prepare(default_time_to_live=2)
 
         start = time.time()
@@ -229,7 +221,6 @@ class TestTTL(Tester):
         """
         Test that we cannot remove a column ttl when a default ttl is set.
         """
-
         self.prepare(default_time_to_live=2)
 
         start = time.time()
@@ -251,7 +242,6 @@ class TestTTL(Tester):
         """
         Test that ttl has a granularity of elements using a list collection.
         """
-
         self.prepare(default_time_to_live=10)
 
         self.session1.execute("ALTER TABLE ttl_table ADD mylist list<int>;""")
@@ -272,7 +262,6 @@ class TestTTL(Tester):
         """
         Test that ttl has a granularity of elements using a set collection.
         """
-
         self.prepare(default_time_to_live=10)
 
         self.session1.execute("ALTER TABLE ttl_table ADD myset set<int>;""")
@@ -301,7 +290,6 @@ class TestTTL(Tester):
         """
         Test that ttl has a granularity of elements using a map collection.
         """
-
         self.prepare(default_time_to_live=6)
 
         self.session1.execute("ALTER TABLE ttl_table ADD mymap map<int, int>;""")
@@ -370,7 +358,6 @@ class TestDistributedTTL(Tester):
         """
         Test that the ttl setting is replicated properly on all nodes
         """
-
         self.prepare(default_time_to_live=5)
         session1 = self.patient_exclusive_cql_connection(self.node1)
         session2 = self.patient_exclusive_cql_connection(self.node2)
@@ -400,7 +387,6 @@ class TestDistributedTTL(Tester):
 
     def test_ttl_is_respected_on_delayed_replication(self):
         """ Test that ttl is respected on delayed replication """
-
         self.prepare()
         self.node2.stop()
         self.session1.execute("""
@@ -443,7 +429,6 @@ class TestDistributedTTL(Tester):
 
     def test_ttl_is_respected_on_repair(self):
         """ Test that ttl is respected on repair """
-
         self.prepare()
         self.session1.execute("""
             ALTER KEYSPACE ks WITH REPLICATION =

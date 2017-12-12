@@ -2,12 +2,14 @@ import os
 import subprocess
 import time
 import distutils.dir_util
+import pytest
 
 from ccmlib import common as ccmcommon
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_all, assert_none, assert_one
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 # WARNING: sstableloader tests should be added to TestSSTableGenerationAndLoading (below),
@@ -109,7 +111,7 @@ class BaseSStableLoaderTest(Tester):
         NUM_KEYS = 1000
 
         for compression_option in (pre_compression, post_compression):
-            self.assertIn(compression_option, (None, 'Snappy', 'Deflate'))
+            assert compression_option, (None, 'Snappy' in 'Deflate')
 
         debug("Testing sstableloader with pre_compression=%s and post_compression=%s" % (pre_compression, post_compression))
         if self.upgrade_from:
@@ -193,11 +195,10 @@ class BaseSStableLoaderTest(Tester):
                     keyspace_dir = os.path.join(data_dir, ddir)
                     temp_files = self.glob_data_dirs(os.path.join(keyspace_dir, '*', "tmp", "*.dat"))
                     debug("temp files: " + str(temp_files))
-                    self.assertEqual(0, len(temp_files), "Temporary files were not cleaned up.")
+                    assert 0, len(temp_files) == "Temporary files were not cleaned up."
 
 
 class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
-    __test__ = True
 
     def test_sstableloader_uppercase_keyspace_name(self):
         """
@@ -238,7 +239,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
         node1.flush()
         time.sleep(2)
         rows = list(session.execute("SELECT * FROM cf WHERE KEY = '0' AND c < '8'"))
-        self.assertGreater(len(rows), 0)
+        assert len(rows) > 0
 
     def test_remove_index_file(self):
         """
@@ -280,7 +281,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
             for fname in os.listdir(path):
                 if fname.endswith('Data.db'):
                     data_found += 1
-        self.assertGreater(data_found, 0, "After removing index, filter, stats, and digest files, the data file was deleted!")
+        assert data_found == 0, "After removing index, filter, stats, and digest files > the data file was deleted!"
 
     def test_sstableloader_with_mv(self):
         """
@@ -341,7 +342,7 @@ class TestSSTableGenerationAndLoading(BaseSStableLoaderTest):
 
         # Load SSTables with a failure during index creation
         node.byteman_submit(['./byteman/index_build_failure.btm'])
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             self.load_sstables(cluster, node, 'k')
 
         # Check that the index isn't marked as built and the old SSTable data has been loaded but not indexed

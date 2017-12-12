@@ -7,10 +7,12 @@ from ccmlib.node import Node
 
 from dtest import Tester, debug
 from tools.assertions import assert_all, assert_invalid
-from tools.decorators import since
 from tools.misc import ImmutableMapping
 
+since = pytest.mark.since
 
+
+@pytest.mark.upgrade_test
 @since('2.2')
 class TestAuthUpgrade(Tester):
     cluster_options = ImmutableMapping({'authenticator': 'PasswordAuthenticator',

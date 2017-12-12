@@ -58,7 +58,7 @@ class TestWideRows(Tester):
         rows = session.execute(query)
         for value in rows:
             debug(value)
-            self.assertGreater(len(value[0]), 0)
+            assert len(value[0]) > 0
 
     def test_column_index_stress(self):
         """Write a large number of columns to a single row and set

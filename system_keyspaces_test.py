@@ -1,7 +1,11 @@
+import pytest
+
 from cassandra import Unauthorized
 from dtest import Tester
 from tools.assertions import assert_all, assert_exception, assert_none
-from tools.decorators import since
+
+since = pytest.mark.since
+
 
 class TestSystemKeyspaces(Tester):
 

@@ -1,6 +1,5 @@
-# coding: utf-8
-
 import itertools
+import pytest
 from unittest import skipUnless
 
 from cassandra.query import dict_factory
@@ -12,9 +11,11 @@ from thrift_bindings.v22.Cassandra import (Column, ColumnDef,
                                            SlicePredicate, SliceRange)
 from thrift_tests import _i64, get_thrift_client
 from tools.assertions import assert_length_equal
-from tools.decorators import since
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs
+
+
+since = pytest.mark.since
 
 
 def _create_dense_super_cf(name):
@@ -102,6 +103,7 @@ def _validate_dense_thrift(client, cf='dense_super_1'):
         assert cosc.super_column.columns[0].value == 'value1'
 
 
+@pytest.mark.upgrade_test
 class UpgradeSuperColumnsThrough(Tester):
     def upgrade_to_version(self, tag, nodes=None):
         debug('Upgrading to ' + tag)
@@ -263,6 +265,7 @@ class UpgradeSuperColumnsThrough(Tester):
         _validate_sparse_cql(cursor, cf='sparse_super_2')
 
 
+@pytest.mark.upgrade_test
 @since('2.1', max_version='4.0.0')
 class TestThrift(UpgradeTester):
     """

@@ -1,10 +1,8 @@
 import os
 import tempfile
+import pytest
 from itertools import chain
 from shutil import rmtree
-from unittest import skipIf
-
-import pytest
 
 from cassandra import ConsistencyLevel, ReadTimeout, Unavailable
 from cassandra.query import SimpleStatement
@@ -13,7 +11,8 @@ from ccmlib.node import Node
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from tools.assertions import assert_bootstrap_state, assert_all, assert_not_running
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class NodeUnavailable(Exception):
@@ -112,7 +111,7 @@ class BaseReplaceAddressTest(Tester):
             self.replaced_node.stop(gently=gently, wait_other_notice=True)
 
         debug("Testing node stoppage (query should fail).")
-        with self.assertRaises((Unavailable, ReadTimeout)):
+        with pytest.raises((Unavailable, ReadTimeout)):
             session = self.patient_cql_connection(self.query_node)
             query = SimpleStatement('select * from {}'.format(table), consistency_level=cl)
             session.execute(query)
@@ -131,7 +130,7 @@ class BaseReplaceAddressTest(Tester):
 
     def _verify_data(self, initial_data, table='keyspace1.standard1', cl=ConsistencyLevel.ONE, limit=10000,
                      restart_nodes=False):
-        self.assertGreater(len(initial_data), 0, "Initial data must be greater than 0")
+        assert len(initial_data), 0 > "Initial data must be greater than 0"
 
         # query should work again
         debug("Stopping old nodes")
@@ -177,11 +176,11 @@ class BaseReplaceAddressTest(Tester):
                                               .format(self.replaced_node.address(),
                                                       self.replacement_node.address()))
         if (previous_log_size is not None):
-            self.assertEqual(len(logs), previous_log_size)
+            assert len(logs) == previous_log_size
 
         moved_tokens = set([l[1].group(1) for l in logs])
         debug("number of moved tokens: {}".format(len(moved_tokens)))
-        self.assertEqual(len(moved_tokens), num_tokens)
+        assert len(moved_tokens) == num_tokens
 
         return len(logs)
 
@@ -229,7 +228,6 @@ class BaseReplaceAddressTest(Tester):
 
 
 class TestReplaceAddress(BaseReplaceAddressTest):
-    __test__ = True
 
     @pytest.mark.resource_intensive
     def test_replace_stopped_node(self):
@@ -290,7 +288,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
     @pytest.mark.resource_intensive
     def test_replace_active_node(self):
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Exception encountered during startup']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+                                                       + [r'Exception encountered during startup']
         self._setup(n=3)
         self._do_replace(wait_for_binary_proto=False)
 
@@ -300,7 +299,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
     @pytest.mark.resource_intensive
     def test_replace_nonexistent_node(self):
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
             # This is caused by starting a node improperly (replacing active/nonexistent)
             r'Exception encountered during startup',
             # This is caused by trying to replace a nonexistent node
@@ -321,7 +320,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         to use replace_address.
         @jira_ticket CASSANDRA-10134
         """
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Exception encountered during startup']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+                                                       + [r'Exception encountered during startup']
         self._setup(n=3)
         self._insert_data()
         node1, node2, node3 = self.cluster.nodelist()
@@ -359,7 +359,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
         @jira_ticket CASSANDRA-10134
         """
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Exception encountered during startup']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+                                                       + [r'Exception encountered during startup']
         self._setup(n=3)
         self._insert_data()
         initial_data = self._fetch_initial_data()
@@ -393,7 +394,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
                 self.replacement_node.watch_log_for('To perform this operation, please restart with -Dcassandra.allow_unsafe_replace=true',
                                                     from_mark=mark, timeout=20)
 
-    @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', reason="Test doesn't run on 3.9")
     @since('2.2')
     def test_insert_data_during_replace_same_address(self):
         """
@@ -402,7 +403,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         """
         self._test_insert_data_during_replace(same_address=True)
 
-    @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', reason="Test doesn't run on 3.9")
     @since('2.2')
     def test_insert_data_during_replace_different_address(self):
         """
@@ -437,7 +438,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self._test_restart_failed_replace(mode='wipe')
 
     def _test_restart_failed_replace(self, mode):
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Error while waiting on bootstrap to complete']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+                                                       + [r'Error while waiting on bootstrap to complete']
         self._setup(n=3, enable_byteman=True)
         self._insert_data(n="1k")
 
@@ -502,7 +504,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         Test that replace fails when there are insufficient replicas
         @jira_ticket CASSANDRA-11848
         """
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Unable to find sufficient sources for streaming range']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+                                                       + [r'Unable to find sufficient sources for streaming range']
         self._setup(n=3)
         self._insert_data(rf=2)
 
@@ -563,7 +566,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         assert_bootstrap_state(self, self.replacement_node, 'COMPLETED')
 
         # Check that keyspace was replicated from dc1 to dc2
-        self.assertFalse(self.replacement_node.grep_log("Unable to find sufficient sources for streaming range"))
+        assert not self.replacement_node.grep_log("Unable to find sufficient sources for streaming range")
 
         self._verify_data(initial_data, table=table_name, cl=ConsistencyLevel.LOCAL_ONE)
 

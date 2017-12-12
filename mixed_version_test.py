@@ -1,8 +1,11 @@
+import pytest
+
 from cassandra import ConsistencyLevel, OperationTimedOut, ReadTimeout
 from cassandra.query import SimpleStatement
 
 from dtest import Tester, debug
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class TestSchemaChanges(Tester):

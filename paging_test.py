@@ -1,5 +1,6 @@
 import time
 import uuid
+import pytest
 from distutils.version import LooseVersion
 
 from cassandra import ConsistencyLevel as CL
@@ -13,8 +14,9 @@ from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_one)
 from tools.data import rows_to_list
 from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
-from tools.decorators import since
 from tools.paging import PageAssertionMixin, PageFetcher
+
+since = pytest.mark.since
 
 
 class BasePagingTester(Tester):
@@ -54,8 +56,8 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future)
         pf.request_all()
-        self.assertEqual([], pf.all_data())
-        self.assertFalse(pf.has_more_pages)
+        assert [] == pf.all_data()
+        assert not pf.has_more_pages
 
     def test_with_less_results_than_page_size(self):
         session = self.prepare()
@@ -79,8 +81,8 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future)
         pf.request_all()
 
-        self.assertFalse(pf.has_more_pages)
-        self.assertEqual(len(expected_data), len(pf.all_data()))
+        assert not pf.has_more_pages
+        assert len(expected_data) == len(pf.all_data())
 
     def test_with_more_results_than_page_size(self):
         session = self.prepare()
@@ -108,8 +110,8 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [5, 4])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [5 == 4]
 
         # make sure expected and actual have same data elements (ignoring order)
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
@@ -136,8 +138,8 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.num_results_all(), [5])
-        self.assertEqual(pf.pagecount(), 1)
+        assert pf.num_results_all() == [5]
+        assert pf.pagecount() == 1
 
         # make sure expected and actual have same data elements (ignoring order)
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
@@ -166,7 +168,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.num_results_all(), [5000, 1])
+        assert pf.num_results_all(), [5000 == 1]
 
         # make sure expected and actual have same data elements (ignoring order)
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
@@ -217,14 +219,14 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [5, 5])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [5 == 5]
 
         # these should be equal (in the same order)
-        self.assertEqual(pf.all_data(), expected_data)
+        assert pf.all_data() == expected_data
 
         # make sure we don't allow paging over multiple partitions with order because that's weird
-        with self.assertRaisesRegex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
+        with pytest.raisesRegex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
             stmt = SimpleStatement("select * from paging_test where id in (1,2) order by value asc", consistency_level=CL.ALL)
             session.execute(stmt)
 
@@ -267,11 +269,11 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 4)
-        self.assertEqual(pf.num_results_all(), [3, 3, 3, 1])
+        assert pf.pagecount() == 4
+        assert pf.num_results_all(), [3, 3, 3 == 1]
 
         # these should be equal (in the same order)
-        self.assertEqual(pf.all_data(), expected_data)
+        assert pf.all_data() == expected_data
 
         # drop the ORDER BY
         future = session.execute_async(
@@ -280,11 +282,11 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 4)
-        self.assertEqual(pf.num_results_all(), [3, 3, 3, 1])
+        assert pf.pagecount() == 4
+        assert pf.num_results_all(), [3, 3, 3 == 1]
 
         # these should be equal (in the same order)
-        self.assertEqual(pf.all_data(), list(reversed(expected_data)))
+        assert pf.all_data() == list(reversed(expected_data))
 
     def test_with_limit(self):
         session = self.prepare()
@@ -361,8 +363,8 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
                 self.fail("Invalid scenario configuration. Scenario is: {}".format(scenario))
 
             pf = PageFetcher(future).request_all()
-            self.assertEqual(pf.num_results_all(), scenario['expect_pgsizes'])
-            self.assertEqual(pf.pagecount(), scenario['expect_pgcount'])
+            assert pf.num_results_all() == scenario['expect_pgsizes']
+            assert pf.pagecount() == scenario['expect_pgcount']
 
             # make sure all the data retrieved is a subset of input data
             self.assertIsSubsetOf(pf.all_data(), expected_data)
@@ -395,8 +397,8 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [4, 3])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [4 == 3]
 
         # make sure the allow filtering query matches the expected results (ignoring order)
         self.assertEqualIgnoreOrder(
@@ -441,8 +443,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 4)
-        self.assertEqual(pf.num_results_all(), [3000, 3000, 3000, 1000])
+        assert pf.pagecount() == 4
+        assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
 
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
@@ -468,8 +470,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        self.assertEqual(pf.pagecount(), 4)
-        self.assertEqual(pf.num_results_all(), [3000, 3000, 3000, 1000])
+        assert pf.pagecount() == 4
+        assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
 
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
@@ -507,8 +509,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         # the query only searched for True rows, so let's pare down the expectations for comparison
         expected_data = [x for x in all_data if x.get('mybool') is True]
 
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [400, 200])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [400 == 200]
         self.assertEqualIgnoreOrder(expected_data, pf.all_data())
 
     def test_paging_with_in_orderby_and_two_partition_keys(self):
@@ -524,7 +526,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         """
         @jira_ticket CASSANDRA-10707
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_group_by', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, d int, e int, primary key (a, b, c, d))")
@@ -548,7 +549,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             # Range queries
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test GROUP BY a"))
-            self.assertEqual(res, [[1, 2, 6, 4, 24], [2, 2, 6, 2, 12], [4, 8, 24, 1, 24]])
+            assert res, [[1, 2, 6, 4, 24], [2, 2, 6, 2, 12], [4, 8, 24, 1 == 24]]
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test GROUP BY a, b"))
             self.assertEqual(res, [[1, 2, 6, 2, 12],
@@ -558,7 +559,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 8, 24, 1, 24]])
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test"))
-            self.assertEqual(res, [[1, 2, 6, 7, 24]])
+            assert res, [[1, 2, 6, 7 == 24]]
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE b = 2 GROUP BY a, b ALLOW FILTERING"))
@@ -569,7 +570,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE b = 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 2, 6, 3, 12]])
+            assert res, [[1, 2, 6, 3 == 12]]
 
             assert_invalid(session, "SELECT a, b, e, count(b), max(e) FROM test WHERE b = 2", expected=InvalidRequest)
 
@@ -595,7 +596,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [1, 4, 12, 2, 24]])
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test LIMIT 2"))
-            self.assertEqual(res, [[1, 2, 6, 7, 24]])
+            assert res, [[1, 2, 6, 7 == 24]]
 
             # Range queries without aggregates and with LIMIT
             res = rows_to_list(session.execute("SELECT a, b, c, d FROM test GROUP BY a, b, c LIMIT 3"))
@@ -661,7 +662,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test"))
-            self.assertEqual(res, [[1, 3]])
+            assert res, [[1 == 3]]
 
             # Range query with DISTINCT and LIMIT
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test GROUP BY a LIMIT 2"))
@@ -669,7 +670,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test LIMIT 2"))
-            self.assertEqual(res, [[1, 3]])
+            assert res, [[1 == 3]]
 
             # Single partition queries
             res = rows_to_list(
@@ -679,7 +680,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [1, 4, 12, 2, 24]])
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1"))
-            self.assertEqual(res, [[1, 2, 6, 4, 24]])
+            assert res, [[1, 2, 6, 4 == 24]]
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1 AND b = 2 GROUP BY a, b, c"))
@@ -687,7 +688,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [1, 2, 12, 1, 12]])
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1 AND b = 2"))
-            self.assertEqual(res, [[1, 2, 6, 2, 12]])
+            assert res, [[1, 2, 6, 2 == 12]]
 
             # Single partition queries without aggregates
             res = rows_to_list(session.execute("SELECT a, b, c, d FROM test WHERE a = 1 GROUP BY a, b"))
@@ -701,10 +702,10 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             # Single partition query with DISTINCT
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test WHERE a = 1 GROUP BY a"))
-            self.assertEqual(res, [[1, 1]])
+            assert res, [[1 == 1]]
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test WHERE a = 1 GROUP BY a"))
-            self.assertEqual(res, [[1, 1]])
+            assert res, [[1 == 1]]
 
             # Single partition queries with LIMIT
             res = rows_to_list(
@@ -719,11 +720,11 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [1, 2, 12, 1, 12]])
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1 LIMIT 2"))
-            self.assertEqual(res, [[1, 2, 6, 4, 24]])
+            assert res, [[1, 2, 6, 4 == 24]]
 
             res = rows_to_list(
                 session.execute("SELECT count(b), max(e) FROM test WHERE a = 1 GROUP BY a, b, c LIMIT 1"))
-            self.assertEqual(res, [[1, 6]])
+            assert res, [[1 == 6]]
 
             # Single partition queries with PER PARTITION LIMIT
             res = rows_to_list(
@@ -749,7 +750,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [1, 4, 2, 6]])
 
             res = rows_to_list(session.execute("SELECT a, b, c, d FROM test WHERE a = 1 GROUP BY a, b LIMIT 1"))
-            self.assertEqual(res, [[1, 2, 1, 3]])
+            assert res, [[1, 2, 1 == 3]]
 
             res = rows_to_list(session.execute("SELECT a, b, c, d FROM test WHERE a = 1 GROUP BY a, b, c LIMIT 2"))
             self.assertEqual(res, [[1, 2, 1, 3],
@@ -764,7 +765,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1 ORDER BY b DESC, c DESC"))
-            self.assertEqual(res, [[1, 4, 24, 4, 24]])
+            assert res, [[1, 4, 24, 4 == 24]]
 
             # Single partition queries with ORDER BY and LIMIT
             res = rows_to_list(session.execute(
@@ -774,7 +775,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(session.execute(
                 "SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1 ORDER BY b DESC, c DESC LIMIT 2"))
-            self.assertEqual(res, [[1, 4, 24, 4, 24]])
+            assert res, [[1, 4, 24, 4 == 24]]
 
             # Multi-partitions queries
             res = rows_to_list(
@@ -787,7 +788,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 8, 24, 1, 24]])
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a IN (1, 2, 4)"))
-            self.assertEqual(res, [[1, 2, 6, 7, 24]])
+            assert res, [[1, 2, 6, 7 == 24]]
 
             res = rows_to_list(session.execute(
                 "SELECT a, b, e, count(b), max(e) FROM test WHERE a IN (1, 2, 4) AND b = 2 GROUP BY a, b, c"))
@@ -797,7 +798,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a IN (1, 2, 4) AND b = 2"))
-            self.assertEqual(res, [[1, 2, 6, 3, 12]])
+            assert res, [[1, 2, 6, 3 == 12]]
 
             # Multi-partitions queries without aggregates
             res = rows_to_list(session.execute("SELECT a, b, c, d FROM test WHERE a IN (1, 2, 4) GROUP BY a, b"))
@@ -822,7 +823,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test WHERE a IN (1, 2, 4)"))
-            self.assertEqual(res, [[1, 3]])
+            assert res, [[1 == 3]]
 
             # Multi-partitions query with DISTINCT and LIMIT
             res = rows_to_list(
@@ -831,7 +832,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, count(a)FROM test WHERE a IN (1, 2, 4) LIMIT 2"))
-            self.assertEqual(res, [[1, 3]])
+            assert res, [[1 == 3]]
 
             # Multi-partitions queries without aggregates and with PER PARTITION LIMIT
             res = rows_to_list(session.execute("SELECT a, b, c, d FROM test WHERE a IN (1, 2, 4) GROUP BY a, b PER PARTITION LIMIT 1"))
@@ -867,7 +868,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         """
         @jira_ticket CASSANDRA-10707
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'group_by_with_range_name_query_paging_test', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, d int, primary key (a, b, c))")
@@ -971,7 +971,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, None, 3, 0, 1]])
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test"))
-            self.assertEqual(res, [[1, None, 1, 0, 3]])
+            assert res, [[1, None, 1, 0 == 3]]
 
             # Range query without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test GROUP BY a, b"))
@@ -985,7 +985,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, None, 2, 0, 1]])
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test LIMIT 2"))
-            self.assertEqual(res, [[1, None, 1, 0, 3]])
+            assert res, [[1, None, 1, 0 == 3]]
 
             # Range query with PER PARTITION LIMIT
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test GROUP BY a, b PER PARTITION LIMIT 2"))
@@ -1000,7 +1000,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 3, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(s) FROM test "))
-            self.assertEqual(res, [[1, 1, 3]])
+            assert res, [[1, 1 == 3]]
 
             # Range queries with DISTINCT and LIMIT
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(s) FROM test GROUP BY a LIMIT 2"))
@@ -1008,42 +1008,42 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, 2, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(s) FROM test LIMIT 2"))
-            self.assertEqual(res, [[1, 1, 3]])
+            assert res, [[1, 1 == 3]]
 
             # Single partition queries
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1 GROUP BY a"))
-            self.assertEqual(res, [[1, None, 1, 0, 1]])
+            assert res, [[1, None, 1, 0 == 1]]
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1 GROUP BY a, b"))
-            self.assertEqual(res, [[1, None, 1, 0, 1]])
+            assert res, [[1, None, 1, 0 == 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1"))
-            self.assertEqual(res, [[1, None, 1, 0, 1]])
+            assert res, [[1, None, 1, 0 == 1]]
 
             # Single partition query without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a = 1 GROUP BY a, b"))
-            self.assertEqual(res, [[1, None, 1]])
+            assert res, [[1, None == 1]]
 
             # Single partition queries with LIMIT
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1 GROUP BY a, b LIMIT 2"))
-            self.assertEqual(res, [[1, None, 1, 0, 1]])
+            assert res, [[1, None, 1, 0 == 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1 LIMIT 2"))
-            self.assertEqual(res, [[1, None, 1, 0, 1]])
+            assert res, [[1, None, 1, 0 == 1]]
 
             # Single partition queries with PER PARTITION LIMIT
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1 GROUP BY a, b PER PARTITION LIMIT 2"))
-            self.assertEqual(res, [[1, None, 1, 0, 1]])
+            assert res, [[1, None, 1, 0 == 1]]
 
             # Single partition queries with DISTINCT
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(s) FROM test WHERE a = 1 GROUP BY a"))
-            self.assertEqual(res, [[1, 1, 1]])
+            assert res, [[1, 1 == 1]]
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(s) FROM test WHERE a = 1"))
-            self.assertEqual(res, [[1, 1, 1]])
+            assert res, [[1, 1 == 1]]
 
             # Multi-partitions queries
             res = rows_to_list(
@@ -1059,7 +1059,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, None, 3, 0, 1]])
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4)"))
-            self.assertEqual(res, [[1, None, 1, 0, 3]])
+            assert res, [[1, None, 1, 0 == 3]]
 
             # Multi-partitions query without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a IN (1, 2, 3, 4) GROUP BY a, b"))
@@ -1075,7 +1075,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4) LIMIT 2"))
-            self.assertEqual(res, [[1, None, 1, 0, 3]])
+            assert res, [[1, None, 1, 0 == 3]]
 
             # Multi-partitions query with PER PARTITION LIMIT
             res = rows_to_list(session.execute(
@@ -1092,7 +1092,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 3, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(s) FROM test WHERE a IN (1, 2, 3, 4)"))
-            self.assertEqual(res, [[1, 1, 3]])
+            assert res, [[1, 1 == 3]]
 
             # Multi-partitions queries with DISTINCT and LIMIT
             res = rows_to_list(
@@ -1102,7 +1102,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT DISTINCT a, s, count(s) FROM test WHERE a IN (1, 2, 3, 4) LIMIT 2"))
-            self.assertEqual(res, [[1, 1, 3]])
+            assert res, [[1, 1 == 3]]
 
         # ------------------------------------
         # Test with non static columns not empty
@@ -1143,7 +1143,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [3, None, 3, 0, 1]])
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test"))
-            self.assertEqual(res, [[1, 2, 1, 7, 7]])
+            assert res, [[1, 2, 1, 7 == 7]]
 
             res = rows_to_list(
                 session.execute(
@@ -1155,7 +1155,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE b = 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 2, 1, 3, 3]])
+            assert res, [[1, 2, 1, 3 == 3]]
 
             assert_invalid(session, "SELECT a, b, s, count(b), count(s) FROM test WHERE b = 2", expected=InvalidRequest)
 
@@ -1180,7 +1180,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, 2, 2, 2, 2]])
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test LIMIT 2"))
-            self.assertEqual(res, [[1, 2, 1, 7, 7]])
+            assert res, [[1, 2, 1, 7 == 7]]
 
             # Range queries without aggregates and with LIMIT
             res = rows_to_list(session.execute("SELECT a, b, s FROM test GROUP BY a LIMIT 2"))
@@ -1235,7 +1235,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [3, 3, 1, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(a), count(s) FROM test"))
-            self.assertEqual(res, [[1, 1, 4, 3]])
+            assert res, [[1, 1, 4 == 3]]
 
             # Range queries with DISTINCT and LIMIT
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(a), count(s) FROM test GROUP BY a LIMIT 2"))
@@ -1243,44 +1243,44 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [2, 2, 1, 1]])
 
             res = rows_to_list(session.execute("SELECT DISTINCT a, s, count(a), count(s) FROM test LIMIT 2"))
-            self.assertEqual(res, [[1, 1, 4, 3]])
+            assert res, [[1, 1, 4 == 3]]
 
             # Single partition queries
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 1 GROUP BY a"))
-            self.assertEqual(res, [[1, 2, 1, 4, 4]])
+            assert res, [[1, 2, 1, 4 == 4]]
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 3 GROUP BY a, b"))
-            self.assertEqual(res, [[3, None, 3, 0, 1]])
+            assert res, [[3, None, 3, 0 == 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 3"))
-            self.assertEqual(res, [[3, None, 3, 0, 1]])
+            assert res, [[3, None, 3, 0 == 1]]
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 AND b = 2 GROUP BY a, b"))
-            self.assertEqual(res, [[2, 2, 2, 1, 1]])
+            assert res, [[2, 2, 2, 1 == 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 AND b = 2"))
-            self.assertEqual(res, [[2, 2, 2, 1, 1]])
+            assert res, [[2, 2, 2, 1 == 1]]
 
             # Single partition queries without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a = 1 GROUP BY a"))
-            self.assertEqual(res, [[1, 2, 1]])
+            assert res, [[1, 2 == 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a = 4 GROUP BY a, b"))
-            self.assertEqual(res, [[4, 8, None]])
+            assert res, [[4, 8 == None]]
 
             # Single partition queries with LIMIT
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 GROUP BY a, b LIMIT 1"))
-            self.assertEqual(res, [[2, 2, 2, 1, 1]])
+            assert res, [[2, 2, 2, 1 == 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 LIMIT 1"))
-            self.assertEqual(res, [[2, 2, 2, 2, 2]])
+            assert res, [[2, 2, 2, 2 == 2]]
 
             # Single partition queries without aggregates and with LIMIT
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a = 2 GROUP BY a, b LIMIT 1"))
-            self.assertEqual(res, [[2, 2, 2]])
+            assert res, [[2, 2 == 2]]
 
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a = 2 GROUP BY a, b LIMIT 2"))
             self.assertEqual(res, [[2, 2, 2],
@@ -1289,12 +1289,12 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             # Single partition queries with PER PARTITION LIMIT
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 GROUP BY a, b PER PARTITION LIMIT 1"))
-            self.assertEqual(res, [[2, 2, 2, 1, 1]])
+            assert res, [[2, 2, 2, 1 == 1]]
 
             # Single partition queries with DISTINCT
             res = rows_to_list(
                 session.execute("SELECT DISTINCT a, s, count(a), count(s) FROM test WHERE a = 2 GROUP BY a"))
-            self.assertEqual(res, [[2, 2, 1, 1]])
+            assert res, [[2, 2, 1 == 1]]
 
             # Single partition queries with ORDER BY
             res = rows_to_list(session.execute(
@@ -1304,21 +1304,21 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 ORDER BY b DESC, c DESC"))
-            self.assertEqual(res, [[2, 4, 2, 2, 2]])
+            assert res, [[2, 4, 2, 2 == 2]]
 
             # Single partition queries with ORDER BY and LIMIT
             res = rows_to_list(session.execute(
                 "SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 GROUP BY a, b ORDER BY b DESC, c DESC LIMIT 1"))
-            self.assertEqual(res, [[2, 4, 2, 1, 1]])
+            assert res, [[2, 4, 2, 1 == 1]]
 
             res = rows_to_list(session.execute(
                 "SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 ORDER BY b DESC, c DESC LIMIT 2"))
-            self.assertEqual(res, [[2, 4, 2, 2, 2]])
+            assert res, [[2, 4, 2, 2 == 2]]
 
             # Single partition queries with ORDER BY and PER PARTITION LIMIT
             res = rows_to_list(session.execute(
                 "SELECT a, b, s, count(b), count(s) FROM test WHERE a = 2 GROUP BY a, b ORDER BY b DESC, c DESC PER PARTITION LIMIT 1"))
-            self.assertEqual(res, [[2, 4, 2, 1, 1]])
+            assert res, [[2, 4, 2, 1 == 1]]
 
             # Multi-partitions queries
             res = rows_to_list(
@@ -1338,7 +1338,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [4, 8, None, 1, 0]])
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4)"))
-            self.assertEqual(res, [[1, 2, 1, 7, 7]])
+            assert res, [[1, 2, 1, 7 == 7]]
 
             res = rows_to_list(session.execute(
                 "SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4) AND b = 2 GROUP BY a, b"))
@@ -1347,7 +1347,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4) AND b = 2"))
-            self.assertEqual(res, [[1, 2, 1, 3, 3]])
+            assert res, [[1, 2, 1, 3 == 3]]
 
             # Multi-partitions queries without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a IN (1, 2, 3, 4) GROUP BY a"))
@@ -1372,7 +1372,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4) LIMIT 2"))
-            self.assertEqual(res, [[1, 2, 1, 7, 7]])
+            assert res, [[1, 2, 1, 7 == 7]]
 
             # Multi-partitions queries without aggregates and with LIMIT
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a IN (1, 2, 3, 4) GROUP BY a LIMIT 2"))
@@ -1435,7 +1435,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT DISTINCT a, s, count(a), count(s) FROM test WHERE a IN (1, 2, 3, 4)"))
-            self.assertEqual(res, [[1, 1, 4, 3]])
+            assert res, [[1, 1, 4 == 3]]
 
             # Multi-partitions query with DISTINCT and LIMIT
             res = rows_to_list(session.execute(
@@ -1445,7 +1445,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT DISTINCT a, s, count(a), count(s) FROM test WHERE a IN (1, 2, 3, 4) LIMIT 2"))
-            self.assertEqual(res, [[1, 1, 4, 3]])
+            assert res, [[1, 1, 4 == 3]]
 
     @since('2.0.6')
     def test_static_columns_paging(self):
@@ -1453,7 +1453,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         Exercises paging with static columns to detect bugs
         @jira_ticket CASSANDRA-8502.
         """
-
         session = self.prepare(row_factory=named_tuple_factory)
         create_ks(session, 'test_paging_static_cols', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, s1 int static, s2 int static, PRIMARY KEY (a, b))")
@@ -1477,13 +1476,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test" % selector))
                 assert_length_equal(results, 16)
-                self.assertEqual([0] * 4 + [1] * 4 + [2] * 4 + [3] * 4, sorted([r.a for r in results]))
-                self.assertEqual([0, 1, 2, 3] * 4, [r.b for r in results])
-                self.assertEqual([0, 1, 2, 3] * 4, [r.c for r in results])
+                assert [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4 == sorted([r.a for r in results])
+                assert [0, 1, 2, 3] * 4 == [r.b for r in results]
+                assert [0, 1, 2, 3] * 4 == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 16, [r.s1 for r in results])
+                    assert [17] * 16 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 16, [r.s2 for r in results])
+                    assert [42] * 16 == [r.s2 for r in results]
 
         # IN over the partitions
         for page_size in PAGE_SIZES:
@@ -1492,13 +1491,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a IN (0, 1, 2, 3)" % selector))
                 assert_length_equal(results, 16)
-                self.assertEqual([0] * 4 + [1] * 4 + [2] * 4 + [3] * 4, sorted([r.a for r in results]))
-                self.assertEqual([0, 1, 2, 3] * 4, [r.b for r in results])
-                self.assertEqual([0, 1, 2, 3] * 4, [r.c for r in results])
+                assert [0] * 4 + [1] * 4 + [2] * 4 + [3] * 4 == sorted([r.a for r in results])
+                assert [0, 1, 2, 3] * 4 == [r.b for r in results]
+                assert [0, 1, 2, 3] * 4 == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 16, [r.s1 for r in results])
+                    assert [17] * 16 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 16, [r.s2 for r in results])
+                    assert [42] * 16 == [r.s2 for r in results]
 
         # single partition
         for i in range(16):
@@ -1510,13 +1509,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99" % selector))
                 assert_length_equal(results, 16)
-                self.assertEqual([99] * 16, [r.a for r in results])
-                self.assertEqual(list(range(16)), [r.b for r in results])
-                self.assertEqual(list(range(16)), [r.c for r in results])
+                assert [99] * 16 == [r.a for r in results]
+                assert list(range(16)) == [r.b for r in results]
+                assert list(range(16)) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 16, [r.s1 for r in results])
+                    assert [17] * 16 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 16, [r.s2 for r in results])
+                    assert [42] * 16 == [r.s2 for r in results]
 
         # reversed
         for page_size in PAGE_SIZES:
@@ -1525,13 +1524,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 ORDER BY b DESC" % selector))
                 assert_length_equal(results, 16)
-                self.assertEqual([99] * 16, [r.a for r in results])
-                self.assertEqual(list(reversed(list(range(16)))), [r.b for r in results])
-                self.assertEqual(list(reversed(list(range(16)))), [r.c for r in results])
+                assert [99] * 16 == [r.a for r in results]
+                assert list(reversed(list(range(16)))) == [r.b for r in results]
+                assert list(reversed(list(range(16)))) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 16, [r.s1 for r in results])
+                    assert [17] * 16 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 16, [r.s2 for r in results])
+                    assert [42] * 16 == [r.s2 for r in results]
 
         # IN on clustering column
         for page_size in PAGE_SIZES:
@@ -1540,13 +1539,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b IN (3, 4, 8, 14, 15)" % selector))
                 assert_length_equal(results, 5)
-                self.assertEqual([99] * 5, [r.a for r in results])
-                self.assertEqual([3, 4, 8, 14, 15], [r.b for r in results])
-                self.assertEqual([3, 4, 8, 14, 15], [r.c for r in results])
+                assert [99] * 5 == [r.a for r in results]
+                assert [3, 4, 8, 14, 15] == [r.b for r in results]
+                assert [3, 4, 8, 14, 15] == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 5, [r.s1 for r in results])
+                    assert [17] * 5 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 5, [r.s2 for r in results])
+                    assert [42] * 5 == [r.s2 for r in results]
 
         # reversed IN on clustering column
         for page_size in PAGE_SIZES:
@@ -1555,13 +1554,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b IN (3, 4, 8, 14, 15) ORDER BY b DESC" % selector))
                 assert_length_equal(results, 5)
-                self.assertEqual([99] * 5, [r.a for r in results])
-                self.assertEqual(list(reversed([3, 4, 8, 14, 15])), [r.b for r in results])
-                self.assertEqual(list(reversed([3, 4, 8, 14, 15])), [r.c for r in results])
+                assert [99] * 5 == [r.a for r in results]
+                assert list(reversed([3, 4, 8, 14, 15])) == [r.b for r in results]
+                assert list(reversed([3, 4, 8, 14, 15])) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 5, [r.s1 for r in results])
+                    assert [17] * 5 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 5, [r.s2 for r in results])
+                    assert [42] * 5 == [r.s2 for r in results]
 
         # slice on clustering column with set start
         for page_size in PAGE_SIZES:
@@ -1570,13 +1569,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3" % selector))
                 assert_length_equal(results, 12)
-                self.assertEqual([99] * 12, [r.a for r in results])
-                self.assertEqual(list(range(4, 16)), [r.b for r in results])
-                self.assertEqual(list(range(4, 16)), [r.c for r in results])
+                assert [99] * 12 == [r.a for r in results]
+                assert list(range(4, 16)) == [r.b for r in results]
+                assert list(range(4, 16)) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 12, [r.s1 for r in results])
+                    assert [17] * 12 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 12, [r.s2 for r in results])
+                    assert [42] * 12 == [r.s2 for r in results]
 
         # reversed slice on clustering column with set finish
         for page_size in PAGE_SIZES:
@@ -1585,13 +1584,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 ORDER BY b DESC" % selector))
                 assert_length_equal(results, 12)
-                self.assertEqual([99] * 12, [r.a for r in results])
-                self.assertEqual(list(reversed(list(range(4, 16)))), [r.b for r in results])
-                self.assertEqual(list(reversed(list(range(4, 16)))), [r.c for r in results])
+                assert [99] * 12 == [r.a for r in results]
+                assert list(reversed(list(range(4, 16)))) == [r.b for r in results]
+                assert list(reversed(list(range(4, 16)))) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 12, [r.s1 for r in results])
+                    assert [17] * 12 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 12, [r.s2 for r in results])
+                    assert [42] * 12 == [r.s2 for r in results]
 
         # slice on clustering column with set finish
         for page_size in PAGE_SIZES:
@@ -1600,13 +1599,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b < 14" % selector))
                 assert_length_equal(results, 14)
-                self.assertEqual([99] * 14, [r.a for r in results])
-                self.assertEqual(list(range(14)), [r.b for r in results])
-                self.assertEqual(list(range(14)), [r.c for r in results])
+                assert [99] * 14 == [r.a for r in results]
+                assert list(range(14)) == [r.b for r in results]
+                assert list(range(14)) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 14, [r.s1 for r in results])
+                    assert [17] * 14 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 14, [r.s2 for r in results])
+                    assert [42] * 14 == [r.s2 for r in results]
 
         # reversed slice on clustering column with set start
         for page_size in PAGE_SIZES:
@@ -1615,13 +1614,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b < 14 ORDER BY b DESC" % selector))
                 assert_length_equal(results, 14)
-                self.assertEqual([99] * 14, [r.a for r in results])
-                self.assertEqual(list(reversed(list(range(14)))), [r.b for r in results])
-                self.assertEqual(list(reversed(list(range(14)))), [r.c for r in results])
+                assert [99] * 14 == [r.a for r in results]
+                assert list(reversed(list(range(14)))) == [r.b for r in results]
+                assert list(reversed(list(range(14)))) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 14, [r.s1 for r in results])
+                    assert [17] * 14 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 14, [r.s2 for r in results])
+                    assert [42] * 14 == [r.s2 for r in results]
 
         # slice on clustering column with start and finish
         for page_size in PAGE_SIZES:
@@ -1630,13 +1629,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 AND b < 14" % selector))
                 assert_length_equal(results, 10)
-                self.assertEqual([99] * 10, [r.a for r in results])
-                self.assertEqual(list(range(4, 14)), [r.b for r in results])
-                self.assertEqual(list(range(4, 14)), [r.c for r in results])
+                assert [99] * 10 == [r.a for r in results]
+                assert list(range(4, 14)) == [r.b for r in results]
+                assert list(range(4, 14)) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 10, [r.s1 for r in results])
+                    assert [17] * 10 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 10, [r.s2 for r in results])
+                    assert [42] * 10 == [r.s2 for r in results]
 
         # reversed slice on clustering column with start and finish
         for page_size in PAGE_SIZES:
@@ -1645,13 +1644,13 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 AND b < 14 ORDER BY b DESC" % selector))
                 assert_length_equal(results, 10)
-                self.assertEqual([99] * 10, [r.a for r in results])
-                self.assertEqual(list(reversed(list(range(4, 14)))), [r.b for r in results])
-                self.assertEqual(list(reversed(list(range(4, 14)))), [r.c for r in results])
+                assert [99] * 10 == [r.a for r in results]
+                assert list(reversed(list(range(4, 14)))) == [r.b for r in results]
+                assert list(reversed(list(range(4, 14)))) == [r.c for r in results]
                 if "s1" in selector:
-                    self.assertEqual([17] * 10, [r.s1 for r in results])
+                    assert [17] * 10 == [r.s1 for r in results]
                 if "s2" in selector:
-                    self.assertEqual([42] * 10, [r.s2 for r in results])
+                    assert [42] * 10 == [r.s2 for r in results]
 
     @since('2.0.6')
     def test_paging_using_secondary_indexes_with_static_cols(self):
@@ -1688,15 +1687,14 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         # the query only searched for True rows, so let's pare down the expectations for comparison
         expected_data = [x for x in all_data if x.get('mybool') is True]
 
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [400, 200])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [400 == 200]
         self.assertEqualIgnoreOrder(expected_data, pf.all_data())
 
     def test_static_columns_with_empty_non_static_columns_paging(self):
         """
         @jira_ticket CASSANDRA-10381.
         """
-
         session = self.prepare(row_factory=named_tuple_factory)
         create_ks(session, 'test_paging_static_cols', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, s int static, PRIMARY KEY (a, b))")
@@ -1706,17 +1704,16 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         session.default_fetch_size = 2
         results = list(session.execute("SELECT * FROM test"))
-        self.assertEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], sorted([r.s for r in results]))
+        assert [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] == sorted([r.s for r in results])
 
         results = list(session.execute("SELECT * FROM test WHERE a IN (0, 1, 2, 3, 4)"))
-        self.assertEqual([0, 1, 2, 3, 4], sorted([r.s for r in results]))
+        assert [0, 1, 2, 3, 4] == sorted([r.s for r in results])
 
     def test_select_in_clause_with_duplicate_keys(self):
         """
         @jira_ticket CASSANDRA-12420
         avoid duplicated result when key is duplicated in IN clause
         """
-
         session = self.prepare(row_factory=named_tuple_factory)
         create_ks(session, 'test_paging_static_cols', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, v int, PRIMARY KEY ((a, b),c))")
@@ -1742,7 +1739,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         """
         @jira_ticket CASSANDRA-6377
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_filtering', 2)
         session.execute("CREATE TABLE test (a int, b int, s int static, c int, d int, primary key (a, b))")
@@ -1918,7 +1914,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on counter columns
         @jira_ticket CASSANDRA-11629
         """
-
         session = self.prepare(row_factory=tuple_factory)
         self._test_paging_with_filtering_on_counter_columns(session, False)
 
@@ -1928,7 +1923,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on counter columns with compact storage
         @jira_ticket CASSANDRA-11629
         """
-
         session = self.prepare(row_factory=tuple_factory)
 
         self._test_paging_with_filtering_on_counter_columns(session, True)
@@ -2010,7 +2004,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on clustering columns
         @jira_ticket CASSANDRA-11310
         """
-
         session = self.prepare(row_factory=tuple_factory)
         self._test_paging_with_filtering_on_clustering_columns(session, False)
 
@@ -2020,7 +2013,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on clustering columns with compact storage
         @jira_ticket CASSANDRA-11310
         """
-
         session = self.prepare(row_factory=tuple_factory)
         self._test_paging_with_filtering_on_clustering_columns(session, True)
 
@@ -2030,7 +2022,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on clustering columns (frozen collections) with CONTAINS statement
         @jira_ticket CASSANDRA-11310
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_flt_clustering_clm_contains', 2)
         session.execute("CREATE TABLE test_list (a int, b int, c frozen<list<int>>, d int, PRIMARY KEY (a, b, c))")
@@ -2110,7 +2101,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on static columns
         @jira_ticket CASSANDRA-11310
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_filtering_on_static_columns', 2)
         session.execute("CREATE TABLE test (a int, b int, s int static, d int, PRIMARY KEY (a, b))")
@@ -2150,7 +2140,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test allow filtering on partition key
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_filtering_on_pk', 2)
         session.execute("CREATE TABLE test (a int, b int, s int static, c int, d int, primary key (a, b))")
@@ -2191,7 +2180,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                               [1, 2, 1, 2, 3]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a <= 1 AND c = 2 AND s >= 1 LIMIT 2 ALLOW FILTERING"))
-            self.assertEqual(res, [[1, 2, 1, 2, 3]])
+            assert res, [[1, 2, 1, 2 == 3]]
 
             # Range query with DISTINCT
             res = rows_to_list(session.execute("SELECT DISTINCT a, s FROM test WHERE a >= 2 AND s >= 1 ALLOW FILTERING"))
@@ -2210,7 +2199,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [0, 2, 0, 2, 2]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a >= 0 AND c >= 1 AND d = 1 ALLOW FILTERING"))
-            self.assertEqual(res, [[0, 1, 0, 1, 1]])
+            assert res, [[0, 1, 0, 1 == 1]]
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a >= 3 AND c >= 1 AND s > 1 ALLOW FILTERING"))
             self.assertEqualIgnoreOrder(res, [[3, 1, 3, 1, 4],
@@ -2252,7 +2241,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test allow filtering on partition key
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_filtering_on_pk_with_limit', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, s int static, d int, primary key ((a, b), c))")
@@ -2321,7 +2309,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on partition key on counter columns
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
 
         self._test_paging_with_filtering_on_partition_key_on_counter_columns(session, False)
@@ -2332,7 +2319,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on partition key on counter columns with compact storage
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
 
         self._test_paging_with_filtering_on_partition_key_on_counter_columns(session, True)
@@ -2389,7 +2375,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                    [0, 9, 10, 11]])
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a < 1 AND b < 3 AND c >= 3 ALLOW FILTERING"))
-            self.assertEqual(res, [[0, 2, 3, 4]])
+            assert res, [[0, 2, 3 == 4]]
 
             res = rows_to_list(session.execute("SELECT * FROM test WHERE a > 0 AND b > 7 AND c > 9 ALLOW FILTERING"))
             self.assertEqualIgnoreOrder(res, [[4, 9, 10, 11],
@@ -2426,7 +2412,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on partition key clustering columns
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
         self._test_paging_with_filtering_on_partition_key_on_clustering_columns(session, False)
 
@@ -2436,7 +2421,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on partition key clustering columns with compact storage
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
         self._test_paging_with_filtering_on_partition_key_on_clustering_columns(session, True)
 
@@ -2446,7 +2430,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on partition key and clustering columns (frozen collections) with CONTAINS statement
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_flt_pk_clustering_clm_contains', 2)
         session.execute("CREATE TABLE test_list (a int, b int, c frozen<list<int>>, d int, PRIMARY KEY (a, b, c))")
@@ -2527,7 +2510,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, when filtering on partition key, on static columns
         @jira_ticket CASSANDRA-11031
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_filtering_on_pk_static_columns', 2)
         session.execute("CREATE TABLE test (a int, b int, s int static, d int, PRIMARY KEY (a, b))")
@@ -2561,7 +2543,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging, on  COMPACT tables without clustering columns, when the first column has a tombstone
         @jira_ticket CASSANDRA-11467
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_on_compact_table_with_tombstone', 2)
         session.execute("CREATE TABLE test (a int primary key, b int, c int) WITH COMPACT STORAGE")
@@ -2584,7 +2565,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging for tables without clustering columns
         @jira_ticket CASSANDRA-11208
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_no_clustering_columns', 2)
         session.execute("CREATE TABLE test (a int primary key, b int)")
@@ -2596,7 +2576,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging for tables without clustering columns
         @jira_ticket CASSANDRA-11208
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_no_clustering_columns', 2)
         session.execute("CREATE TABLE test_compact (a int primary key, b int) WITH COMPACT STORAGE")
@@ -2688,9 +2667,9 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             for row in res:
                 # since partitions are coming unordered, we don't know which are trimmed by the limit
-                self.assertTrue(row[0] in set(range(5)))
-                self.assertTrue(row[1] in set(range(2)))
-                self.assertTrue(row[1] in set(range(2)))
+                assert row[0] in set(range(5))
+                assert row[1] in set(range(2))
+                assert row[1] in set(range(2))
 
             # even/odd number of results
             res = rows_to_list(session.execute("SELECT * FROM test PER PARTITION LIMIT 2 LIMIT 5"))
@@ -2743,7 +2722,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging for range name queries
         @jira_ticket CASSANDRA-11669
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_for_range_name_queries', 2)
         session.execute("CREATE TABLE test (a int, b int, c int, d int, PRIMARY KEY(a, b, c))")
@@ -2756,7 +2734,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging for range name queries with compact storage
         @jira_ticket CASSANDRA-11669
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_for_range_name_queries', 2)
         session.execute("CREATE TABLE test_compact (a int, b int, c int, d int, PRIMARY KEY(a, b, c)) WITH COMPACT STORAGE")
@@ -2810,7 +2787,6 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         test paging when the rows and the static columns are empty
         @jira_ticket CASSANDRA-13017
         """
-
         session = self.prepare(row_factory=tuple_factory)
         create_ks(session, 'test_paging_with_empty_rows_and_static_columns', 2)
         session.execute("CREATE TABLE test (pk int, c int, v int, s int static, primary key(pk, c))")
@@ -2884,8 +2860,8 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         session.execute(SimpleStatement("insert into paging_test (id, mytext) values (1, 'foo')", consistency_level=CL.ALL))
 
         pf.request_all()
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [501, 499])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [501 == 499]
 
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 
@@ -2917,8 +2893,8 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         session.execute(SimpleStatement("insert into paging_test (id, mytext) values (2, 'foo')", consistency_level=CL.ALL))
 
         pf.request_all()
-        self.assertEqual(pf.pagecount(), 2)
-        self.assertEqual(pf.num_results_all(), [500, 500])
+        assert pf.pagecount() == 2
+        assert pf.num_results_all(), [500 == 500]
 
         # add the new row to the expected data and then do a compare
         expected_data.append({'id': 2, 'mytext': 'foo'})
@@ -2965,8 +2941,8 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         time.sleep(15)
 
         pf.request_all()
-        self.assertEqual(pf.pagecount(), 3)
-        self.assertEqual(pf.num_results_all(), [300, 300, 200])
+        assert pf.pagecount() == 3
+        assert pf.num_results_all(), [300, 300 == 200]
 
     def test_cell_TTL_expiry_during_paging(self):
         session = self.prepare()
@@ -3062,7 +3038,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         # stop a node and make sure we get an error trying to page the rest
         node1.stop()
-        with self.assertRaisesRegex(RuntimeError, 'Requested pages were not delivered before timeout'):
+        with pytest.raisesRegex(RuntimeError, 'Requested pages were not delivered before timeout'):
             pf.request_all()
 
         # TODO: can we resume the node and expect to get more results from the result set or is it done?
@@ -3131,17 +3107,17 @@ class TestPagingQueryIsolation(BasePagingTester, PageAssertionMixin):
         for pf in page_fetchers:
             pf.request_all()
 
-        self.assertEqual(page_fetchers[0].pagecount(), 10)
-        self.assertEqual(page_fetchers[1].pagecount(), 9)
-        self.assertEqual(page_fetchers[2].pagecount(), 8)
-        self.assertEqual(page_fetchers[3].pagecount(), 7)
-        self.assertEqual(page_fetchers[4].pagecount(), 6)
-        self.assertEqual(page_fetchers[5].pagecount(), 5)
-        self.assertEqual(page_fetchers[6].pagecount(), 5)
-        self.assertEqual(page_fetchers[7].pagecount(), 5)
-        self.assertEqual(page_fetchers[8].pagecount(), 4)
-        self.assertEqual(page_fetchers[9].pagecount(), 4)
-        self.assertEqual(page_fetchers[10].pagecount(), 34)
+        assert page_fetchers[0].pagecount() == 10
+        assert page_fetchers[1].pagecount() == 9
+        assert page_fetchers[2].pagecount() == 8
+        assert page_fetchers[3].pagecount() == 7
+        assert page_fetchers[4].pagecount() == 6
+        assert page_fetchers[5].pagecount() == 5
+        assert page_fetchers[6].pagecount() == 5
+        assert page_fetchers[7].pagecount() == 5
+        assert page_fetchers[8].pagecount() == 4
+        assert page_fetchers[9].pagecount() == 4
+        assert page_fetchers[10].pagecount() == 34
 
         self.assertEqualIgnoreOrder(flatten_into_set(page_fetchers[0].all_data()), flatten_into_set(expected_data[:5000]))
         self.assertEqualIgnoreOrder(flatten_into_set(page_fetchers[1].all_data()), flatten_into_set(expected_data[5000:10000]))
@@ -3212,12 +3188,12 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
 
         pf = self.get_page_fetcher()
         pf.request_all()
-        self.assertEqual(pf.pagecount(), pagecount)
-        self.assertEqual(pf.num_results_all(), num_page_results)
+        assert pf.pagecount() == pagecount
+        assert pf.num_results_all() == num_page_results
 
         for i in range(pf.pagecount()):
             page_data = pf.page_data(i + 1)
-            self.assertEqual(page_data, expected_pages_data[i])
+            assert page_data == expected_pages_data[i]
 
     def test_single_partition_deletions(self):
         """Test single partition deletions """
@@ -3317,8 +3293,9 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
                                       [25, 25, 25, 25, 25, 25, 25])
 
     def test_multiple_row_deletions(self):
-        """Test multiple row deletions.
-           This test should be finished when CASSANDRA-6237 is done.
+        """
+        Test multiple row deletions.
+        This test should be finished when CASSANDRA-6237 is done.
         """
         self.skipTest("Feature In Development")
         self.session = self.prepare()
@@ -3440,7 +3417,6 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
 
     def test_failure_threshold_deletions(self):
         """Test that paging throws a failure in case of tombstone threshold """
-
         supports_v5_protocol = self.cluster.version() >= LooseVersion('3.10')
 
         self.allow_log_errors = True
@@ -3463,11 +3439,11 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
         try:
             self.session.execute(SimpleStatement("select * from paging_test", fetch_size=1000, consistency_level=CL.ALL, retry_policy=FallthroughRetryPolicy()))
         except ReadTimeout as exc:
-            self.assertTrue(self.cluster.version() < LooseVersion('2.2'))
+            assert self.cluster.version() < LooseVersion('2.2')
         except ReadFailure as exc:
             if supports_v5_protocol:
-                self.assertIsNotNone(exc.error_code_map)
-                self.assertEqual(0x0001, list(exc.error_code_map.values())[0])
+                assert exc.error_code_map is not None
+                assert 0x0001 == list(exc.error_code_map.values())[0]
         except Exception:
             raise
         else:
@@ -3502,7 +3478,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
             self.session.default_fetch_size = 2
             result = self.session.execute("SELECT DISTINCT k, s FROM paging_test {}".format(whereClause))
             result = list(result)
-            self.assertEqual(4, len(result))
+            assert 4 == len(result)
 
             future = self.session.execute_async("SELECT DISTINCT k, s FROM paging_test {}".format(whereClause))
 
@@ -3514,4 +3490,4 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
 
             # finish paging
             fetcher.request_all()
-            self.assertEqual([2, 2], fetcher.num_results_all())
+            assert [2, 2] == fetcher.num_results_all()

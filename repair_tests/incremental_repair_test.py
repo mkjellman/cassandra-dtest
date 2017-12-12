@@ -1,11 +1,10 @@
 import time
+import pytest
 from datetime import datetime
 from collections import Counter, namedtuple
 from re import findall, compile
 from unittest import skip
 from uuid import UUID, uuid1
-
-import pytest
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -16,8 +15,9 @@ from ccmlib.node import Node, ToolError
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_almost_equal, assert_one
 from tools.data import insert_c1c2
-from tools.decorators import since
 from tools.misc import new_node
+
+since = pytest.mark.since
 
 
 class ConsistentState(object):
@@ -58,30 +58,30 @@ class TestIncRepair(Tester):
     def assertNoRepairedSSTables(self, node, keyspace):
         """ Checks that no sstables are marked repaired, and none are marked pending repair """
         data = self._get_repaired_data(node, keyspace)
-        self.assertTrue(all([t.repaired == 0 for t in data]), '{}'.format(data))
-        self.assertTrue(all([t.pending_id is None for t in data]))
+        assert all([t.repaired == 0 for t in data]), '{}'.format(data)
+        assert all([t.pending_id is None for t in data])
 
     def assertAllPendingRepairSSTables(self, node, keyspace, pending_id=None):
         """ Checks that no sstables are marked repaired, and all are marked pending repair """
         data = self._get_repaired_data(node, keyspace)
-        self.assertTrue(all([t.repaired == 0 for t in data]), '{}'.format(data))
+        assert all([t.repaired == 0 for t in data]), '{}'.format(data)
         if pending_id:
-            self.assertTrue(all([t.pending_id == pending_id for t in data]))
+            assert all([t.pending_id == pending_id for t in data])
         else:
-            self.assertTrue(all([t.pending_id is not None for t in data]))
+            assert all([t.pending_id is not None for t in data])
 
     def assertAllRepairedSSTables(self, node, keyspace):
         """ Checks that all sstables are marked repaired, and none are marked pending repair """
         data = self._get_repaired_data(node, keyspace)
-        self.assertTrue(all([t.repaired > 0 for t in data]), '{}'.format(data))
-        self.assertTrue(all([t.pending_id is None for t in data]), '{}'.format(data))
+        assert all([t.repaired > 0 for t in data]), '{}'.format(data)
+        assert all([t.pending_id is None for t in data]), '{}'.format(data)
 
     def assertRepairedAndUnrepaired(self, node, keyspace):
         """ Checks that a node has both repaired and unrepaired sstables for a given keyspace """
         data = self._get_repaired_data(node, keyspace)
-        self.assertTrue(any([t.repaired > 0 for t in data]), '{}'.format(data))
-        self.assertTrue(any([t.repaired == 0 for t in data]), '{}'.format(data))
-        self.assertTrue(all([t.pending_id is None for t in data]), '{}'.format(data))
+        assert any([t.repaired > 0 for t in data]), '{}'.format(data)
+        assert any([t.repaired == 0 for t in data]), '{}'.format(data)
+        assert all([t.pending_id is None for t in data]), '{}'.format(data)
 
     @since('4.0')
     def test_consistent_repair(self):
@@ -121,7 +121,7 @@ class TestIncRepair(Tester):
             self.assertNoRepairedSSTables(node, 'ks')
             session = self.patient_exclusive_cql_connection(node)
             results = list(session.execute("SELECT * FROM system.repairs"))
-            self.assertEqual(len(results), 0, str(results))
+            assert len(results), 0 == str(results)
 
         # disable compaction so we can verify sstables are marked pending repair
         for node in cluster.nodelist():
@@ -137,15 +137,15 @@ class TestIncRepair(Tester):
         for node in cluster.nodelist():
             session = self.patient_exclusive_cql_connection(node)
             results = list(session.execute("SELECT * FROM system.repairs"))
-            self.assertEqual(len(results), 1)
+            assert len(results) == 1
             result = results[0]
-            self.assertEqual(set(result.participants), expected_participants)
-            self.assertEqual(result.state, ConsistentState.FINALIZED, "4=FINALIZED")
+            assert set(result.participants) == expected_participants
+            assert result.state, ConsistentState.FINALIZED == "4=FINALIZED"
             pending_id = result.parent_id
             self.assertAllPendingRepairSSTables(node, 'ks', pending_id)
             recorded_pending_ids.add(pending_id)
 
-        self.assertEqual(len(recorded_pending_ids), 1)
+        assert len(recorded_pending_ids) == 1
 
         # sstables are compacted out of pending repair by a compaction
         # task, we disabled compaction earlier in the test, so here we
@@ -198,27 +198,27 @@ class TestIncRepair(Tester):
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
-            self.assertIn("no sessions", out.stdout)
+            assert "no sessions" in out.stdout
 
         session_id = self._make_fake_session('ks', 'tbl')
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
             lines = out.stdout.split('\n')
-            self.assertGreater(len(lines), 1)
+            assert len(lines) > 1
             line = lines[1]
-            self.assertIn(str(session_id), line)
-            self.assertIn("REPAIRING", line)
+            assert str(session_id) in line
+            assert "REPAIRING" in line
 
         node1.nodetool("repair_admin --cancel {}".format(session_id))
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin --all')
             lines = out.stdout.split('\n')
-            self.assertGreater(len(lines), 1)
+            assert len(lines) > 1
             line = lines[1]
-            self.assertIn(str(session_id), line)
-            self.assertIn("FAILED", line)
+            assert str(session_id) in line
+            assert "FAILED" in line
 
     @since('4.0')
     def test_manual_session_cancel_non_coordinator_failure(self):
@@ -235,17 +235,17 @@ class TestIncRepair(Tester):
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
-            self.assertIn("no sessions", out.stdout)
+            assert "no sessions" in out.stdout
 
         session_id = self._make_fake_session('ks', 'tbl')
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
             lines = out.stdout.split('\n')
-            self.assertGreater(len(lines), 1)
+            assert len(lines) > 1
             line = lines[1]
-            self.assertIn(str(session_id), line)
-            self.assertIn("REPAIRING", line)
+            assert str(session_id) in line
+            assert "REPAIRING" in line
 
         try:
             node2.nodetool("repair_admin --cancel {}".format(session_id))
@@ -257,10 +257,10 @@ class TestIncRepair(Tester):
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
             lines = out.stdout.split('\n')
-            self.assertGreater(len(lines), 1)
+            assert len(lines) > 1
             line = lines[1]
-            self.assertIn(str(session_id), line)
-            self.assertIn("REPAIRING", line)
+            assert str(session_id) in line
+            assert "REPAIRING" in line
 
     @since('4.0')
     def test_manual_session_force_cancel(self):
@@ -277,27 +277,27 @@ class TestIncRepair(Tester):
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
-            self.assertIn("no sessions", out.stdout)
+            assert "no sessions" in out.stdout
 
         session_id = self._make_fake_session('ks', 'tbl')
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin')
             lines = out.stdout.split('\n')
-            self.assertGreater(len(lines), 1)
+            assert len(lines) > 1
             line = lines[1]
-            self.assertIn(str(session_id), line)
-            self.assertIn("REPAIRING", line)
+            assert str(session_id) in line
+            assert "REPAIRING" in line
 
         node2.nodetool("repair_admin --cancel {} --force".format(session_id))
 
         for node in self.cluster.nodelist():
             out = node.nodetool('repair_admin --all')
             lines = out.stdout.split('\n')
-            self.assertGreater(len(lines), 1)
+            assert len(lines) > 1
             line = lines[1]
-            self.assertIn(str(session_id), line)
-            self.assertIn("FAILED", line)
+            assert str(session_id) in line
+            assert "FAILED" in line
 
     def test_sstable_marking(self):
         """
@@ -339,7 +339,7 @@ class TestIncRepair(Tester):
                 node.nodetool('compact keyspace1 standard1')
 
         for out in (node.run_sstablemetadata(keyspace='keyspace1').stdout for node in cluster.nodelist()):
-            self.assertNotIn('Repaired at: 0', out)
+            assert 'Repaired at: 0' not in out
 
     def test_multiple_repair(self):
         """
@@ -457,11 +457,11 @@ class TestIncRepair(Tester):
         uniquematches = set(matches)
         matchcount = Counter(matches)
 
-        self.assertGreaterEqual(len(uniquematches), 2, uniquematches)
+        assert len(uniquematches), 2 >= uniquematches
 
-        self.assertGreaterEqual(max(matchcount), 1, matchcount)
+        assert max(matchcount), 1 >= matchcount
 
-        self.assertIn('Repaired at: 0', '\n'.join([initialOut1, initialOut2]))
+        assert 'Repaired at: 0', '\n'.join([initialOut1 in initialOut2])
 
         node1.stop()
         node2.stress(['write', 'n=15K', 'no-warmup', '-schema', 'replication(factor=2)'])
@@ -488,11 +488,11 @@ class TestIncRepair(Tester):
         uniquematches = set(matches)
         matchcount = Counter(matches)
 
-        self.assertGreaterEqual(len(uniquematches), 2)
+        assert len(uniquematches) >= 2
 
-        self.assertGreaterEqual(max(matchcount), 2)
+        assert max(matchcount) >= 2
 
-        self.assertNotIn('Repaired at: 0', '\n'.join([finalOut1, finalOut2]))
+        assert 'Repaired at: 0', '\n'.join([finalOut1 not in finalOut2])
 
     def test_compaction(self):
         """
@@ -656,7 +656,7 @@ class TestIncRepair(Tester):
                 node.nodetool('compact keyspace1 standard1')
 
         for out in (node.run_sstablemetadata(keyspace='keyspace1').stdout for node in cluster.nodelist() if len(node.get_sstables('keyspace1', 'standard1')) > 0):
-            self.assertNotIn('Repaired at: 0', out)
+            assert 'Repaired at: 0' not in out
 
     @pytest.mark.no_vnodes
     @since('4.0')
@@ -685,14 +685,14 @@ class TestIncRepair(Tester):
         # everything should be in sync
         for node in cluster.nodelist():
             result = node.repair(options=['ks', '--validate'])
-            self.assertIn("Repaired data is in sync", result.stdout)
+            assert "Repaired data is in sync" in result.stdout
 
         node2.nodetool('move {}'.format(2**16))
 
         # everything should still be in sync
         for node in cluster.nodelist():
             result = node.repair(options=['ks', '--validate'])
-            self.assertIn("Repaired data is in sync", result.stdout)
+            assert "Repaired data is in sync" in result.stdout
 
     @pytest.mark.no_vnodes
     @since('4.0')
@@ -721,14 +721,14 @@ class TestIncRepair(Tester):
         # everything should be in sync
         for node in cluster.nodelist():
             result = node.repair(options=['ks', '--validate'])
-            self.assertIn("Repaired data is in sync", result.stdout)
+            assert "Repaired data is in sync" in result.stdout
 
         node2.nodetool('decommission')
 
         # everything should still be in sync
         for node in [node1, node3, node4]:
             result = node.repair(options=['ks', '--validate'])
-            self.assertIn("Repaired data is in sync", result.stdout)
+            assert "Repaired data is in sync" in result.stdout
 
     @pytest.mark.no_vnodes
     @since('4.0')
@@ -757,16 +757,16 @@ class TestIncRepair(Tester):
         # everything should be in sync
         for node in [node1, node2, node3]:
             result = node.repair(options=['ks', '--validate'])
-            self.assertIn("Repaired data is in sync", result.stdout)
+            assert "Repaired data is in sync" in result.stdout
 
         node4 = new_node(self.cluster)
         node4.start(wait_for_binary_proto=True)
 
-        self.assertEqual(len(self.cluster.nodelist()), 4)
+        assert len(self.cluster.nodelist()) == 4
         # everything should still be in sync
         for node in self.cluster.nodelist():
             result = node.repair(options=['ks', '--validate'])
-            self.assertIn("Repaired data is in sync", result.stdout)
+            assert "Repaired data is in sync" in result.stdout
 
     @since('4.0')
     def test_force(self):
@@ -790,7 +790,7 @@ class TestIncRepair(Tester):
         node2.stop()
 
         # repair should fail because node2 is down
-        with self.assertRaises(ToolError):
+        with pytest.raises(ToolError):
             node1.repair(options=['ks'])
 
         # run with force flag

@@ -25,9 +25,9 @@ class TestInternodeSSL(Tester):
         cluster = self.cluster
 
         debug("***using internode ssl***")
-        generate_ssl_stores(self.test_path)
+        generate_ssl_stores(self.fixture_dtest_setup.test_path)
         cluster.set_configuration_options({'internode_compression': internode_compression})
-        cluster.enable_internode_ssl(self.test_path)
+        cluster.enable_internode_ssl(self.fixture_dtest_setup.test_path)
 
         cluster.populate(3).start()
 

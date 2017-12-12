@@ -1,14 +1,14 @@
 import os
 import socket
 import time
-
 import pytest
 
 from cassandra import ConsistencyLevel
 from dtest import Tester, debug
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
+
+since = pytest.mark.since
 
 
 @since('2.2.5')
@@ -84,16 +84,16 @@ class TestGossipingPropertyFileSnitch(Tester):
         # read data from node2 just to make sure data and connectivity is OK
         session = self.patient_exclusive_cql_connection(node2)
         new_rows = list(session.execute("SELECT * FROM {}".format(stress_table)))
-        self.assertEqual(original_rows, new_rows)
+        assert original_rows == new_rows
 
         out, err, _ = node1.nodetool('gossipinfo')
-        self.assertEqual(0, len(err), err)
+        assert 0, len(err) == err
         debug(out)
 
-        self.assertIn("/{}".format(NODE1_BROADCAST_ADDRESS), out)
-        self.assertIn("INTERNAL_IP:6:{}".format(NODE1_LISTEN_ADDRESS), out)
-        self.assertIn("/{}".format(NODE2_BROADCAST_ADDRESS), out)
-        self.assertIn("INTERNAL_IP:6:{}".format(NODE2_LISTEN_ADDRESS), out)
+        assert "/{}".format(NODE1_BROADCAST_ADDRESS) in out
+        assert "INTERNAL_IP:6:{}".format(NODE1_LISTEN_ADDRESS) in out
+        assert "/{}".format(NODE2_BROADCAST_ADDRESS) in out
+        assert "INTERNAL_IP:6:{}".format(NODE2_LISTEN_ADDRESS) in out
 
 
 class TestDynamicEndpointSnitch(Tester):

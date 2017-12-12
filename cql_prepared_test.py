@@ -1,7 +1,9 @@
 import time
+import pytest
 
 from dtest import Tester, create_ks
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since("1.2")

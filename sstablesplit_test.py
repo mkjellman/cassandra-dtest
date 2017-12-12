@@ -103,7 +103,7 @@ class TestSSTableSplit(Tester):
         for (stdout, stderr, rc) in result:
             debug(stderr)
             failure = stderr.find("java.lang.AssertionError: Data component is missing")
-            self.assertEqual(failure, -1, "Error during sstablesplit")
+            assert failure, -1 == "Error during sstablesplit"
 
         sstables = node.get_sstables('keyspace1', '')
-        self.assertGreaterEqual(len(sstables), 1, sstables)
+        assert len(sstables), 1 >= sstables

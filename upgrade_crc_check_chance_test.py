@@ -2,9 +2,11 @@ import pytest
 
 from dtest import Tester, debug
 from tools.assertions import assert_crc_check_chance_equal, assert_one
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
+@pytest.mark.upgrade_test
 @since('3.0')
 class TestCrcCheckChanceUpgrade(Tester):
     ignore_log_patterns = (
@@ -108,8 +110,8 @@ class TestCrcCheckChanceUpgrade(Tester):
         session = self.patient_exclusive_cql_connection(node)
         session.cluster.refresh_schema_metadata(0)
         meta = session.cluster.metadata.keyspaces['ks'].tables['cf1']
-        self.assertEqual('org.apache.cassandra.io.compress.DeflateCompressor', meta.options['compression']['class'])
-        self.assertEqual('256', meta.options['compression']['chunk_length_in_kb'])
+        assert 'org.apache.cassandra.io.compress.DeflateCompressor' == meta.options['compression']['class']
+        assert '256' == meta.options['compression']['chunk_length_in_kb']
         assert_crc_check_chance_equal(session, "cf1", 0.6)
         session.shutdown()
 

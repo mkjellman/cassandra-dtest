@@ -6,7 +6,6 @@ import logging
 import os
 import pprint
 import re
-import shutil
 import signal
 import subprocess
 import sys
@@ -51,7 +50,7 @@ config = configparser.RawConfigParser()
 if len(config.read(os.path.expanduser('~/.cassandra-dtest'))) > 0:
     if config.has_option('main', 'default_dir'):
         DEFAULT_DIR = os.path.expanduser(config.get('main', 'default_dir'))
-CASSANDRA_DIR = os.environ.get('CASSANDRA_DIR', DEFAULT_DIR)
+#CASSANDRA_DIR = os.environ.get('CASSANDRA_DIR', DEFAULT_DIR)
 
 NO_SKIP = os.environ.get('SKIP', '').lower() in ('no', 'false')
 DEBUG = os.environ.get('DEBUG', '').lower() in ('yes', 'true')
@@ -111,8 +110,10 @@ if _cassandra_version_slug:
     CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(ccm_repo_cache_dir)
     CASSANDRA_GITREF = get_sha(ccm_repo_cache_dir)  # will be set None when not a git repo
 else:
-    CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(CASSANDRA_DIR)
-    CASSANDRA_GITREF = get_sha(CASSANDRA_DIR)
+    CASSANDRA_VERSION_FROM_BUILD = LooseVersion("4.0") # todo kjkjkj
+    CASSANDRA_GITREF = ""
+    #CASSANDRA_VERSION_FROM_BUILD = get_version_from_build(self.dtest_config.cassandra_dir)
+    #CASSANDRA_GITREF = get_sha(dtest_config.cassandra_dir)
 
 
 # Determine the location of the libjemalloc jar so that we can specify it
@@ -168,20 +169,7 @@ def debug(msg):
 debug("Python driver version in use: {}".format(cassandra.__version__))
 
 
-def retry_till_success(fun, *args, **kwargs):
-    timeout = kwargs.pop('timeout', 60)
-    bypassed_exception = kwargs.pop('bypassed_exception', Exception)
 
-    deadline = time.time() + timeout
-    while True:
-        try:
-            return fun(*args, **kwargs)
-        except bypassed_exception:
-            if time.time() > deadline:
-                raise
-            else:
-                # brief pause before next attempt
-                time.sleep(0.25)
 
 
 class FlakyRetryPolicy(RetryPolicy):
@@ -269,22 +257,38 @@ def make_execution_profile(retry_policy=FlakyRetryPolicy(), consistency_level=Co
                                 **kwargs)
 
 
-@pytest.mark.usefixtures("fixture_dtest_config")
-class Tester(TestCase):
+#@pytest.mark.usefixtures("fixture_dtest_config")
+#class Tester(TestCase):
+class Tester():
 
     maxDiff = None
-    allow_log_errors = False  # scan the log of each node for errors after every test.
     cluster_options = None
+    connections = []
+
+    def __getattribute__(self, name):
+        #print(self, name)
+        try:
+            return object.__getattribute__(self, name)
+        except AttributeError:
+            fixture_dtest_setup = object.__getattribute__(self, 'fixture_dtest_setup')
+            return object.__getattribute__(fixture_dtest_setup , name)
+
+
+    @pytest.fixture(scope='function', autouse=True)
+    def set_dtest_setup_on_function(self, fixture_dtest_setup, fixture_dtest_config):
+        self.fixture_dtest_setup = fixture_dtest_setup
+        self.dtest_config = fixture_dtest_config
 
     def set_node_to_current_version(self, node):
         version = os.environ.get('CASSANDRA_VERSION')
-        cdir = CASSANDRA_DIR
 
         if version:
             node.set_install_dir(version=version)
         else:
-            node.set_install_dir(install_dir=cdir)
+            node.set_install_dir(install_dir=self.dtest_config.cassandra_dir)
+            os.environ.set('CASSANDRA_DIR', self.dtest_config.cassandra_dir)
 
+    """
     def init_config(self):
         init_default_config(self.cluster, self.cluster_options)
 
@@ -305,6 +309,7 @@ class Tester(TestCase):
         set_log_levels(self.cluster)
         self.connections = []
         self.runners = []
+    """
 
     # this is intentionally spelled 'tst' instead of 'test' to avoid
     # making unittest think it's a test method
@@ -377,169 +382,9 @@ class Tester(TestCase):
     the given keyspace in all nodes
     """
 
-    def glob_data_dirs(self, path, ks="ks"):
-        result = []
-        for node in self.cluster.nodelist():
-            for data_dir in node.data_directories():
-                ks_dir = os.path.join(data_dir, ks, path)
-                result.extend(glob.glob(ks_dir))
-        return result
 
-    def _catch_interrupt(self, signal, frame):
-        """
-        Signal handler for registering on SIGINT.
 
-        If called will look for a stored exception and raise it to abort test.
-        If a stored exception is not present, this handler has likely caught a
-        user interrupt via CTRL-C, and will raise a KeyboardInterrupt.
-        """
-        try:
-            # check if we have a persisted exception to fail with
-            raise self.exit_with_exception
-        except AttributeError:
-            # looks like this was just a plain CTRL-C event
-            raise KeyboardInterrupt()
-
-    def copy_logs(self, cluster, directory=None, name=None):
-        """Copy the current cluster's log files somewhere, by default to LOG_SAVED_DIR with a name of 'last'"""
-        if directory is None:
-            directory = LOG_SAVED_DIR
-        if name is None:
-            name = LAST_LOG
-        else:
-            name = os.path.join(directory, name)
-        if not os.path.exists(directory):
-            os.mkdir(directory)
-        logs = [(node.name, node.logfilename(), node.debuglogfilename(), node.gclogfilename(), node.compactionlogfilename())
-                for node in list(self.cluster.nodes.values())]
-        if len(logs) is not 0:
-            basedir = str(int(time.time() * 1000)) + '_' + self.id()
-            logdir = os.path.join(directory, basedir)
-            os.mkdir(logdir)
-            for n, log, debuglog, gclog, compactionlog in logs:
-                if os.path.exists(log):
-                    self.assertGreaterEqual(os.path.getsize(log), 0)
-                    shutil.copyfile(log, os.path.join(logdir, n + ".log"))
-                if os.path.exists(debuglog):
-                    self.assertGreaterEqual(os.path.getsize(debuglog), 0)
-                    shutil.copyfile(debuglog, os.path.join(logdir, n + "_debug.log"))
-                if os.path.exists(gclog):
-                    self.assertGreaterEqual(os.path.getsize(gclog), 0)
-                    shutil.copyfile(gclog, os.path.join(logdir, n + "_gc.log"))
-                if os.path.exists(compactionlog):
-                    self.assertGreaterEqual(os.path.getsize(compactionlog), 0)
-                    shutil.copyfile(compactionlog, os.path.join(logdir, n + "_compaction.log"))
-            if os.path.exists(name):
-                os.unlink(name)
-            if not is_win():
-                os.symlink(basedir, name)
-
-    def cql_connection(self, node, keyspace=None, user=None,
-                       password=None, compression=True, protocol_version=None, port=None, ssl_opts=None, **kwargs):
-
-        return self._create_session(node, keyspace, user, password, compression,
-                                    protocol_version, port=port, ssl_opts=ssl_opts, **kwargs)
-
-    def exclusive_cql_connection(self, node, keyspace=None, user=None,
-                                 password=None, compression=True, protocol_version=None, port=None, ssl_opts=None, **kwargs):
-
-        node_ip = get_ip_from_node(node)
-        wlrr = WhiteListRoundRobinPolicy([node_ip])
-
-        return self._create_session(node, keyspace, user, password, compression,
-                                    protocol_version, port=port, ssl_opts=ssl_opts, load_balancing_policy=wlrr, **kwargs)
-
-    def _create_session(self, node, keyspace, user, password, compression, protocol_version,
-                        port=None, ssl_opts=None, execution_profiles=None, **kwargs):
-        node_ip = get_ip_from_node(node)
-        if not port:
-            port = get_port_from_node(node)
-
-        if protocol_version is None:
-            protocol_version = get_eager_protocol_version(node.cluster.version())
-
-        if user is not None:
-            auth_provider = get_auth_provider(user=user, password=password)
-        else:
-            auth_provider = None
-
-        profiles = {EXEC_PROFILE_DEFAULT: make_execution_profile(**kwargs)
-                    } if not execution_profiles else execution_profiles
-
-        cluster = PyCluster([node_ip],
-                            auth_provider=auth_provider,
-                            compression=compression,
-                            protocol_version=protocol_version,
-                            port=port,
-                            ssl_options=ssl_opts,
-                            connect_timeout=10,
-                            allow_beta_protocol_version=True,
-                            execution_profiles=profiles)
-        session = cluster.connect(wait_for_all_pools=True)
-
-        if keyspace is not None:
-            session.set_keyspace(keyspace)
-
-        self.connections.append(session)
-        return session
-
-    def patient_cql_connection(self, node, keyspace=None,
-                               user=None, password=None, timeout=30, compression=True,
-                               protocol_version=None, port=None, ssl_opts=None, **kwargs):
-        """
-        Returns a connection after it stops throwing NoHostAvailables due to not being ready.
-
-        If the timeout is exceeded, the exception is raised.
-        """
-        if is_win():
-            timeout *= 2
-
-        expected_log_lines = ('Control connection failed to connect, shutting down Cluster:',
-                              '[control connection] Error connecting to ')
-        with log_filter('cassandra.cluster', expected_log_lines):
-            session = retry_till_success(
-                self.cql_connection,
-                node,
-                keyspace=keyspace,
-                user=user,
-                password=password,
-                timeout=timeout,
-                compression=compression,
-                protocol_version=protocol_version,
-                port=port,
-                ssl_opts=ssl_opts,
-                bypassed_exception=NoHostAvailable,
-                **kwargs
-            )
-
-        return session
-
-    def patient_exclusive_cql_connection(self, node, keyspace=None,
-                                         user=None, password=None, timeout=30, compression=True,
-                                         protocol_version=None, port=None, ssl_opts=None, **kwargs):
-        """
-        Returns a connection after it stops throwing NoHostAvailables due to not being ready.
-
-        If the timeout is exceeded, the exception is raised.
-        """
-        if is_win():
-            timeout *= 2
-
-        return retry_till_success(
-            self.exclusive_cql_connection,
-            node,
-            keyspace=keyspace,
-            user=user,
-            password=password,
-            timeout=timeout,
-            compression=compression,
-            protocol_version=protocol_version,
-            port=port,
-            ssl_opts=ssl_opts,
-            bypassed_exception=NoHostAvailable,
-            **kwargs
-        )
-
+    """
     @classmethod
     def tearDownClass(cls):
         reset_environment_vars()
@@ -595,15 +440,8 @@ class Tester(TestCase):
             finally:
                 log_watch_thread = getattr(self, '_log_watch_thread', None)
                 cleanup_cluster(self.cluster, self.test_path, log_watch_thread)
+    """
 
-    def check_logs_for_errors(self):
-        for node in self.cluster.nodelist():
-            errors = list(self.__filter_errors(
-                ['\n'.join(msg) for msg in node.grep_log_for_errors()]))
-            if len(errors) is not 0:
-                for error in errors:
-                    print("Unexpected error in {node_name} log, error: \n{error}".format(node_name=node.name, error=error))
-                return True
 
     def go(self, func):
         runner = Runner(func)
@@ -611,47 +449,7 @@ class Tester(TestCase):
         runner.start()
         return runner
 
-    def __filter_errors(self, errors):
-        """Filter errors, removing those that match self.ignore_log_patterns"""
-        if not hasattr(self, 'ignore_log_patterns'):
-            self.ignore_log_patterns = []
-        for e in errors:
-            for pattern in self.ignore_log_patterns:
-                if re.search(pattern, e):
-                    break
-            else:
-                yield e
 
-    def get_jfr_jvm_args(self):
-        """
-        @return The JVM arguments required for attaching flight recorder to a Java process.
-        """
-        return ["-XX:+UnlockCommercialFeatures", "-XX:+FlightRecorder"]
-
-    def start_jfr_recording(self, nodes):
-        """
-        Start Java flight recorder provided the cluster was started with the correct jvm arguments.
-        """
-        for node in nodes:
-            p = subprocess.Popen(['jcmd', str(node.pid), 'JFR.start'],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-            stdout, stderr = p.communicate()
-            debug(stdout)
-            debug(stderr)
-
-    def dump_jfr_recording(self, nodes):
-        """
-        Save Java flight recorder results to file for analyzing with mission control.
-        """
-        for node in nodes:
-            p = subprocess.Popen(['jcmd', str(node.pid), 'JFR.dump',
-                                  'recording=1', 'filename=recording_{}.jfr'.format(node.address())],
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE)
-            stdout, stderr = p.communicate()
-            debug(stdout)
-            debug(stderr)
 
 
 def get_eager_protocol_version(cassandra_version):
@@ -786,12 +584,11 @@ get_test_path.__test__ = False
 def create_ccm_cluster(test_path, name, config):
     debug("cluster ccm directory: " + test_path)
     version = os.environ.get('CASSANDRA_VERSION')
-    cdir = CASSANDRA_DIR
 
     if version:
         cluster = Cluster(test_path, name, cassandra_version=version)
     else:
-        cluster = Cluster(test_path, name, cassandra_dir=cdir)
+        cluster = Cluster(test_path, name, cassandra_dir=config.cassandra_dir)
 
     if config.use_vnodes:
         cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': config.num_tokens})
@@ -807,36 +604,36 @@ def create_ccm_cluster(test_path, name, config):
     return cluster
 
 
-def cleanup_cluster(cluster, test_path, log_watch_thread=None):
+def cleanup_cluster(dtest_setup, dtest_config, log_watch_thread=None):
     with log_filter('cassandra'):  # quiet noise from driver when nodes start going down
         if KEEP_TEST_DIR:
-            cluster.stop(gently=RECORD_COVERAGE)
+            dtest_setup.cluster.stop(gently=RECORD_COVERAGE)
         else:
             # when recording coverage the jvm has to exit normally
             # or the coverage information is not written by the jacoco agent
             # otherwise we can just kill the process
             if RECORD_COVERAGE:
-                cluster.stop(gently=True)
+                dtest_setup.cluster.stop(gently=True)
 
             # Cleanup everything:
             try:
                 if log_watch_thread:
                     stop_active_log_watch(log_watch_thread)
             finally:
-                debug("removing ccm cluster {name} at: {path}".format(name=cluster.name, path=test_path))
-                cluster.remove()
+                debug("removing ccm cluster {name} at: {path}".format(name=dtest_setup.cluster.name, path=dtest_setup.test_path))
+                dtest_setup.cluster.remove()
 
-                debug("clearing ssl stores from [{0}] directory".format(test_path))
+                debug("clearing ssl stores from [{0}] directory".format(dtest_setup.test_path))
                 for filename in ('keystore.jks', 'truststore.jks', 'ccm_node.cer'):
                     try:
-                        os.remove(os.path.join(test_path, filename))
+                        os.remove(os.path.join(dtest_setup.test_path, filename))
                     except OSError as e:
                         # once we port to py3, which has better reporting for exceptions raised while
                         # handling other excpetions, we should just assert e.errno == errno.ENOENT
                         if e.errno != errno.ENOENT:  # ENOENT = no such file or directory
                             raise
 
-                os.rmdir(test_path)
+                os.rmdir(dtest_setup.test_path)
                 cleanup_last_test_dir()
 
 
@@ -917,7 +714,7 @@ def set_log_levels(cluster):
         cluster.set_log_level('TRACE', None if len(classes_to_trace) == 0 else classes_to_trace)
 
 
-def maybe_setup_jacoco(test_path, cluster_name='test'):
+def maybe_setup_jacoco(dtest_config, dtest_setup, cluster_name='test'):
     """Setup JaCoCo code coverage support"""
 
     if not RECORD_COVERAGE:
@@ -925,15 +722,13 @@ def maybe_setup_jacoco(test_path, cluster_name='test'):
 
     # use explicit agent and execfile locations
     # or look for a cassandra build if they are not specified
-    cdir = CASSANDRA_DIR
-
-    agent_location = os.environ.get('JACOCO_AGENT_JAR', os.path.join(cdir, 'build/lib/jars/jacocoagent.jar'))
-    jacoco_execfile = os.environ.get('JACOCO_EXECFILE', os.path.join(cdir, 'build/jacoco/jacoco.exec'))
+    agent_location = os.environ.get('JACOCO_AGENT_JAR', os.path.join(dtest_config.cassandra_dir, 'build/lib/jars/jacocoagent.jar'))
+    jacoco_execfile = os.environ.get('JACOCO_EXECFILE', os.path.join(dtest_config.cassandra_dir, 'build/jacoco/jacoco.exec'))
 
     if os.path.isfile(agent_location):
         debug("Jacoco agent found at {}".format(agent_location))
         with open(os.path.join(
-                test_path, cluster_name, 'cassandra.in.sh'), 'w') as f:
+                dtest_setup.test_path, cluster_name, 'cassandra.in.sh'), 'w') as f:
 
             f.write('JVM_OPTS="$JVM_OPTS -javaagent:{jar_path}=destfile={exec_file}"'
                     .format(jar_path=agent_location, exec_file=jacoco_execfile))
@@ -976,7 +771,6 @@ class ReusableClusterTester(Tester):
     def setUp(self):
         self.set_current_tst_name()
         self.connections = []
-
         # TODO enable active log watching
         # This needs to happen in setUp() and not setUpClass() so that individual
         # test methods can set allow_log_errors and so that error handling
@@ -1006,10 +800,9 @@ class ReusableClusterTester(Tester):
                 if failed:
                     cleanup_cluster(self.cluster, self.test_path)
                     kill_windows_cassandra_procs()
-                    self.initialize_cluster()
+                    self.initialize_cluster(self.dtest_config)
 
-    @classmethod
-    def initialize_cluster(cls):
+    def initialize_cluster(cls, dtest_config):
         """
         This method is responsible for initializing and configuring a ccm
         cluster for the next set of tests.  This can be called for two
@@ -1021,7 +814,7 @@ class ReusableClusterTester(Tester):
         do so by overriding post_initialize_cluster().
         """
         cls.test_path = get_test_path()
-        cls.cluster = create_ccm_cluster(cls.test_path, name='test', config=cls.dtest_config)
+        cls.cluster = create_ccm_cluster(cls.test_path, name='test', config=dtest_config)
         cls.init_config()
 
         maybe_setup_jacoco(cls.test_path)
@@ -1104,6 +897,7 @@ def run_scenarios(scenarios, handler, deferred_exceptions=tuple()):
 
     if errors:
         raise MultiError(errors, tracebacks)
+
 
 def supports_v5_protocol(cluster_version):
     return cluster_version >= LooseVersion('4.0')

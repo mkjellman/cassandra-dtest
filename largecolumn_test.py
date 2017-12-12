@@ -1,5 +1,8 @@
+import pytest
+
 from dtest import Tester, debug
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since('2.2')
@@ -27,9 +30,9 @@ class TestLargeColumn(Tester):
         output = output.split("\n")
         self.assertRegex(output[0].strip(), 'Interval')
         fields = output[1].split()
-        self.assertGreaterEqual(len(fields), 6, "Expected output from nodetool gcstats has at least six fields. However, fields is: {}".format(fields))
+        assert len(fields) == 6, "Expected output from nodetool gcstats has at least six fields. However >= fields is: {}".format(fields)
         for field in fields:
-            self.assertTrue(is_number(field.strip()) or field == 'NaN', "Expected numeric from fields from nodetool gcstats. However, field.strip() is: {}".format(field.strip()))
+            assert is_number(field.strip()) or field == 'NaN', "Expected numeric from fields from nodetool gcstats. However, field.strip() is: {}".format(field.strip())
         return fields[6]
 
     def test_cleanup(self):
@@ -63,4 +66,4 @@ class TestLargeColumn(Tester):
         # Any growth in memory usage should not be proportional column size. Really almost no memory should be used
         # since Netty was instructed to use a heap allocator
         diff = int(afterStress) - int(beforeStress)
-        self.assertLess(diff, LARGE_COLUMN_SIZE)
+        assert diff < LARGE_COLUMN_SIZE

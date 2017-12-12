@@ -30,10 +30,9 @@ class TestMetadata(Tester):
         Resets the schema while a compact, read and repair happens.
         All kinds of glorious things can fail.
         """
-
         # while the schema is being reset, there will inevitably be some
         # queries that will error with this message
-        self.ignore_log_patterns = '.*Unknown keyspace/cf pair.*'
+        self.fixture_dtest_setup.ignore_log_patterns = ['.*Unknown keyspace/cf pair.*']
 
         cluster = self.cluster
         cluster.populate(2).start(wait_other_notice=True)

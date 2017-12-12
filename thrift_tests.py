@@ -2,7 +2,7 @@ import re
 import struct
 import time
 import uuid
-from unittest import skipIf
+import pytest
 
 from thrift.protocol import TBinaryProtocol
 from thrift.Thrift import TApplicationException
@@ -23,7 +23,8 @@ from thrift_bindings.v22.Cassandra import (CfDef, Column, ColumnDef,
                                            SlicePredicate, SliceRange,
                                            SuperColumn)
 from tools.assertions import assert_all, assert_none, assert_one
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 def get_thrift_client(host='127.0.0.1', port=9160):
@@ -1300,10 +1301,10 @@ class TestMutations(ThriftTester):
         p = SlicePredicate(slice_range=SliceRange('sc1', 'sc2', False, 2))
         result = client.get_slice('key1', ColumnParent('Super1'), p, ConsistencyLevel.ONE)
         assert_length_equal(result, 2)
-        self.assertEqual(result[0].super_column.name, 'sc1')
-        self.assertEqual(result[0].super_column.columns[0], Column(_i64(4), 'value4', 1234))
-        self.assertEqual(result[1].super_column.name, 'sc2')
-        self.assertEqual(result[1].super_column.columns, [Column(_i64(5), 'value5', 1234), Column(_i64(6), 'value6', 1234)])
+        assert result[0].super_column.name == 'sc1'
+        assert result[0].super_column.columns[0], Column(_i64(4), 'value4' == 1234)
+        assert result[1].super_column.name == 'sc2'
+        assert result[1].super_column.columns, [Column(_i64(5), 'value5', 1234), Column(_i64(6), 'value6' == 1234)]
 
     def test_range_with_remove(self):
         _set_keyspace('Keyspace1')
@@ -1513,7 +1514,6 @@ class TestMutations(ThriftTester):
 
     def test_multiget_slice_with_compact_table(self):
         """Insert multiple keys in a compact table and retrieve them using the multiget_slice interface"""
-
         _set_keyspace('Keyspace1')
 
         # create
@@ -1538,7 +1538,6 @@ class TestMutations(ThriftTester):
 
     def test_multiget_slice(self):
         """Insert multiple keys and retrieve them using the multiget_slice interface"""
-
         _set_keyspace('Keyspace1')
         self.truncate_all('Standard1')
 
@@ -1642,9 +1641,9 @@ class TestMutations(ThriftTester):
         # matches a regex pattern for BytesToken.toString().
         ring = list(client.describe_token_map().items())
         if not self.dtest_config.use_vnodes:
-            self.assertEqual(len(ring), 1)
+            assert len(ring) == 1
         else:
-            self.assertEqual(len(ring), int(self.dtest_config.num_tokens))
+            assert len(ring) == int(self.dtest_config.num_tokens)
         token, node = ring[0]
         if self.dtest_config.use_vnodes:
             assert re.match("[0-9A-Fa-f]{32}", token)
@@ -2027,7 +2026,7 @@ class TestMutations(ThriftTester):
         column = Column('cttl3', 'value1', 0, 0)
         client.insert('key1', ColumnParent('Expiring'), column, ConsistencyLevel.ONE)
         c = client.get('key1', ColumnPath('Expiring', column='cttl3'), ConsistencyLevel.ONE).column
-        self.assertEqual(Column('cttl3', 'value1', 0), c)
+        assert Column('cttl3', 'value1', 0) == c
 
     def test_simple_expiration_batch_mutate(self):
         """ Test that column ttled do expires using batch_mutate """
@@ -2285,7 +2284,7 @@ class TestMutations(ThriftTester):
             [composite('0', '0'), composite('1', '1'), composite('2', '2'),
              composite('6', '6'), composite('7', '7'), composite('8', '8'), composite('9', '9')])
 
-    @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', reason="Test doesn't run on 3.9")
     def test_range_deletion_eoc_0(self):
         """
         This test confirms that a range tombstone with a final EOC of 0
@@ -2642,7 +2641,7 @@ class TestMutations(ThriftTester):
         client.insert(_i32(i), ColumnParent('cs1'), Column('v', _i32(i), 0), CL)
         _assert_column('cs1', _i32(i), 'v', _i32(i), 0)
 
-    @skipIf(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', reason="Test doesn't run on 3.9")
     def test_range_tombstone_eoc_0(self):
         """
         Insert a range tombstone with EOC=0 for a compact storage table. Insert 2 rows that
@@ -2673,6 +2672,6 @@ class TestMutations(ThriftTester):
         session.execute("INSERT INTO test (id, c1, c2, v) VALUES (1, 'asd', 'asd', 0) USING TIMESTAMP 1470761449416613")
 
         ret = list(session.execute('SELECT * FROM test'))
-        self.assertEqual(2, len(ret))
+        assert 2 == len(ret)
 
         node1.nodetool('flush Keyspace1 test')

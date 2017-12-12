@@ -5,12 +5,13 @@ import string
 import tempfile
 import time
 from distutils.version import LooseVersion
-
+import pytest
 import parse
 
 from dtest import Tester, debug, create_ks
 from tools.assertions import assert_length_equal, assert_none, assert_one
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class TestCompaction(Tester):
@@ -58,7 +59,7 @@ class TestCompaction(Tester):
 
         numfound = jsoninfo.count("markedForDeleteAt")
 
-        self.assertEqual(numfound, 10)
+        assert numfound == 10
 
     def test_data_size(self):
         """
@@ -95,7 +96,7 @@ class TestCompaction(Tester):
         else:
             debug("datasize not found")
         # allow 5% size increase - if we have few sstables it is not impossible that live size increases *slightly* after compaction
-        self.assertLess(finalValue, initialValue * 1.05)
+        assert finalValue < initialValue * 1.05
 
     def test_bloomfilter_size(self):
         """
@@ -148,7 +149,7 @@ class TestCompaction(Tester):
 
         debug("bloom filter size is: {}".format(bfSize))
         debug("size factor = {}".format(size_factor))
-        self.assertGreaterEqual(bfSize, size_factor * min_bf_size)
+        assert bfSize >= size_factor * min_bf_size
         self.assertLessEqual(bfSize, size_factor * max_bf_size)
 
     def test_sstable_deletion(self):
@@ -180,7 +181,7 @@ class TestCompaction(Tester):
                 cfs = os.listdir(os.path.join(data_dir, "ks"))
                 ssdir = os.listdir(os.path.join(data_dir, "ks", cfs[0]))
                 for afile in ssdir:
-                    self.assertFalse("Data" in afile, afile)
+                    assert not "Data" in afile, afile
 
         except OSError:
             self.fail("Path to sstables not valid.")
@@ -215,7 +216,7 @@ class TestCompaction(Tester):
         expected_sstable_count = 1
         if self.cluster.version() > LooseVersion('3.1'):
             expected_sstable_count = cluster.data_dir_count
-        self.assertEqual(len(expired_sstables), expected_sstable_count)
+        assert len(expired_sstables) == expected_sstable_count
         # write a new sstable to make DTCS check for expired sstables:
         for x in range(0, 100):
             session.execute('insert into cf (key, val) values ({}, {})'.format(x, x))
@@ -223,7 +224,7 @@ class TestCompaction(Tester):
         time.sleep(5)
         # we only check every 10 minutes - sstable should still be there:
         for expired_sstable in expired_sstables:
-            self.assertIn(expired_sstable, node1.get_sstables('ks', 'cf'))
+            assert expired_sstable, node1.get_sstables('ks' in 'cf')
 
         session.execute("alter table cf with compaction =  {'class':'DateTieredCompactionStrategy', 'max_sstable_age_days':0.00035, 'min_threshold':2, 'expired_sstable_check_frequency_seconds':0}")
         time.sleep(1)
@@ -232,7 +233,7 @@ class TestCompaction(Tester):
         node1.flush()
         time.sleep(5)
         for expired_sstable in expired_sstables:
-            self.assertNotIn(expired_sstable, node1.get_sstables('ks', 'cf'))
+            assert expired_sstable, node1.get_sstables('ks' not in 'cf')
 
     def test_compaction_throughput(self):
         """
@@ -277,7 +278,7 @@ class TestCompaction(Tester):
         }
 
         units = ['MB'] if cluster.version() < LooseVersion('3.6') else ['KiB', 'MiB', 'GiB']
-        self.assertIn(found_units, units)
+        assert found_units in units
 
         debug(avgthroughput)
         avgthroughput_mb = unit_conversion_dct[found_units] * float(avgthroughput)
@@ -285,7 +286,7 @@ class TestCompaction(Tester):
         # The throughput in the log is computed independantly from the throttling and on the output files while
         # throttling is on the input files, so while that throughput shouldn't be higher than the one set in
         # principle, a bit of wiggle room is expected
-        self.assertGreaterEqual(float(threshold) + 0.5, avgthroughput_mb)
+        assert float(threshold) + 0.5 >= avgthroughput_mb
 
     def test_compaction_strategy_switching(self):
         """Ensure that switching strategies does not result in problems.
@@ -347,7 +348,7 @@ class TestCompaction(Tester):
 
         ret = list(session.execute("SELECT properties from ks.large where userid = 'user'"))
         assert_length_equal(ret, 1)
-        self.assertEqual(200, len(list(ret[0][0].keys())))
+        assert 200 == len(list(ret[0][0].keys()))
 
         node.flush()
 
@@ -358,7 +359,7 @@ class TestCompaction(Tester):
 
         ret = list(session.execute("SELECT properties from ks.large where userid = 'user'"))
         assert_length_equal(ret, 1)
-        self.assertEqual(200, len(list(ret[0][0].keys())))
+        assert 200 == len(list(ret[0][0].keys()))
 
     def test_disable_autocompaction_nodetool(self):
         """
@@ -379,11 +380,11 @@ class TestCompaction(Tester):
             log_file = 'system.log'
         else:
             log_file = 'debug.log'
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy)
         node.nodetool('enableautocompaction ks to_disable')
         # sleep to allow compactions to start
         time.sleep(2)
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy)
 
     def test_disable_autocompaction_schema(self):
         """
@@ -404,7 +405,7 @@ class TestCompaction(Tester):
         else:
             log_file = 'debug.log'
 
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy)
         # should still be disabled after restart:
         node.stop()
         node.start(wait_for_binary_proto=True)
@@ -412,11 +413,11 @@ class TestCompaction(Tester):
         session.execute("use ks")
         # sleep to make sure we dont start any logs
         time.sleep(2)
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy)
         node.nodetool('enableautocompaction ks to_disable')
         # sleep to allow compactions to start
         time.sleep(2)
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy)
 
     def test_disable_autocompaction_alter(self):
         """
@@ -437,14 +438,14 @@ class TestCompaction(Tester):
             log_file = 'system.log'
         else:
             log_file = 'debug.log'
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy)
         session.execute('ALTER TABLE to_disable WITH compaction = {{\'class\':\'{0}\', \'enabled\':\'true\'}}'.format(self.strategy))
         # we need to flush atleast once when altering to enable:
         session.execute('insert into to_disable (id, d) values (99, \'hello\')')
         node.flush()
         # sleep to allow compactions to start
         time.sleep(2)
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy)
 
     def test_disable_autocompaction_alter_and_nodetool(self):
         """
@@ -465,16 +466,16 @@ class TestCompaction(Tester):
             log_file = 'system.log'
         else:
             log_file = 'debug.log'
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found compaction log items for {0}'.format(self.strategy)
         session.execute('ALTER TABLE to_disable WITH compaction = {{\'class\':\'{0}\', \'tombstone_threshold\':0.9}}'.format(self.strategy))
         session.execute('insert into to_disable (id, d) values (99, \'hello\')')
         node.flush()
         time.sleep(2)
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) == 0, 'Found log items for {0}'.format(self.strategy)
         node.nodetool('enableautocompaction ks to_disable')
         # sleep to allow compactions to start
         time.sleep(2)
-        self.assertTrue(len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy))
+        assert len(node.grep_log('Compacting.+to_disable', filename=log_file)) > 0, 'Found no log items for {0}'.format(self.strategy)
 
     @since('3.7')
     def test_user_defined_compaction(self):
@@ -503,7 +504,7 @@ class TestCompaction(Tester):
         node1.nodetool('compact --user-defined {}'.format(sstable_files))
 
         sstable_files = node1.get_sstable_data_files('keyspace1', 'standard1')
-        self.assertEqual(len(node1.data_directories()), len(sstable_files),
+        assert len(node1.data_directories()) == len(sstable_files,
                           'Expected one sstable data file per node directory but got {}'.format(sstable_files))
 
     @since('3.10')
@@ -538,7 +539,7 @@ class TestCompaction(Tester):
         # [0, ?/10, ?, 0, 0, 0...]
         p = re.compile(r'0,\s(\d+)/10,.*')
         m = p.search(output)
-        self.assertEqual(10 * len(node1.data_directories()), int(m.group(1)))
+        assert 10 * len(node1.data_directories()) == int(m.group(1))
 
         debug("Altering the fanout_size")
         session.execute("ALTER TABLE keyspace1.standard1 with compaction={'class': 'LeveledCompactionStrategy', 'sstable_size_in_mb':1, 'fanout_size':5};")
@@ -551,8 +552,8 @@ class TestCompaction(Tester):
         # [0, ?/5, ?/25, ?, 0, 0...]
         p = re.compile(r'0,\s(\d+)/5,\s(\d+)/25,.*')
         m = p.search(output)
-        self.assertEqual(5 * len(node1.data_directories()), int(m.group(1)))
-        self.assertEqual(25 * len(node1.data_directories()), int(m.group(2)))
+        assert 5 * len(node1.data_directories()) == int(m.group(1))
+        assert 25 * len(node1.data_directories()) == int(m.group(2))
 
     def skip_if_no_major_compaction(self):
         if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':

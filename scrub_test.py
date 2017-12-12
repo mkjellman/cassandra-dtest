@@ -4,13 +4,15 @@ import re
 import subprocess
 import time
 import uuid
-
+import pytest
 import parse
+
 from ccmlib import common
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_length_equal, assert_stderr_clean
-from tools.decorators import since
+
+since = pytest.mark.since
 
 KEYSPACE = 'ks'
 
@@ -86,12 +88,12 @@ class TestHelper(Tester):
         """
         sstables = {}
         table_sstables = self.get_sstable_files(self.get_table_paths(table))
-        self.assertGreater(len(table_sstables), 0)
+        assert len(table_sstables) > 0
         sstables[table] = sorted(table_sstables)
 
         for index in indexes:
             index_sstables = self.get_sstable_files(self.get_index_paths(table, index))
-            self.assertGreater(len(index_sstables), 0)
+            assert len(index_sstables) > 0
             sstables[index] = sorted('{}/{}'.format(index, sstable) for sstable in index_sstables)
 
         return sstables
@@ -228,18 +230,18 @@ class TestScrubIndexes(TestHelper):
         scrubbed_sstables = self.scrub('users', 'gender_idx', 'state_idx', 'birth_year_idx')
 
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
         # Scrub and check sstables and data again
         scrubbed_sstables = self.scrub('users', 'gender_idx', 'state_idx', 'birth_year_idx')
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
         # Restart and check data again
         cluster.stop()
@@ -249,7 +251,7 @@ class TestScrubIndexes(TestHelper):
         session.execute('USE {}'.format(KEYSPACE))
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
     def test_standalone_scrub(self):
         cluster = self.cluster
@@ -269,14 +271,14 @@ class TestScrubIndexes(TestHelper):
 
         scrubbed_sstables = self.standalonescrub('users', 'gender_idx', 'state_idx', 'birth_year_idx')
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         cluster.start()
         session = self.patient_cql_connection(node1)
         session.execute('USE {}'.format(KEYSPACE))
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
     def test_scrub_collections_table(self):
         cluster = self.cluster
@@ -297,21 +299,21 @@ class TestScrubIndexes(TestHelper):
             session.execute(("UPDATE users set uuids = [{id}] where user_id = {user_id}").format(id=_id, user_id=user_uuid))
 
         initial_users = list(session.execute(("SELECT * from users where uuids contains {some_uuid}").format(some_uuid=_id)))
-        self.assertEqual(num_users, len(initial_users))
+        assert num_users == len(initial_users)
 
         initial_sstables = self.flush('users', 'user_uuids_idx')
         scrubbed_sstables = self.scrub('users', 'user_uuids_idx')
 
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         users = list(session.execute(("SELECT * from users where uuids contains {some_uuid}").format(some_uuid=_id)))
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
         scrubbed_sstables = self.scrub('users', 'user_uuids_idx')
 
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         users = list(session.execute(("SELECT * from users where uuids contains {some_uuid}").format(some_uuid=_id)))
 
@@ -365,18 +367,18 @@ class TestScrub(TestHelper):
         scrubbed_sstables = self.scrub('users')
 
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
         # Scrub and check sstables and data again
         scrubbed_sstables = self.scrub('users')
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
         # Restart and check data again
         cluster.stop()
@@ -386,7 +388,7 @@ class TestScrub(TestHelper):
         session.execute('USE {}'.format(KEYSPACE))
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
     def test_standalone_scrub(self):
         cluster = self.cluster
@@ -406,14 +408,14 @@ class TestScrub(TestHelper):
 
         scrubbed_sstables = self.standalonescrub('users')
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         cluster.start()
         session = self.patient_cql_connection(node1)
         session.execute('USE {}'.format(KEYSPACE))
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
     def test_standalone_scrub_essential_files_only(self):
         cluster = self.cluster
@@ -435,14 +437,14 @@ class TestScrub(TestHelper):
 
         scrubbed_sstables = self.standalonescrub('users')
         self.increase_sstable_generations(initial_sstables)
-        self.assertEqual(initial_sstables, scrubbed_sstables)
+        assert initial_sstables == scrubbed_sstables
 
         cluster.start()
         session = self.patient_cql_connection(node1)
         session.execute('USE {}'.format(KEYSPACE))
 
         users = self.query_users(session)
-        self.assertEqual(initial_users, users)
+        assert initial_users == users
 
     def test_scrub_with_UDT(self):
         """
@@ -460,4 +462,4 @@ class TestScrub(TestHelper):
         node1.nodetool("scrub")
         time.sleep(2)
         match = node1.grep_log("org.apache.cassandra.serializers.MarshalException: Not enough bytes to read a set")
-        self.assertEqual(len(match), 0)
+        assert len(match) == 0

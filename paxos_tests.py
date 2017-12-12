@@ -1,16 +1,15 @@
-# coding: utf-8
-
 import time
-from threading import Thread
-
 import pytest
+
+from threading import Thread
 
 from cassandra import ConsistencyLevel, WriteTimeout
 from cassandra.query import SimpleStatement
 
 from tools.assertions import assert_unavailable
 from dtest import Tester, create_ks
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since('2.0.6')
@@ -191,4 +190,4 @@ class TestPaxos(Tester):
             errors = errors + w.errors
             retries = retries + w.retries
 
-        self.assertTrue((value == threads * iterations) and (errors == 0), "value={}, errors={}, retries={}".format(value, errors, retries))
+        assert (value == threads * iterations) and (errors == 0), "value={}, errors={}, retries={}".format(value, errors, retries)

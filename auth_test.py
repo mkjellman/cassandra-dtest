@@ -2,8 +2,8 @@ import time
 from collections import namedtuple
 from datetime import datetime, timedelta
 from distutils.version import LooseVersion
-
-from plugins.assert_tools import assert_regexp_matches
+import re
+import pytest
 
 from cassandra import AuthenticationFailed, InvalidRequest, Unauthorized
 from cassandra.cluster import NoHostAvailable
@@ -13,21 +13,23 @@ from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from tools.assertions import (assert_all, assert_exception, assert_invalid,
                               assert_length_equal, assert_one,
                               assert_unauthorized)
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 from tools.metadata_wrapper import UpdatingKeyspaceMetadataWrapper
 from tools.misc import ImmutableMapping
 
+since = pytest.mark.since
 
 class TestAuth(Tester):
 
-    ignore_log_patterns = (
-        # This one occurs if we do a non-rolling upgrade, the node
-        # it's trying to send the migration to hasn't started yet,
-        # and when it does, it gets replayed and everything is fine.
-        r'Can\'t send migration request: node.*is down',
-    )
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            # This one occurs if we do a non-rolling upgrade, the node
+            # it's trying to send the migration to hasn't started yet,
+            # and when it does, it gets replayed and everything is fine.
+            r'Can\'t send migration request: node.*is down',
+        )
 
     def test_system_auth_ks_is_alterable(self):
         """
@@ -49,14 +51,14 @@ class TestAuth(Tester):
             ks_name='system_auth',
             max_schema_agreement_wait=30  # 3x the default of 10
         )
-        self.assertEqual(1, auth_metadata.replication_strategy.replication_factor)
+        assert 1 == auth_metadata.replication_strategy.replication_factor
 
         session.execute("""
             ALTER KEYSPACE system_auth
                 WITH replication = {'class':'SimpleStrategy', 'replication_factor':3};
         """)
 
-        self.assertEqual(3, auth_metadata.replication_strategy.replication_factor)
+        assert 3 == auth_metadata.replication_strategy.replication_factor
 
         # Run repair to workaround read repair issues caused by CASSANDRA-10655
         debug("Repairing before altering RF")
@@ -79,7 +81,7 @@ class TestAuth(Tester):
                 cluster=self.patient_exclusive_cql_connection(node, user='cassandra', password='cassandra').cluster,
                 ks_name='system_auth'
             )
-            self.assertEqual(3, exclusive_auth_metadata.replication_strategy.replication_factor)
+            assert 3 == exclusive_auth_metadata.replication_strategy.replication_factor
 
     def test_login(self):
         """
@@ -94,11 +96,11 @@ class TestAuth(Tester):
         try:
             self.get_session(user='cassandra', password='badpassword')
         except NoHostAvailable as e:
-            self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
+            assert isinstance(list(e.errors.values())[0], AuthenticationFailed)
         try:
             self.get_session(user='doesntexist', password='doesntmatter')
         except NoHostAvailable as e:
-            self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
+            assert isinstance(list(e.errors.values())[0], AuthenticationFailed)
 
     # from 2.2 role creation is granted by CREATE_ROLE permissions, not superuser status
     @since('1.2', max_version='2.1.x')
@@ -163,27 +165,27 @@ class TestAuth(Tester):
         session.execute("CREATE USER dave WITH PASSWORD '12345' SUPERUSER")
 
         rows = list(session.execute("LIST USERS"))
-        self.assertEqual(5, len(rows))
+        assert 5 == len(rows)
         # {username: isSuperuser} dict.
         users = dict([(r[0], r[1]) for r in rows])
 
-        self.assertTrue(users['cassandra'])
-        self.assertFalse(users['alex'])
-        self.assertTrue(users['bob'])
-        self.assertFalse(users['cathy'])
-        self.assertTrue(users['dave'])
+        assert users['cassandra']
+        assert not users['alex']
+        assert users['bob']
+        assert not users['cathy']
+        assert users['dave']
 
         self.get_session(user='dave', password='12345')
         rows = list(session.execute("LIST USERS"))
-        self.assertEqual(5, len(rows))
+        assert 5 == len(rows)
         # {username: isSuperuser} dict.
         users = dict([(r[0], r[1]) for r in rows])
 
-        self.assertTrue(users['cassandra'])
-        self.assertFalse(users['alex'])
-        self.assertTrue(users['bob'])
-        self.assertFalse(users['cathy'])
-        self.assertTrue(users['dave'])
+        assert users['cassandra']
+        assert not users['alex']
+        assert users['bob']
+        assert not users['cathy']
+        assert users['dave']
 
     @since('2.2')
     def test_handle_corrupt_role_data(self):
@@ -208,12 +210,12 @@ class TestAuth(Tester):
 
         session.execute("UPDATE system_auth.roles SET is_superuser=null WHERE role='bob'")
 
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Invalid metadata has been detected for role bob']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [r'Invalid metadata has been detected for role bob']
         assert_exception(session, "LIST USERS", "Invalid metadata has been detected for role", expected=(ServerError))
         try:
             self.get_session(user='bob', password='12345')
         except NoHostAvailable as e:
-            self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
+            assert isinstance(list(e.errors.values())[0], AuthenticationFailed)
 
     def test_user_cant_drop_themselves(self):
         """
@@ -245,17 +247,17 @@ class TestAuth(Tester):
         cassandra.execute("CREATE USER cathy WITH PASSWORD '12345' NOSUPERUSER")
         cassandra.execute("CREATE USER dave WITH PASSWORD '12345' NOSUPERUSER")
         rows = list(cassandra.execute("LIST USERS"))
-        self.assertEqual(3, len(rows))
+        assert 3 == len(rows)
 
         cathy = self.get_session(user='cathy', password='12345')
         assert_unauthorized(cathy, 'DROP USER dave', 'Only superusers are allowed to perform DROP (\[ROLE\|USER\]|USER) queries')
 
         rows = list(cassandra.execute("LIST USERS"))
-        self.assertEqual(3, len(rows))
+        assert 3 == len(rows)
 
         cassandra.execute('DROP USER dave')
         rows = list(cassandra.execute("LIST USERS"))
-        self.assertEqual(2, len(rows))
+        assert 2 == len(rows)
 
     def test_dropping_nonexistent_user_throws_exception(self):
         """
@@ -284,7 +286,7 @@ class TestAuth(Tester):
 
         cassandra.execute("DROP USER Test")
         rows = [x[0] for x in list(cassandra.execute("LIST USERS"))]
-        self.assertItemsEqual(rows, ['cassandra'])
+        assert rows == ['cassandra']
 
         cassandra.execute("CREATE USER test WITH PASSWORD '12345'")
 
@@ -293,7 +295,7 @@ class TestAuth(Tester):
 
         cassandra.execute("DROP USER test")
         rows = [x[0] for x in list(cassandra.execute("LIST USERS"))]
-        self.assertItemsEqual(rows, ['cassandra'])
+        assert rows == ['cassandra']
 
     def test_alter_user_case_sensitive(self):
         """
@@ -631,7 +633,7 @@ class TestAuth(Tester):
 
         cassandra.execute("GRANT SELECT ON ks.cf TO cathy")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEqual(0, len(rows))
+        assert 0 == len(rows)
 
         assert_unauthorized(cathy, "INSERT INTO ks.cf (id, val) VALUES (0, 0)", "User cathy has no MODIFY permission on <table ks.cf> or any of its parents")
 
@@ -645,14 +647,14 @@ class TestAuth(Tester):
         cathy.execute("INSERT INTO ks.cf (id, val) VALUES (0, 0)")
         cathy.execute("UPDATE ks.cf SET val = 1 WHERE id = 1")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEqual(2, len(rows))
+        assert 2 == len(rows)
 
         cathy.execute("DELETE FROM ks.cf WHERE id = 1")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEqual(1, len(rows))
+        assert 1 == len(rows)
 
         rows = list(cathy.execute("TRUNCATE ks.cf"))
-        self.assertItemsEqual(rows, [])
+        assert rows == []
 
     @since('2.2')
     def test_grant_revoke_without_ks_specified(self):
@@ -771,7 +773,7 @@ class TestAuth(Tester):
         cathy = self.get_session(user='cathy', password='12345')
         cathy.execute("INSERT INTO ks.cf (id, val) VALUES (0, 0)")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEqual(1, len(rows))
+        assert 1 == len(rows)
 
         # drop and recreate the user, make sure permissions are gone
         cassandra.execute("DROP USER cathy")
@@ -785,7 +787,7 @@ class TestAuth(Tester):
         cassandra.execute("GRANT ALL ON ks.cf TO cathy")
         cathy.execute("INSERT INTO ks.cf (id, val) VALUES (0, 0)")
         rows = list(cathy.execute("SELECT * FROM ks.cf"))
-        self.assertEqual(1, len(rows))
+        assert 1 == len(rows)
 
         # drop and recreate the keyspace, make sure permissions are gone
         cassandra.execute("DROP KEYSPACE ks")
@@ -849,7 +851,7 @@ class TestAuth(Tester):
                         # legit failure
                         self.fail("Expecting query to raise an exception, but nothing was raised.")
                 except Unauthorized as e:
-                    assert_regexp_matches(str(e), "User cathy has no SELECT permission on <table ks.cf> or any of its parents")
+                    assert re.search("User cathy has no SELECT permission on <table ks.cf> or any of its parents", str(e))
 
         check_caching()
 
@@ -871,14 +873,14 @@ class TestAuth(Tester):
             try:
                 for c in cathys:
                     rows = list(c.execute("SELECT * FROM ks.cf"))
-                    self.assertEqual(0, len(rows))
+                    assert 0 == len(rows)
                 success = True
             except Unauthorized:
                 pass
             cnt += 1
             time.sleep(0.1)
 
-        self.assertTrue(success)
+        assert success
 
     def test_list_permissions(self):
         """
@@ -1024,7 +1026,6 @@ class TestAuth(Tester):
         so as to estimate the percentage of authentication attempts that failed.
         @jira_ticket CASSANDRA-10635
         """
-
         cluster = self.cluster
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator',
                   'authorizer': 'org.apache.cassandra.auth.CassandraAuthorizer',
@@ -1042,13 +1043,13 @@ class TestAuth(Tester):
             failure = jmx.read_attribute(
                 make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
-            self.assertEqual(0, success)
-            self.assertEqual(0, failure)
+            assert 0 == success
+            assert 0 == failure
 
             try:
                 self.get_session(user='cassandra', password='wrong_password')
             except NoHostAvailable as e:
-                self.assertIsInstance(list(e.errors.values())[0], AuthenticationFailed)
+                assert isinstance(list(e.errors.values())[0], AuthenticationFailed)
 
             self.get_session(user='cassandra', password='cassandra')
 
@@ -1057,8 +1058,8 @@ class TestAuth(Tester):
             failure = jmx.read_attribute(
                 make_mbean('metrics', type='Client', name='AuthFailure'), 'Count')
 
-            self.assertGreater(success, 0)
-            self.assertGreater(failure, 0)
+            assert success > 0
+            assert failure > 0
 
     def prepare(self, nodes=1, permissions_validity=0):
         """
@@ -1097,7 +1098,7 @@ class TestAuth(Tester):
         """
         rows = session.execute(query)
         perms = [(str(r.username), str(r.resource), str(r.permission)) for r in rows]
-        self.assertEqual(sorted(expected), sorted(perms))
+        assert sorted(expected) == sorted(perms)
 
 
 def data_resource_creator_permissions(creator, resource):
@@ -1134,14 +1135,19 @@ cassandra_role = Role('cassandra', True, True, {})
 
 @since('2.2')
 class TestAuthRoles(Tester):
-    """
-    @jira_ticket CASSANDRA-7653
-    """
-    if CASSANDRA_VERSION_FROM_BUILD >= '3.0':
-        cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
-                                            'enable_scripted_user_defined_functions': 'true'})
-    else:
-        cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        """
+        @jira_ticket CASSANDRA-7653
+        """
+        if CASSANDRA_VERSION_FROM_BUILD >= '3.0':
+            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
+                                                'enable_scripted_user_defined_functions': 'true'})
+        else:
+            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+
+        return parse_dtest_config
 
     def test_create_drop_role(self):
         """
@@ -1431,7 +1437,7 @@ class TestAuthRoles(Tester):
 
         cassandra.execute("DROP ROLE role1")
         cassandra.execute("DROP ROLE role2")
-        self.assertItemsEqual(list(cassandra.execute("LIST ALL PERMISSIONS OF mike")), [])
+        assert list(cassandra.execute("LIST ALL PERMISSIONS OF mike")) == []
 
     def test_grant_revoke_roles(self):
         """
@@ -1760,7 +1766,7 @@ class TestAuthRoles(Tester):
                                        "LIST ALTER PERMISSION ON ROLE role1 OF role2")
         # make sure ALTER on role2 is excluded properly when OF is for another role
         cassandra.execute("CREATE ROLE role3 WITH SUPERUSER = false AND LOGIN = false")
-        self.assertItemsEqual(list(cassandra.execute("LIST ALTER PERMISSION ON ROLE role1 OF role3")), [])
+        assert list(cassandra.execute("LIST ALTER PERMISSION ON ROLE role1 OF role3")) == []
 
         # now check users can list their own permissions
         mike = self.get_session(user='mike', password='12345')
@@ -1853,7 +1859,7 @@ class TestAuthRoles(Tester):
             except Unauthorized as e:
                 unauthorized = e
 
-        self.assertIsNotNone(unauthorized)
+        assert unauthorized is not None
 
     def drop_non_existent_role_should_not_update_cache(self):
         """
@@ -2609,7 +2615,7 @@ class TestAuthRoles(Tester):
         cassandra.execute("DROP AGGREGATE ks.simple_aggregate(int)")
         all_perms = list(cassandra.execute("LIST ALL PERMISSIONS OF mike"))
         for p in agg_perms:
-            self.assertFalse(p in all_perms, msg="Perm {p} found, but should be removed".format(p=p))
+            assert not p in all_perms, "Perm {p} found, but should be removed".format(p=p)
 
     def test_ignore_invalid_roles(self):
         """
@@ -2619,7 +2625,6 @@ class TestAuthRoles(Tester):
         table, then the result of LIST ROLES OF roleA should not include roleB
         @jira_ticket CASSANDRA-9551
         """
-
         self.prepare()
         cassandra = self.get_session(user='cassandra', password='cassandra')
         cassandra.execute("CREATE ROLE mike WITH LOGIN = true")
@@ -2632,7 +2637,7 @@ class TestAuthRoles(Tester):
         session.execute("CREATE TABLE ks.t1 (k int PRIMARY KEY, v int)")
 
     def assert_unauthenticated(self, user, password):
-        with self.assertRaises(NoHostAvailable) as response:
+        with pytest.raises(NoHostAvailable) as response:
             node = self.cluster.nodelist()[0]
             self.cql_connection(node, user=user, password=password)
         host, error = response.exception.errors.popitem()
@@ -2644,10 +2649,10 @@ class TestAuthRoles(Tester):
                   '[Bad credentials] message="{message}"'.format(host=host, message=message)
 
         assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
-        self.assertIn(pattern, error.message)
+        assert pattern in repr(error)
 
     def assert_login_not_allowed(self, user, password):
-        with self.assertRaises(NoHostAvailable) as response:
+        with pytest.raises(NoHostAvailable) as response:
             node = self.cluster.nodelist()[0]
             self.cql_connection(node, user=user, password=password)
         host, error = response.exception.errors.popitem()
@@ -2656,7 +2661,7 @@ class TestAuthRoles(Tester):
                   '[Bad credentials] message="{user} is not permitted to log in"'.format(host=host, user=user)
 
         assert isinstance(error, AuthenticationFailed), "Expected AuthenticationFailed, got {error}".format(error=error)
-        self.assertIn(pattern, error.message)
+        assert pattern in repr(error)
 
     def get_session(self, node_idx=0, user=None, password=None):
         """
@@ -2684,10 +2689,10 @@ class TestAuthRoles(Tester):
     def assert_permissions_listed(self, expected, session, query):
         rows = session.execute(query)
         perms = [(str(r.role), str(r.resource), str(r.permission)) for r in rows]
-        self.assertEqual(sorted(expected), sorted(perms))
+        assert sorted(expected) == sorted(perms)
 
     def assert_no_permissions(self, session, query):
-        self.assertItemsEqual(list(session.execute(query)), [])
+        assert list(session.execute(query)) == []
 
 
 def role_creator_permissions(creator, role):

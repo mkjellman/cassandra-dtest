@@ -1,11 +1,13 @@
 import uuid
+import pytest
 
 from cassandra import ConsistencyLevel, WriteFailure, WriteTimeout
 
 from dtest import Tester, supports_v5_protocol
 from thrift_bindings.v22 import ttypes as thrift_types
 from thrift_tests import get_thrift_client
-from tools.decorators import since
+
+since = pytest.mark.since
 
 KEYSPACE = "foo"
 
@@ -25,7 +27,7 @@ class TestWriteFailures(Tester):
     def setUp(self):
         super(TestWriteFailures, self).setUp()
 
-        self.ignore_log_patterns = [
+        self.fixture_dtest_setup.ignore_log_patterns = [
             "Testing write failures",  # The error to simulate a write failure
             "ERROR WRITE_FAILURE",     # Logged in DEBUG mode for write failures
             "MigrationStage"           # This occurs sometimes due to node down (because of restart)
@@ -81,7 +83,7 @@ class TestWriteFailures(Tester):
         if self.expected_expt is None:
             session.execute(statement)
         else:
-            with self.assertRaises(self.expected_expt) as cm:
+            with pytest.raises(self.expected_expt) as cm:
                 session.execute(statement)
             return cm.exception
 
@@ -91,14 +93,14 @@ class TestWriteFailures(Tester):
         where at least one node responded with some expected code.
         This is meant for testing failure exceptions on protocol v5.
         """
-        self.assertIsNotNone(exception)
-        self.assertIsNotNone(exception.error_code_map)
+        assert exception is not None
+        assert exception.error_code_map is not None
         expected_code_found = False
         for error_code in list(exception.error_code_map.values()):
             if error_code == expected_code:
                 expected_code_found = True
                 break
-        self.assertTrue(expected_code_found, "The error code map did not contain " + str(expected_code))
+        assert expected_code_found, "The error code map did not contain " + str(expected_code)
 
     @since('2.2', max_version='2.2.x')
     def test_mutation_v2(self):
@@ -147,8 +149,8 @@ class TestWriteFailures(Tester):
 
     def test_mutation_one(self):
         """
-            A WriteFailure is received at consistency level ONE
-            if all nodes fail
+        A WriteFailure is received at consistency level ONE
+        if all nodes fail
         """
         self.consistency_level = ConsistencyLevel.ONE
         self.failing_nodes = [0, 1, 2]
@@ -220,7 +222,7 @@ class TestWriteFailures(Tester):
         client.transport.open()
         client.set_keyspace(KEYSPACE)
 
-        with self.assertRaises(self.expected_expt):
+        with pytest.raises(self.expected_expt):
             client.insert('key1',
                           thrift_types.ColumnParent('mytable'),
                           thrift_types.Column('value', 'Value 1', 0),

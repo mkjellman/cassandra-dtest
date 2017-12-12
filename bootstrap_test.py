@@ -16,17 +16,18 @@ from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import (assert_almost_equal, assert_bootstrap_state, assert_not_running,
                               assert_one, assert_stderr_clean)
 from tools.data import query_c1c2
-from tools.decorators import since
 from tools.intervention import InterruptBootstrap, KillOnBootstrap
 from tools.misc import new_node
 from tools.misc import generate_ssl_stores
 
+since = pytest.mark.since
 
-class BaseBootstrapTest(Tester):
-    __test__ = False
+class TestBootstrap(Tester):
 
-    allow_log_errors = True
-    ignore_log_patterns = (
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.allow_log_errors = True
+        fixture_dtest_setup.ignore_log_patterns = (
         # This one occurs when trying to send the migration to a
         # node that hasn't started yet, and when it does, it gets
         # replayed and everything is fine.
@@ -51,8 +52,8 @@ class BaseBootstrapTest(Tester):
 
         if enable_ssl:
             debug("***using internode ssl***")
-            generate_ssl_stores(self.test_path)
-            cluster.enable_internode_ssl(self.test_path)
+            generate_ssl_stores(self.fixture_dtest_setup.test_path)
+            cluster.enable_internode_ssl(self.fixture_dtest_setup.test_path)
 
         tokens = cluster.balanced_tokens(2)
         cluster.set_configuration_options(values={'num_tokens': 1})
@@ -88,19 +89,17 @@ class BaseBootstrapTest(Tester):
 
         # Reads inserted data all during the bootstrap process. We shouldn't
         # get any error
-        reader = self.go(lambda _: query_c1c2(session, random.randint(0, keys - 1), ConsistencyLevel.ONE))
+        query_c1c2(session, random.randint(0, keys - 1), ConsistencyLevel.ONE)
+        session.shutdown()
 
         # Bootstrapping a new node in the current version
         node2 = bootstrap(cluster, tokens[1])
         node2.compact()
 
-        reader.check()
         node1.cleanup()
         debug("node1 size after cleanup: %s" % float(node1.data_size()))
         node1.compact()
         debug("node1 size after compacting: %s" % float(node1.data_size()))
-        time.sleep(.5)
-        reader.check()
 
         debug("node2 size after compacting: %s" % float(node2.data_size()))
 
@@ -109,13 +108,7 @@ class BaseBootstrapTest(Tester):
         assert_almost_equal(size1, size2, error=0.3)
         assert_almost_equal(float(initial_size - empty_size), 2 * (size1 - float(empty_size)))
 
-        session.shutdown()
-
         assert_bootstrap_state(self, node2, 'COMPLETED')
-
-
-class TestBootstrap(BaseBootstrapTest):
-    __test__ = True
 
     @pytest.mark.no_vnodes
     def test_simple_bootstrap_with_ssl(self):
@@ -127,18 +120,16 @@ class TestBootstrap(BaseBootstrapTest):
 
     @pytest.mark.no_vnodes
     def test_bootstrap_on_write_survey(self):
-        import faulthandler
-        faulthandler.enable()
         def bootstrap_on_write_survey_and_join(cluster, token):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
             node2.start(jvm_args=["-Dcassandra.write_survey=true"], wait_for_binary_proto=True)
 
-            self.assertTrue(len(node2.grep_log('Startup complete, but write survey mode is active, not becoming an active ring member.')))
+            assert len(node2.grep_log('Startup complete, but write survey mode is active, not becoming an active ring member.'))
             assert_bootstrap_state(self, node2, 'IN_PROGRESS')
 
             node2.nodetool("join")
-            self.assertTrue(len(node2.grep_log('Leaving write survey mode and joining ring at operator request')))
+            assert len(node2.grep_log('Leaving write survey mode and joining ring at operator request'))
             return node2
 
         self._base_bootstrap_test(bootstrap_on_write_survey_and_join)
@@ -185,16 +176,15 @@ class TestBootstrap(BaseBootstrapTest):
         assert_bootstrap_state(self, node2, 'COMPLETED')
 
         for node in cluster.nodelist():
-            self.assertTrue(node.grep_log('Scheduling keep-alive task with 2s period.', filename='debug.log'))
-            self.assertTrue(node.grep_log('Sending keep-alive', filename='debug.log'))
-            self.assertTrue(node.grep_log('Received keep-alive', filename='debug.log'))
+            assert node.grep_log('Scheduling keep-alive task with 2s period.', filename='debug.log')
+            assert node.grep_log('Sending keep-alive', filename='debug.log')
+            assert node.grep_log('Received keep-alive', filename='debug.log')
 
     def test_simple_bootstrap_nodata(self):
         """
         @jira_ticket CASSANDRA-11010
         Test that bootstrap completes if streaming from nodes with no data
         """
-
         cluster = self.cluster
         # Create a two-node cluster
         cluster.populate(2)
@@ -227,7 +217,7 @@ class TestBootstrap(BaseBootstrapTest):
 
         session = self.patient_exclusive_cql_connection(node4)
         new_rows = list(session.execute("SELECT * FROM %s" % (stress_table,)))
-        self.assertEqual(original_rows, new_rows)
+        assert original_rows == new_rows
 
     def test_consistent_range_movement_true_with_replica_down_should_fail(self):
         self._bootstrap_test_with_replica_down(True)
@@ -287,7 +277,7 @@ class TestBootstrap(BaseBootstrapTest):
             # with rf=1 and cassandra.consistent.rangemovement=false, missing sources are ignored
             if not consistent_range_movement and rf == 1:
                 node3.watch_log_for("Unable to find sufficient sources for streaming range")
-            self.assertTrue(node3.is_running())
+            assert node3.is_running()
             assert_bootstrap_state(self, node3, 'COMPLETED')
         else:
             if consistent_range_movement:
@@ -301,7 +291,6 @@ class TestBootstrap(BaseBootstrapTest):
         """
         Test resuming bootstrap after data streaming failure
         """
-
         cluster = self.cluster
         cluster.populate(2)
 
@@ -343,12 +332,11 @@ class TestBootstrap(BaseBootstrapTest):
         stdout, stderr, _ = node3.stress(['read', 'n=1k', 'no-warmup', '-schema', 'replication(factor=2)', '-rate', 'threads=8'])
 
         if stdout is not None:
-            self.assertNotIn("FAILURE", stdout.decode("utf-8"))
+            assert "FAILURE" not in stdout.decode("utf-8")
 
     @since('2.2')
     def test_bootstrap_with_reset_bootstrap_state(self):
         """Test bootstrap with resetting bootstrap progress"""
-
         cluster = self.cluster
         cluster.set_configuration_options(values={'stream_throughput_outbound_megabits_per_sec': 1})
         cluster.populate(2).start(wait_other_notice=True)
@@ -407,14 +395,13 @@ class TestBootstrap(BaseBootstrapTest):
         node1.cleanup()
 
         current_rows = list(session.execute("SELECT * FROM %s" % stress_table))
-        self.assertEqual(original_rows, current_rows)
+        assert original_rows == current_rows
 
     def test_local_quorum_bootstrap(self):
         """
         Test that CL local_quorum works while a node is bootstrapping.
         @jira_ticket CASSANDRA-8058
         """
-
         cluster = self.cluster
         cluster.populate([1, 1])
         cluster.start()
@@ -461,7 +448,7 @@ class TestBootstrap(BaseBootstrapTest):
         assert_stderr_clean(err)
         regex = re.compile("Operation.+error inserting key.+Exception")
         failure = regex.search(str(out))
-        self.assertIsNone(failure, "Error during stress while bootstrapping")
+        assert failure is None, "Error during stress while bootstrapping"
 
     def test_shutdown_wiped_node_cannot_join(self):
         self._wiped_node_cannot_join_test(gently=True)
@@ -494,7 +481,7 @@ class TestBootstrap(BaseBootstrapTest):
         node4.start(wait_for_binary_proto=True)
 
         session = self.patient_cql_connection(node4)
-        self.assertEqual(original_rows, list(session.execute("SELECT * FROM {}".format(stress_table,))))
+        assert original_rows == list(session.execute("SELECT * FROM {}".format(stress_table,)))
 
         # Stop the new node and wipe its data
         node4.stop(gently=gently)
@@ -527,7 +514,7 @@ class TestBootstrap(BaseBootstrapTest):
         node4.start(wait_for_binary_proto=True, wait_other_notice=True)
 
         session = self.patient_cql_connection(node4)
-        self.assertEqual(original_rows, list(session.execute("SELECT * FROM {}".format(stress_table,))))
+        assert original_rows == list(session.execute("SELECT * FROM {}".format(stress_table,)))
 
         # Decommission the new node and wipe its data
         node4.decommission()
@@ -611,7 +598,7 @@ class TestBootstrap(BaseBootstrapTest):
 
         node2.start()
         t.join()
-        self.assertFalse(node2.is_running())
+        assert not node2.is_running()
 
         # wipe any data for node2
         self._cleanup(node2)
@@ -691,7 +678,7 @@ class TestBootstrap(BaseBootstrapTest):
         node1.nodetool("cleanup -j {} keyspace1 standard1".format(jobs))
         event.set()
         thread.join()
-        self.assertFalse(failed.is_set())
+        assert not failed.is_set()
 
     def _monitor_datadir(self, node, event, basecount, jobs, failed):
         while True:

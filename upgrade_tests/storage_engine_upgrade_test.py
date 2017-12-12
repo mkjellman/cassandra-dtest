@@ -1,5 +1,6 @@
 import os
 import time
+import pytest
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from sstable_generation_loading_test import BaseSStableLoaderTest
@@ -9,14 +10,16 @@ from thrift_bindings.v22.Cassandra import (ConsistencyLevel, Deletion,
 from thrift_tests import composite, get_thrift_client, i32
 from tools.assertions import (assert_all, assert_length_equal, assert_none,
                               assert_one)
-from tools.decorators import since
 from tools.misc import new_node
+
+since = pytest.mark.since
 
 LEGACY_SSTABLES_JVM_ARGS = ["-Dcassandra.streamdes.initial_mem_buffer_size=1",
                             "-Dcassandra.streamdes.max_mem_buffer_size=5",
                             "-Dcassandra.streamdes.max_spill_file_size=128"]
 
 
+@pytest.mark.upgrade_test
 @since('3.0')
 class TestStorageEngineUpgrade(Tester):
 
@@ -68,7 +71,7 @@ class TestStorageEngineUpgrade(Tester):
 
             temp_files = self.glob_data_dirs(os.path.join('*', "tmp", "*.dat"))
             debug("temp files: " + str(temp_files))
-            self.assertEqual(0, len(temp_files), "Temporary files were not cleaned up.")
+            assert 0, len(temp_files) == "Temporary files were not cleaned up."
 
         cursor = self.patient_cql_connection(node1)
         if login_keyspace:
@@ -448,6 +451,7 @@ class TestStorageEngineUpgrade(Tester):
         assert_none(session, "SELECT k FROM test")
 
 
+@pytest.mark.upgrade_test
 @since('3.0')
 class TestBootstrapAfterUpgrade(TestStorageEngineUpgrade):
 
@@ -455,31 +459,31 @@ class TestBootstrapAfterUpgrade(TestStorageEngineUpgrade):
         super(TestBootstrapAfterUpgrade, self).setUp(bootstrap=True, jvm_args=LEGACY_SSTABLES_JVM_ARGS)
 
 
+@pytest.mark.upgrade_test
 @since('3.0', max_version='4')
 class TestLoadKaSStables(BaseSStableLoaderTest):
-    __test__ = True
     upgrade_from = '2.1.6'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
 
 
+@pytest.mark.upgrade_test
 @since('3.0', max_version='4')
 class TestLoadKaCompactSStables(BaseSStableLoaderTest):
-    __test__ = True
     upgrade_from = '2.1.6'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
     compact = True
 
 
+@pytest.mark.upgrade_test
 @since('3.0', max_version='4')
 class TestLoadLaSStables(BaseSStableLoaderTest):
-    __test__ = True
     upgrade_from = '2.2.4'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
 
 
+@pytest.mark.upgrade_test
 @since('3.0', max_version='4')
 class TestLoadLaCompactSStables(BaseSStableLoaderTest):
-    __test__ = True
     upgrade_from = '2.2.4'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
     compact = True

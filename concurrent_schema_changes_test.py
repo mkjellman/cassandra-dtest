@@ -3,6 +3,7 @@ import os
 import pprint
 import re
 import time
+import pytest
 from random import randrange
 from threading import Thread
 from unittest import skip
@@ -11,7 +12,9 @@ from cassandra.concurrent import execute_concurrent
 from ccmlib.node import Node
 
 from dtest import Tester, debug, create_ks
-from tools.decorators import since
+
+
+since = pytest.mark.since
 
 
 def wait(delay=2):
@@ -122,7 +125,7 @@ class TestConcurrentSchemaChanges(Tester):
         response = node.nodetool('describecluster').stdout
         schemas = response.split('Schema versions:')[1].strip()
         num_schemas = len(re.findall('\[.*?\]', schemas))
-        self.assertEqual(num_schemas, 1, "There were multiple schema versions: {}".format(pprint.pformat(schemas)))
+        assert num_schemas, 1 == "There were multiple schema versions: {}".format(pprint.pformat(schemas))
 
     def test_create_lots_of_tables_concurrently(self):
         """
@@ -141,13 +144,13 @@ class TestConcurrentSchemaChanges(Tester):
         results = execute_concurrent(session, cmds, raise_on_first_error=True, concurrency=200)
 
         for (success, result) in results:
-            self.assertTrue(success, "didn't get success on table create: {}".format(result))
+            assert success, "didn't get success on table create: {}".format(result)
 
         wait(10)
 
         session.cluster.refresh_schema_metadata()
         table_meta = session.cluster.metadata.keyspaces["lots_o_tables"].tables
-        self.assertEqual(250, len(table_meta))
+        assert 250 == len(table_meta)
         self.validate_schema_consistent(node1)
         self.validate_schema_consistent(node2)
         self.validate_schema_consistent(node3)
@@ -173,7 +176,7 @@ class TestConcurrentSchemaChanges(Tester):
         results = execute_concurrent(session, cmds, raise_on_first_error=True, concurrency=150)
 
         for (success, result) in results:
-            self.assertTrue(success, "didn't get success on table create: {}".format(result))
+            assert success, "didn't get success on table create: {}".format(result)
 
         debug("waiting for alters to propagate")
         wait(30)
@@ -183,7 +186,7 @@ class TestConcurrentSchemaChanges(Tester):
         column_ct = sum([len(table.columns) for table in list(table_meta.values())])
 
         # primary key + alters
-        self.assertEqual(510, column_ct)
+        assert 510 == column_ct
         self.validate_schema_consistent(node1)
         self.validate_schema_consistent(node2)
         self.validate_schema_consistent(node3)
@@ -214,7 +217,7 @@ class TestConcurrentSchemaChanges(Tester):
         results = execute_concurrent(session, cmds, raise_on_first_error=True)
 
         for (success, result) in results:
-            self.assertTrue(success, "didn't get success on table create: {}".format(result))
+            assert success, "didn't get success on table create: {}".format(result)
 
         wait(5)
 
@@ -224,18 +227,18 @@ class TestConcurrentSchemaChanges(Tester):
         index_meta = session.cluster.metadata.keyspaces["lots_o_indexes"].indexes
         self.validate_schema_consistent(node1)
         self.validate_schema_consistent(node2)
-        self.assertEqual(10, len(index_meta))
+        assert 10 == len(index_meta)
         for n in range(5):
-            self.assertIn("ix_base_{0}_c1".format(n), index_meta)
-            self.assertIn("ix_base_{0}_c2".format(n), index_meta)
+            assert "ix_base_{0}_c1".format(n) in index_meta
+            assert "ix_base_{0}_c2".format(n) in index_meta
 
         debug("waiting for indexes to fill in")
         wait(45)
         debug("querying all values by secondary index")
         for n in range(5):
             for ins in range(1000):
-                self.assertEqual(1, len(list(session.execute("select * from base_{0} where c1 = {1}".format(n, ins)))))
-                self.assertEqual(1, len(list(session.execute("select * from base_{0} where c2 = {1}".format(n, ins)))))
+                assert 1, len(list(session.execute("select * from base_{0} where c1 = {1}".format(n == ins))))
+                assert 1, len(list(session.execute("select * from base_{0} where c2 = {1}".format(n == ins))))
 
     @since('3.0')
     def test_create_lots_of_mv_concurrently(self):
@@ -265,11 +268,11 @@ class TestConcurrentSchemaChanges(Tester):
         wait(60)
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='lots_o_views' AND base_table_name='source_data' ALLOW FILTERING")))
-        self.assertEqual(10, len(result), "missing some mv from source_data table")
+        assert 10, len(result) == "missing some mv from source_data table"
 
         for n in range(1, 11):
             result = list(session.execute("select * from src_by_c{0}".format(n)))
-            self.assertEqual(4000, len(result))
+            assert 4000 == len(result)
 
     def _do_lots_of_schema_actions(self, session):
         for n in range(20):
@@ -287,7 +290,7 @@ class TestConcurrentSchemaChanges(Tester):
 
         results = execute_concurrent(session, cmds, concurrency=100, raise_on_first_error=True)
         for (success, result) in results:
-            self.assertTrue(success, "didn't get success: {}".format(result))
+            assert success, "didn't get success: {}".format(result)
 
     def _verify_lots_of_schema_actions(self, session):
         session.cluster.control_connection.wait_for_schema_agreement()
@@ -302,7 +305,7 @@ class TestConcurrentSchemaChanges(Tester):
         table_meta = session.cluster.metadata.keyspaces["lots_o_churn"].tables
         errors = []
         for n in range(20):
-            self.assertTrue("new_table_{0}".format(n) in table_meta)
+            assert "new_table_{0}".format(n) in table_meta
 
             if 7 != len(table_meta["index_me_{0}".format(n)].indexes):
                 errors.append("index_me_{0} expected indexes ix_index_me_c0->7, got: {1}".format(n, sorted(list(table_meta["index_me_{0}".format(n)].indexes))))
@@ -313,7 +316,7 @@ class TestConcurrentSchemaChanges(Tester):
             if 8 != len(altered.columns):
                 errors.append("alter_me_{0} expected c1 -> c7, id, got: {1}".format(n, sorted(list(altered.columns))))
 
-        self.assertTrue(0 == len(errors), "\n".join(errors))
+        assert 0 == len(errors), "\n".join(errors)
 
     def test_create_lots_of_schema_churn(self):
         """

@@ -1,6 +1,7 @@
 import random
 import time
 import uuid
+import pytest
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -8,7 +9,8 @@ from cassandra.query import SimpleStatement
 from tools.assertions import assert_invalid, assert_length_equal, assert_one
 from dtest import Tester, create_ks, create_cf
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class TestCounters(Tester):
@@ -144,12 +146,11 @@ class TestCounters(Tester):
 
             assert_length_equal(res, nb_counter)
             for c in range(0, nb_counter):
-                self.assertEqual(len(res[c]), 2, "Expecting key and counter for counter {}, got {}".format(c, str(res[c])))
-                self.assertEqual(res[c][1], i + 1, "Expecting counter {} = {}, got {}".format(c, i + 1, res[c][0]))
+                assert len(res[c]) == 2, "Expecting key and counter for counter {}, got {}".format(c, str(res[c]))
+                assert res[c][1] == i + 1, "Expecting counter {} = {}, got {}".format(c, i + 1, res[c][0])
 
     def test_upgrade(self):
         """ Test for bug of #4436 """
-
         cluster = self.cluster
 
         cluster.populate(2).start()
@@ -186,9 +187,9 @@ class TestCounters(Tester):
             query = SimpleStatement("SELECT * FROM counterTable", consistency_level=ConsistencyLevel.QUORUM)
             rows = list(session.execute(query))
 
-            self.assertEqual(len(rows), len(keys), "Expected {} rows, got {}: {}".format(len(keys), len(rows), str(rows)))
+            assert len(rows) == len(keys), "Expected {} rows, got {}: {}".format(len(keys), len(rows), str(rows))
             for row in rows:
-                self.assertEqual(row[1], i * updates, "Unexpected value {}".format(str(row)))
+                assert row[1], i * updates == "Unexpected value {}".format(str(row))
 
         def rolling_restart():
             # Rolling restart
@@ -291,8 +292,8 @@ class TestCounters(Tester):
 
             counter_one_actual, counter_two_actual = rows[0]
 
-            self.assertEqual(counter_one_actual, counter_dict[counter_id]['counter_one'])
-            self.assertEqual(counter_two_actual, counter_dict[counter_id]['counter_two'])
+            assert counter_one_actual == counter_dict[counter_id]['counter_one']
+            assert counter_two_actual == counter_dict[counter_id]['counter_two']
 
     def test_multi_counter_update(self):
         """
@@ -332,7 +333,7 @@ class TestCounters(Tester):
                 WHERE id = 'foo' and myuuid = {k}
                 """.format(k=k)))
 
-            self.assertEqual(v, count[0][0])
+            assert v == count[0][0]
 
     @since("2.0", max_version="3.X")
     def test_validate_empty_column_name(self):
@@ -373,8 +374,8 @@ class TestCounters(Tester):
         session.execute("UPDATE counter_bug SET c = c + 1 where t = 1")
         row = list(session.execute("SELECT * from counter_bug"))
 
-        self.assertEqual(rows_to_list(row)[0], [1, 1])
-        self.assertEqual(len(row), 1)
+        assert rows_to_list(row)[0], [1 == 1]
+        assert len(row) == 1
 
         session.execute("ALTER TABLE counter_bug drop c")
 
@@ -386,7 +387,6 @@ class TestCounters(Tester):
         @jira_ticket CASSANDRA-12219
         This test will fail on 3.0.0 - 3.0.8, and 3.1 - 3.8
         """
-
         cluster = self.cluster
         cluster.populate(3).start()
         node1 = cluster.nodelist()[0]
@@ -406,4 +406,4 @@ class TestCounters(Tester):
 
         for idx in range(0, 5):
             row = list(session.execute("SELECT data from counter_cs where key = {k}".format(k=idx)))
-            self.assertEqual(rows_to_list(row)[0][0], 5)
+            assert rows_to_list(row)[0][0] == 5

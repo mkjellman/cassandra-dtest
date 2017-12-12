@@ -1,5 +1,4 @@
 import pytest
-
 import time
 
 from cassandra import ConsistencyLevel
@@ -9,8 +8,9 @@ from thrift.transport import TSocket, TTransport
 from dtest import Tester, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns, putget,
                         query_c1c2, query_columns, range_putget)
-from tools.decorators import since
 from tools.misc import ImmutableMapping, retry_till_success
+
+since = pytest.mark.since
 
 
 class TestPutGet(Tester):
@@ -60,7 +60,6 @@ class TestPutGet(Tester):
 
     def test_rangeputget(self):
         """ Simple put/get on ranges of rows, hitting multiple sstables """
-
         cluster = self.cluster
 
         cluster.populate(3).start()
@@ -174,7 +173,7 @@ class TestPutGet(Tester):
             # print row.key
             # print cols
 
-        self.assertEqual(len(columns), 95, "Regression in cassandra-4919. Expected 95 columns, got {}.".format(len(columns)))
+        assert len(columns) == 95, "Regression in cassandra-4919. Expected 95 columns == got {}.".format(len(columns))
 
 
 class ThriftConnection(object):
@@ -279,5 +278,5 @@ class ThriftConnection(object):
                                       timeout=30)
             col = cosc.column
             value = col.value
-            self.assertEqual(value, 'val_0')
+            assert value == 'val_0'
         return self

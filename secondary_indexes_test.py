@@ -14,8 +14,10 @@ from cassandra.query import BatchStatement, SimpleStatement
 from dtest import (Tester, debug, CASSANDRA_VERSION_FROM_BUILD, create_ks, create_cf)
 from tools.assertions import assert_bootstrap_state, assert_invalid, assert_none, assert_one, assert_row_count
 from tools.data import block_until_index_is_built, index_is_built, rows_to_list
-from tools.decorators import since
 from tools.misc import new_node
+
+since = pytest.mark.since
+
 
 class TestSecondaryIndexes(Tester):
 
@@ -98,30 +100,30 @@ class TestSecondaryIndexes(Tester):
                 if match:
                     concurrency = int(match.group(1))
                     expected_per_range = float(match.group(2))
-                    self.assertTrue(concurrency > 1, "Expected more than 1 concurrent range request, got %d" % concurrency)
-                    self.assertTrue(expected_per_range > 0)
+                    assert concurrency > 1, "Expected more than 1 concurrent range request, got %d" % concurrency
+                    assert expected_per_range > 0
                     break
             else:
                 self.fail("Didn't find matching trace event")
 
         query = SimpleStatement("SELECT * FROM ks.cf WHERE b='1';")
         result = session.execute(query, trace=True)
-        self.assertEqual(3, len(list(result)))
+        assert 3 == len(list(result))
         check_trace_events(result.get_query_trace())
 
         query = SimpleStatement("SELECT * FROM ks.cf WHERE b='1' LIMIT 100;")
         result = session.execute(query, trace=True)
-        self.assertEqual(3, len(list(result)))
+        assert 3 == len(list(result))
         check_trace_events(result.get_query_trace())
 
         query = SimpleStatement("SELECT * FROM ks.cf WHERE b='1' LIMIT 3;")
         result = session.execute(query, trace=True)
-        self.assertEqual(3, len(list(result)))
+        assert 3 == len(list(result))
         check_trace_events(result.get_query_trace())
 
         for limit in (1, 2):
             result = list(session.execute("SELECT * FROM ks.cf WHERE b='1' LIMIT %d;" % (limit,)))
-            self.assertEqual(limit, len(result))
+            assert limit == len(result)
 
     def test_6924_dropping_ks(self):
         """
@@ -169,7 +171,7 @@ class TestSecondaryIndexes(Tester):
 
             rows = session.execute("select count(*) from ks.cf WHERE col1='asdf'")
             count = rows[0][0]
-            self.assertEqual(count, 10)
+            assert count == 10
 
     def test_6924_dropping_cf(self):
         """
@@ -206,7 +208,7 @@ class TestSecondaryIndexes(Tester):
 
             rows = session.execute("select count(*) from ks.cf WHERE col1='asdf'")
             count = rows[0][0]
-            self.assertEqual(count, 10)
+            assert count == 10
 
     def test_8280_validate_indexed_values(self):
         """
@@ -315,7 +317,7 @@ class TestSecondaryIndexes(Tester):
         block_until_index_is_built(node1, session, 'keyspace1', 'standard1', 'ix_c0')
 
         stmt = session.prepare('select * from standard1 where "C0" = ?')
-        self.assertEqual(1, len(list(session.execute(stmt, [lookup_value]))))
+        assert 1, len(list(session.execute(stmt == [lookup_value])))
         before_files = self._index_sstables_files(node1, 'keyspace1', 'standard1', 'ix_c0')
 
         node1.nodetool("rebuild_index keyspace1 standard1 ix_c0")
@@ -323,10 +325,10 @@ class TestSecondaryIndexes(Tester):
 
         after_files = self._index_sstables_files(node1, 'keyspace1', 'standard1', 'ix_c0')
         self.assertNotEqual(before_files, after_files)
-        self.assertEqual(1, len(list(session.execute(stmt, [lookup_value]))))
+        assert 1, len(list(session.execute(stmt == [lookup_value])))
 
         # verify that only the expected row is present in the build indexes table
-        self.assertEqual(1, len(list(session.execute("""SELECT * FROM system."IndexInfo";"""))))
+        assert 1 == len(list(session.execute("""SELECT * FROM system."IndexInfo";""")))
 
     @since('4.0')
     def test_failing_manual_rebuild_index(self):
@@ -354,12 +356,12 @@ class TestSecondaryIndexes(Tester):
         # Simulate a failing index rebuild
         before_files = self._index_sstables_files(node, 'k', 't', 'idx')
         node.byteman_submit(['./byteman/index_build_failure.btm'])
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             node.nodetool("rebuild_index k t idx")
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
 
         # Verify that the index is not rebuilt, not marked as built, and it still can answer queries
-        self.assertEqual(before_files, after_files)
+        assert before_files == after_files
         assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
@@ -380,12 +382,12 @@ class TestSecondaryIndexes(Tester):
         # Simulate another failing index rebuild
         before_files = self._index_sstables_files(node, 'k', 't', 'idx')
         node.byteman_submit(['./byteman/index_build_failure.btm'])
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             node.nodetool("rebuild_index k t idx")
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
 
         # Verify that the index is not rebuilt, not marked as built, and it still can answer queries
-        self.assertEqual(before_files, after_files)
+        assert before_files == after_files
         assert_none(session, """SELECT * FROM system."IndexInfo" WHERE table_name='k'""")
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
@@ -468,7 +470,7 @@ class TestSecondaryIndexes(Tester):
         node.stop()
         node.start(wait_for_binary_proto=True)
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
-        self.assertEqual(before_files, after_files)
+        assert before_files == after_files
 
         debug("Verify the index is still marked as built and it can be queried")
         session = self.patient_cql_connection(node)
@@ -495,7 +497,7 @@ class TestSecondaryIndexes(Tester):
         session.execute("INSERT INTO tbl (id, c0, c1, c2) values (uuid(), 'a', 'e', 'f');")
 
         rows = list(session.execute("SELECT * FROM tbl WHERE c0 = 'a';"))
-        self.assertEqual(4, len(rows))
+        assert 4 == len(rows)
 
         stmt = "SELECT * FROM tbl WHERE c0 = 'a' AND c1 = 'b';"
         assert_invalid(session, stmt, "Cannot execute this query as it might involve data filtering and thus may have "
@@ -503,7 +505,7 @@ class TestSecondaryIndexes(Tester):
                                       "performance unpredictability, use ALLOW FILTERING")
 
         rows = list(session.execute("SELECT * FROM tbl WHERE c0 = 'a' AND c1 = 'b' ALLOW FILTERING;"))
-        self.assertEqual(2, len(rows))
+        assert 2 == len(rows)
 
     @since('3.0')
     def test_only_coordinator_chooses_index_for_query(self):
@@ -567,7 +569,7 @@ class TestSecondaryIndexes(Tester):
 
         query = SimpleStatement("SELECT * FROM ks.cf WHERE b='1';")
         result = session.execute(query, trace=True)
-        self.assertEqual(3, len(list(result)))
+        assert 3 == len(list(result))
 
         trace = result.get_query_trace()
 
@@ -613,9 +615,9 @@ class TestSecondaryIndexes(Tester):
                                      insert_args)
 
         res = session.execute("SELECT * FROM ks.compact_table WHERE b = 0")
-        self.assertEqual(len(rows_to_list(res)), 50)
+        assert len(rows_to_list(res)) == 50
         res = session.execute("SELECT * FROM ks.regular_table WHERE b = 0")
-        self.assertEqual(len(rows_to_list(res)), 50)
+        assert len(rows_to_list(res)) == 50
 
 
 class TestSecondaryIndexesOnCollections(Tester):
@@ -648,7 +650,7 @@ class TestSecondaryIndexesOnCollections(Tester):
         results = execute_concurrent(session, cmds * 5, raise_on_first_error=True, concurrency=200)
 
         for (success, result) in results:
-            self.assertTrue(success, "didn't get success on insert: {0}".format(result))
+            assert success, "didn't get success on insert: {0}".format(result)
 
         session.execute("CREATE INDEX idx_single_tuple ON simple_with_tuple(single_tuple);")
         session.execute("CREATE INDEX idx_double_tuple ON simple_with_tuple(double_tuple);")
@@ -658,25 +660,25 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         # check if indexes work on existing data
         for n in range(50):
-            self.assertEqual(5, len(list(session.execute("select * from simple_with_tuple where single_tuple = ({0});".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where single_tuple = (-1);".format(n)))))
-            self.assertEqual(5, len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},{0});".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},-1);".format(n)))))
-            self.assertEqual(5, len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},{0});".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},-1);".format(n)))))
-            self.assertEqual(5, len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},{0}));".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},-1));".format(n)))))
+            assert 5 == len(list(session.execute("select * from simple_with_tuple where single_tuple = ({0});".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where single_tuple = (-1);".format(n))))
+            assert 5 == len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},{0});".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},-1);".format(n))))
+            assert 5 == len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},{0});".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},-1);".format(n))))
+            assert 5 == len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},{0}));".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},-1));".format(n))))
 
         # check if indexes work on new data inserted after index creation
         results = execute_concurrent(session, cmds * 3, raise_on_first_error=True, concurrency=200)
         for (success, result) in results:
-            self.assertTrue(success, "didn't get success on insert: {0}".format(result))
+            assert success, "didn't get success on insert: {0}".format(result)
         time.sleep(5)
         for n in range(50):
-            self.assertEqual(8, len(list(session.execute("select * from simple_with_tuple where single_tuple = ({0});".format(n)))))
-            self.assertEqual(8, len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},{0});".format(n)))))
-            self.assertEqual(8, len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},{0});".format(n)))))
-            self.assertEqual(8, len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},{0}));".format(n)))))
+            assert 8 == len(list(session.execute("select * from simple_with_tuple where single_tuple = ({0});".format(n))))
+            assert 8 == len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},{0});".format(n))))
+            assert 8 == len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},{0});".format(n))))
+            assert 8 == len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},{0}));".format(n))))
 
         # check if indexes work on mutated data
         for n in range(5):
@@ -697,15 +699,15 @@ class TestSecondaryIndexesOnCollections(Tester):
                 session.execute("update simple_with_tuple set nested_one = (-999,(-999,-999)) where id = {0}".format(row.id))
 
         for n in range(5):
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where single_tuple = ({0});".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},{0});".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},{0});".format(n)))))
-            self.assertEqual(0, len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},{0}));".format(n)))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where single_tuple = ({0});".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where double_tuple = ({0},{0});".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where triple_tuple = ({0},{0},{0});".format(n))))
+            assert 0 == len(list(session.execute("select * from simple_with_tuple where nested_one = ({0},({0},{0}));".format(n))))
 
-        self.assertEqual(40, len(list(session.execute("select * from simple_with_tuple where single_tuple = (-999);"))))
-        self.assertEqual(40, len(list(session.execute("select * from simple_with_tuple where double_tuple = (-999,-999);"))))
-        self.assertEqual(40, len(list(session.execute("select * from simple_with_tuple where triple_tuple = (-999,-999,-999);"))))
-        self.assertEqual(40, len(list(session.execute("select * from simple_with_tuple where nested_one = (-999,(-999,-999));"))))
+        assert 40 == len(list(session.execute("select * from simple_with_tuple where single_tuple = (-999);")))
+        assert 40 == len(list(session.execute("select * from simple_with_tuple where double_tuple = (-999,-999);")))
+        assert 40 == len(list(session.execute("select * from simple_with_tuple where triple_tuple = (-999,-999,-999);")))
+        assert 40 == len(list(session.execute("select * from simple_with_tuple where nested_one = (-999,(-999,-999));")))
 
     def test_list_indexes(self):
         """
@@ -730,7 +732,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from list_index_search.users where uuids contains {some_uuid}").format(some_uuid=uuid.uuid4())
         row = list(session.execute(stmt))
-        self.assertEqual(0, len(row))
+        assert 0 == len(row)
 
         # add a row which doesn't specify data for the indexed column, and query again
         user1_uuid = uuid.uuid4()
@@ -741,7 +743,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from list_index_search.users where uuids contains {some_uuid}").format(some_uuid=uuid.uuid4())
         row = list(session.execute(stmt))
-        self.assertEqual(0, len(row))
+        assert 0 == len(row)
 
         _id = uuid.uuid4()
         # alter the row to add a single item to the indexed list
@@ -751,7 +753,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from list_index_search.users where uuids contains {some_uuid}").format(some_uuid=_id)
         row = list(session.execute(stmt))
-        self.assertEqual(1, len(row))
+        assert 1 == len(row)
 
         # add a bunch of user records and query them back
         shared_uuid = uuid.uuid4()  # this uuid will be on all records
@@ -778,7 +780,7 @@ class TestSecondaryIndexesOnCollections(Tester):
         stmt = ("SELECT * from list_index_search.users where uuids contains {shared_uuid}").format(shared_uuid=shared_uuid)
         rows = list(session.execute(stmt))
         result = [row for row in rows]
-        self.assertEqual(50000, len(result))
+        assert 50000 == len(result)
 
         # shuffle the log in-place, and double-check a slice of records by querying the secondary index
         random.shuffle(log)
@@ -788,14 +790,14 @@ class TestSecondaryIndexesOnCollections(Tester):
                     ).format(unshared_uuid=log_entry['unshared_uuid'])
             rows = list(session.execute(stmt))
 
-            self.assertEqual(1, len(rows))
+            assert 1 == len(rows)
 
             db_user_id, db_email, db_uuids = rows[0]
 
-            self.assertEqual(db_user_id, log_entry['user_id'])
-            self.assertEqual(db_email, log_entry['email'])
-            self.assertEqual(str(db_uuids[0]), str(shared_uuid))
-            self.assertEqual(str(db_uuids[1]), str(log_entry['unshared_uuid']))
+            assert db_user_id == log_entry['user_id']
+            assert db_email == log_entry['email']
+            assert str(db_uuids[0]) == str(shared_uuid)
+            assert str(db_uuids[1]) == str(log_entry['unshared_uuid'])
 
     def test_set_indexes(self):
         """
@@ -819,7 +821,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from set_index_search.users where uuids contains {some_uuid}").format(some_uuid=uuid.uuid4())
         row = list(session.execute(stmt))
-        self.assertEqual(0, len(row))
+        assert 0 == len(row)
 
         # add a row which doesn't specify data for the indexed column, and query again
         user1_uuid = uuid.uuid4()
@@ -829,7 +831,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from set_index_search.users where uuids contains {some_uuid}").format(some_uuid=uuid.uuid4())
         row = list(session.execute(stmt))
-        self.assertEqual(0, len(row))
+        assert 0 == len(row)
 
         _id = uuid.uuid4()
         # alter the row to add a single item to the indexed set
@@ -838,7 +840,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from set_index_search.users where uuids contains {some_uuid}").format(some_uuid=_id)
         row = list(session.execute(stmt))
-        self.assertEqual(1, len(row))
+        assert 1 == len(row)
 
         # add a bunch of user records and query them back
         shared_uuid = uuid.uuid4()  # this uuid will be on all records
@@ -865,7 +867,7 @@ class TestSecondaryIndexesOnCollections(Tester):
         stmt = ("SELECT * from set_index_search.users where uuids contains {shared_uuid}").format(shared_uuid=shared_uuid)
         rows = session.execute(stmt)
         result = [row for row in rows]
-        self.assertEqual(50000, len(result))
+        assert 50000 == len(result)
 
         # shuffle the log in-place, and double-check a slice of records by querying the secondary index
         random.shuffle(log)
@@ -875,14 +877,14 @@ class TestSecondaryIndexesOnCollections(Tester):
                     ).format(unshared_uuid=log_entry['unshared_uuid'])
             rows = list(session.execute(stmt))
 
-            self.assertEqual(1, len(rows))
+            assert 1 == len(rows)
 
             db_user_id, db_email, db_uuids = rows[0]
 
-            self.assertEqual(db_user_id, log_entry['user_id'])
-            self.assertEqual(db_email, log_entry['email'])
-            self.assertTrue(shared_uuid in db_uuids)
-            self.assertTrue(log_entry['unshared_uuid'] in db_uuids)
+            assert db_user_id == log_entry['user_id']
+            assert db_email == log_entry['email']
+            assert shared_uuid in db_uuids
+            assert log_entry['unshared_uuid'] in db_uuids
 
     @since('3.0')
     def test_multiple_indexes_on_single_map_column(self):
@@ -915,27 +917,27 @@ class TestSecondaryIndexesOnCollections(Tester):
         session.execute("INSERT INTO map_tbl (id, amap) values (uuid(), {'faz': 1, 'baz': 2});")
 
         value_search = list(session.execute("SELECT * FROM map_tbl WHERE amap CONTAINS 1"))
-        self.assertEqual(2, len(value_search), "incorrect number of rows when querying on map values")
+        assert 2, len(value_search) == "incorrect number of rows when querying on map values"
 
         key_search = list(session.execute("SELECT * FROM map_tbl WHERE amap CONTAINS KEY 'foo'"))
-        self.assertEqual(1, len(key_search), "incorrect number of rows when querying on map keys")
+        assert 1, len(key_search) == "incorrect number of rows when querying on map keys"
 
         entries_search = list(session.execute("SELECT * FROM map_tbl WHERE amap['foo'] = 1"))
-        self.assertEqual(1, len(entries_search), "incorrect number of rows when querying on map entries")
+        assert 1, len(entries_search) == "incorrect number of rows when querying on map entries"
 
         session.cluster.refresh_schema_metadata()
         table_meta = session.cluster.metadata.keyspaces["map_double_index"].tables["map_tbl"]
-        self.assertEqual(3, len(table_meta.indexes))
-        self.assertItemsEqual(['map_keys', 'map_values', 'map_entries'], table_meta.indexes)
-        self.assertEqual(3, len(session.cluster.metadata.keyspaces["map_double_index"].indexes))
+        assert 3 == len(table_meta.indexes)
+        assert ['map_keys', 'map_values', 'map_entries'] == table_meta.indexes
+        assert 3 == len(session.cluster.metadata.keyspaces["map_double_index"].indexes)
 
-        self.assertTrue('map_keys' in table_meta.export_as_string())
-        self.assertTrue('map_values' in table_meta.export_as_string())
-        self.assertTrue('map_entries' in table_meta.export_as_string())
+        assert 'map_keys' in table_meta.export_as_string()
+        assert 'map_values' in table_meta.export_as_string()
+        assert 'map_entries' in table_meta.export_as_string()
 
         session.execute("DROP TABLE map_tbl")
         session.cluster.refresh_schema_metadata()
-        self.assertEqual(0, len(session.cluster.metadata.keyspaces["map_double_index"].indexes))
+        assert 0 == len(session.cluster.metadata.keyspaces["map_double_index"].indexes)
 
     @pytest.mark.no_offheap_memtables
     def test_map_indexes(self):
@@ -960,7 +962,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = "SELECT * from map_index_search.users where uuids contains key {some_uuid}".format(some_uuid=uuid.uuid4())
         rows = list(session.execute(stmt))
-        self.assertEqual(0, len(rows))
+        assert 0 == len(rows)
 
         # add a row which doesn't specify data for the indexed column, and query again
         user1_uuid = uuid.uuid4()
@@ -971,7 +973,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from map_index_search.users where uuids contains key {some_uuid}").format(some_uuid=uuid.uuid4())
         rows = list(session.execute(stmt))
-        self.assertEqual(0, len(rows))
+        assert 0 == len(rows)
 
         _id = uuid.uuid4()
 
@@ -982,7 +984,7 @@ class TestSecondaryIndexesOnCollections(Tester):
 
         stmt = ("SELECT * from map_index_search.users where uuids contains key {some_uuid}").format(some_uuid=_id)
         rows = list(session.execute(stmt))
-        self.assertEqual(1, len(rows))
+        assert 1 == len(rows)
 
         # add a bunch of user records and query them back
         shared_uuid = uuid.uuid4()  # this uuid will be on all records
@@ -1011,7 +1013,7 @@ class TestSecondaryIndexesOnCollections(Tester):
                 ).format(shared_uuid=shared_uuid)
         rows = session.execute(stmt)
         result = [row for row in rows]
-        self.assertEqual(50000, len(result))
+        assert 50000 == len(result)
 
         # shuffle the log in-place, and double-check a slice of records by querying the secondary index on keys
         random.shuffle(log)
@@ -1022,15 +1024,15 @@ class TestSecondaryIndexesOnCollections(Tester):
             row = session.execute(stmt)
 
             result = list(row)
-            rows = self.assertEqual(1, len(result))
+            assert 1 == len(result)
 
             db_user_id, db_email, db_uuids = result[0]
 
-            self.assertEqual(db_user_id, log_entry['user_id'])
-            self.assertEqual(db_email, log_entry['email'])
+            assert db_user_id == log_entry['user_id']
+            assert db_email == log_entry['email']
 
-            self.assertTrue(shared_uuid in db_uuids)
-            self.assertTrue(log_entry['unshared_uuid1'] in db_uuids)
+            assert shared_uuid in db_uuids
+            assert log_entry['unshared_uuid1'] in db_uuids
 
         # attempt to add an index on map values as well (should fail pre 3.0)
         stmt = "CREATE INDEX user_uuids_values on map_index_search.users (uuids);"
@@ -1065,14 +1067,14 @@ class TestSecondaryIndexesOnCollections(Tester):
                     ).format(unshared_uuid2=log_entry['unshared_uuid2'])
 
             rows = list(session.execute(stmt))
-            self.assertEqual(1, len(rows), rows)
+            assert 1, len(rows) == rows
 
             db_user_id, db_email, db_uuids = rows[0]
-            self.assertEqual(db_user_id, log_entry['user_id'])
-            self.assertEqual(db_email, log_entry['email'])
+            assert db_user_id == log_entry['user_id']
+            assert db_email == log_entry['email']
 
-            self.assertTrue(shared_uuid in db_uuids)
-            self.assertTrue(log_entry['unshared_uuid2'] in list(db_uuids.values()))
+            assert shared_uuid in db_uuids
+            assert log_entry['unshared_uuid2'] in list(db_uuids.values())
 
 
 class TestUpgradeSecondaryIndexes(Tester):
@@ -1140,13 +1142,12 @@ class TestUpgradeSecondaryIndexes(Tester):
             # node.nodetool('upgradesstables -a')
 
 
-@pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
 @since('3.10')
 class TestPreJoinCallback(Tester):
 
-    def __init__(self, *args, **kwargs):
-        # Ignore these log patterns:
-        self.ignore_log_patterns = [
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.fixture_dtest_setup.ignore_log_patterns = [
             # ignore all streaming errors during bootstrap
             r'Exception encountered during startup',
             r'Streaming error occurred',
@@ -1154,7 +1155,6 @@ class TestPreJoinCallback(Tester):
             r'\[Stream.*\] Remote peer 127.0.0.\d failed stream session',
             r'Error while waiting on bootstrap to complete. Bootstrap will have to be restarted.'
         ]
-        Tester.__init__(self, *args, **kwargs)
 
     def _base_test(self, joinFn):
         cluster = self.cluster
@@ -1185,7 +1185,7 @@ class TestPreJoinCallback(Tester):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
             node2.start(wait_for_binary_proto=True)
-            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+            assert node2.grep_log('Executing pre-join post-bootstrap tasks')
 
         self._base_test(bootstrap)
 
@@ -1215,7 +1215,7 @@ class TestPreJoinCallback(Tester):
 
             node2.nodetool("bootstrap resume")
             assert_bootstrap_state(self, node2, 'COMPLETED')
-            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+            assert node2.grep_log('Executing pre-join post-bootstrap tasks')
 
         self._base_test(resume)
 
@@ -1224,11 +1224,11 @@ class TestPreJoinCallback(Tester):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
             node2.start(join_ring=False, wait_for_binary_proto=True, wait_other_notice=240)
-            self.assertTrue(node2.grep_log('Not joining ring as requested'))
-            self.assertFalse(node2.grep_log('Executing pre-join'))
+            assert node2.grep_log('Not joining ring as requested')
+            assert not node2.grep_log('Executing pre-join')
 
             node2.nodetool("join")
-            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+            assert node2.grep_log('Executing pre-join post-bootstrap tasks')
 
         self._base_test(manual_join)
 
@@ -1237,11 +1237,11 @@ class TestPreJoinCallback(Tester):
             node2 = new_node(cluster)
             node2.set_configuration_options(values={'initial_token': token})
             node2.start(jvm_args=["-Dcassandra.write_survey=true"], wait_for_binary_proto=True)
-            self.assertTrue(node2.grep_log('Startup complete, but write survey mode is active, not becoming an active ring member.'))
-            self.assertFalse(node2.grep_log('Executing pre-join'))
+            assert node2.grep_log('Startup complete, but write survey mode is active, not becoming an active ring member.')
+            assert not node2.grep_log('Executing pre-join')
 
             node2.nodetool("join")
-            self.assertTrue(node2.grep_log('Leaving write survey mode and joining ring at operator request'))
-            self.assertTrue(node2.grep_log('Executing pre-join post-bootstrap tasks'))
+            assert node2.grep_log('Leaving write survey mode and joining ring at operator request')
+            assert node2.grep_log('Executing pre-join post-bootstrap tasks')
 
         self._base_test(write_survey_and_join)

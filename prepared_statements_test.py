@@ -14,7 +14,6 @@ class TestPreparedStatements(Tester):
         """
         Prepared statements using dropped indexes should be handled correctly
         """
-
         self.cluster.populate(1).start()
         node = list(self.cluster.nodes.values())[0]
 

@@ -1,5 +1,4 @@
 import pytest
-
 import time
 from threading import Thread
 
@@ -8,7 +7,8 @@ from ccmlib.node import ToolError
 
 from dtest import Tester, debug, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class TestRebuild(Tester):
@@ -140,9 +140,10 @@ class TestRebuild(Tester):
 
         Test rebuild operation is resumable
         """
-        self.ignore_log_patterns = list(self.ignore_log_patterns) + [r'Error while rebuilding node',
-                                                                     r'Streaming error occurred on session with peer 127.0.0.3',
-                                                                     r'Remote peer 127.0.0.3 failed stream session']
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+                                                       + [r'Error while rebuilding node',
+                                                          r'Streaming error occurred on session with peer 127.0.0.3',
+                                                          r'Remote peer 127.0.0.3 failed stream session']
         cluster = self.cluster
         cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
 
@@ -203,13 +204,13 @@ class TestRebuild(Tester):
         node3.byteman_submit(script)
 
         # First rebuild must fail and data must be incomplete
-        with self.assertRaises(ToolError, msg='Unexpected: SUCCEED'):
+        with pytest.raises(ToolError, msg='Unexpected: SUCCEED'):
             debug('Executing first rebuild -> '),
             node3.nodetool('rebuild dc1')
         debug('Expected: FAILED')
 
         session.execute('USE ks')
-        with self.assertRaises(AssertionError, msg='Unexpected: COMPLETE'):
+        with pytest.raises(AssertionError, msg='Unexpected: COMPLETE'):
             debug('Checking data is complete -> '),
             for i in range(0, 20000):
                 query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
@@ -322,7 +323,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with self.assertRaisesRegex(ToolError, 'is not a range that is owned by this node'):
+        with pytest.raisesRegex(ToolError, 'is not a range that is owned by this node'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s]' % (node1_token, node2_token))
 
     @since('3.10')
@@ -358,7 +359,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with self.assertRaisesRegex(ToolError, 'Unable to find sufficient sources for streaming range'):
+        with pytest.raisesRegex(ToolError, 'Unable to find sufficient sources for streaming range'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
 
     @since('3.10')
@@ -426,11 +427,11 @@ class TestRebuild(Tester):
 
         # verify that node2 streamed to node3
         log_matches = node2.grep_log('Session with /%s is complete' % node3_address)
-        self.assertTrue(len(log_matches) > 0)
+        assert len(log_matches) > 0
 
         # verify that node1 did not participate
         log_matches = node1.grep_log('streaming plan for Rebuild')
-        self.assertEqual(len(log_matches), 0)
+        assert len(log_matches) == 0
 
         # check data is sent by stopping node1, node2
         node1.stop()

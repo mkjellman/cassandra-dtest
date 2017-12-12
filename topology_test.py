@@ -1,9 +1,8 @@
 import re
 import time
+import pytest
 from threading import Thread
 from unittest import skip
-
-import pytest
 
 from cassandra import ConsistencyLevel
 from ccmlib.node import TimeoutError, ToolError
@@ -11,7 +10,8 @@ from ccmlib.node import TimeoutError, ToolError
 from dtest import Tester, debug, create_ks, create_cf
 from tools.assertions import assert_almost_equal, assert_all, assert_none
 from tools.data import insert_c1c2, query_c1c2
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class TestTopology(Tester):
@@ -180,7 +180,7 @@ class TestTopology(Tester):
         node2.watch_log_for('DECOMMISSIONING', filename='debug.log')
 
         # Launch a second decommission, should fail
-        with self.assertRaises(ToolError):
+        with pytest.raises(ToolError):
             node2.nodetool('decommission')
 
         # Check data is correctly forwarded to node1 after node2 is decommissioned
@@ -198,7 +198,9 @@ class TestTopology(Tester):
 
         Test decommission operation is resumable
         """
-        self.ignore_log_patterns = [r'Streaming error occurred', r'Error while decommissioning node', r'Remote peer 127.0.0.2 failed stream session']
+        self.fixture_dtest_setup.ignore_log_patterns = [r'Streaming error occurred',
+                                                        r'Error while decommissioning node',
+                                                        r'Remote peer 127.0.0.2 failed stream session']
         cluster = self.cluster
         cluster.set_configuration_options(values={'stream_throughput_outbound_megabits_per_sec': 1})
         cluster.populate(3, install_byteman=True).start(wait_other_notice=True)
@@ -212,7 +214,7 @@ class TestTopology(Tester):
         insert_c1c2(session, n=10000, consistency=ConsistencyLevel.ALL)
 
         # Execute first rebuild, should fail
-        with self.assertRaises(ToolError):
+        with pytest.raises(ToolError):
             if cluster.version() >= '4.0':
                 script = ['./byteman/4.0/decommission_failure_inject.btm']
             else:
@@ -368,11 +370,7 @@ class TestTopology(Tester):
         - asserting that the node is not running.
         """
         rejoin_err = 'This node was decommissioned and will not rejoin the ring'
-        try:
-            self.ignore_log_patterns = list(self.ignore_log_patterns)
-        except AttributeError:
-            self.ignore_log_patterns = []
-        self.ignore_log_patterns.append(rejoin_err)
+        self.fixture_dtest_setup.ignore_log_patterns.append(rejoin_err)
 
         self.cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = self.cluster.nodelist()
@@ -402,7 +400,7 @@ class TestTopology(Tester):
         while start + 30 > time.time() and node3.is_running():
             time.sleep(1)
 
-        self.assertFalse(node3.is_running())
+        assert not node3.is_running()
 
     @since('3.0')
     def test_crash_during_decommission(self):
@@ -413,7 +411,7 @@ class TestTopology(Tester):
         @jira_ticket CASSANDRA-10231
         """
         cluster = self.cluster
-        self.ignore_log_patterns = [r'Streaming error occurred', 'Stream failed']
+        self.fixture_dtest_setup.ignore_log_patterns = [r'Streaming error occurred', 'Stream failed']
         cluster.populate(3).start(wait_other_notice=True)
 
         node1, node2 = cluster.nodelist()[0:2]
@@ -439,7 +437,7 @@ class TestTopology(Tester):
         debug("Sleeping for 30 seconds to allow gossip updates")
         time.sleep(30)
         out = self.show_status(node2)
-        self.assertFalse(null_status_pattern.search(out))
+        assert not null_status_pattern.search(out)
 
     @since('3.12')
     @pytest.mark.resource_intensive
@@ -456,17 +454,17 @@ class TestTopology(Tester):
         session = self.patient_cql_connection(node2)
         session.execute("ALTER KEYSPACE system_distributed WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'2'};")
         create_ks(session, 'ks', {'dc1': 2, 'dc2': 2})
-        with self.assertRaises(ToolError):
+        with pytest.raises(ToolError):
             node4.nodetool('decommission')
 
         session.execute('DROP KEYSPACE ks')
         create_ks(session, 'ks2', 4)
-        with self.assertRaises(ToolError):
+        with pytest.raises(ToolError):
             node4.nodetool('decommission')
 
         node4.nodetool('decommission --force')
         decommissioned = node4.watch_log_for("DECOMMISSIONED", timeout=120)
-        self.assertTrue(decommissioned, "Node failed to decommission when passed --force")
+        assert decommissioned, "Node failed to decommission when passed --force"
 
     def show_status(self, node):
         out, _, _ = node.nodetool('status')

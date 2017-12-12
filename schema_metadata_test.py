@@ -1,8 +1,11 @@
+import pytest
+
 from collections import defaultdict
 from uuid import uuid4
 
 from dtest import Tester, debug, create_ks
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 def establish_durable_writes_keyspace(version, session, table_name_prefix=""):
@@ -514,92 +517,92 @@ class TestSchemaMetadata(Tester):
 
     def test_creating_and_dropping_keyspace(self):
         starting_keyspace_count = len(self.session.cluster.metadata.keyspaces)
-        self.assertEqual(True, self._keyspace_meta().durable_writes)
+        assert True == self._keyspace_meta().durable_writes
         self.session.execute("""
                 CREATE KEYSPACE so_long
                     WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1}
                     AND durable_writes = false
             """)
-        self.assertEqual(False, self._keyspace_meta('so_long').durable_writes)
+        assert False == self._keyspace_meta('so_long').durable_writes
         self.session.execute("DROP KEYSPACE so_long")
-        self.assertEqual(starting_keyspace_count, len(self.session.cluster.metadata.keyspaces))
+        assert starting_keyspace_count == len(self.session.cluster.metadata.keyspaces)
 
     def test_creating_and_dropping_table(self):
         self.session.execute("create table born_to_die (id uuid primary key, name varchar)")
         meta = self._keyspace_meta().tables['born_to_die']
-        self.assertEqual('ks', meta.keyspace_name)
-        self.assertEqual('born_to_die', meta.name)
-        self.assertEqual(1, len(meta.partition_key))
-        self.assertEqual('id', meta.partition_key[0].name)
-        self.assertEqual(2, len(meta.columns))
-        self.assertIsNotNone(meta.columns.get('id'))
-        self.assertEqual('uuid', meta.columns['id'].cql_type)
-        self.assertIsNotNone(meta.columns.get('name'))
-        self.assertEqual('text', meta.columns['name'].cql_type)
-        self.assertEqual(0, len(meta.clustering_key))
-        self.assertEqual(0, len(meta.triggers))
-        self.assertEqual(0, len(meta.indexes))
+        assert 'ks' == meta.keyspace_name
+        assert 'born_to_die' == meta.name
+        assert 1 == len(meta.partition_key)
+        assert 'id' == meta.partition_key[0].name
+        assert 2 == len(meta.columns)
+        assert meta.columns.get('id') is not None
+        assert 'uuid' == meta.columns['id'].cql_type
+        assert meta.columns.get('name') is not None
+        assert 'text' == meta.columns['name'].cql_type
+        assert 0 == len(meta.clustering_key)
+        assert 0 == len(meta.triggers)
+        assert 0 == len(meta.indexes)
         self.session.execute("drop table born_to_die")
-        self.assertIsNone(self._keyspace_meta().tables.get('born_to_die'))
+        assert self._keyspace_meta().tables.get('born_to_die') is not None
 
     def test_creating_and_dropping_table_with_2ary_indexes(self):
-        self.assertEqual(0, len(self._keyspace_meta().indexes))
+        assert 0 == len(self._keyspace_meta().indexes)
         self.session.execute("create table born_to_die (id uuid primary key, name varchar)")
         self.session.execute("create index ix_born_to_die_name on born_to_die(name)")
 
-        self.assertEqual(1, len(self._keyspace_meta().indexes))
+        assert 1 == len(self._keyspace_meta().indexes)
         ix_meta = self._keyspace_meta().indexes['ix_born_to_die_name']
-        self.assertEqual('ix_born_to_die_name', ix_meta.name)
+        assert 'ix_born_to_die_name' == ix_meta.name
 
-        self.assertEqual({'target': 'name'}, ix_meta.index_options)
-        self.assertEqual('COMPOSITES', ix_meta.kind)
+        assert {'target': 'name'} == ix_meta.index_options
+        assert 'COMPOSITES' == ix_meta.kind
 
         self.session.execute("drop table born_to_die")
-        self.assertIsNone(self._keyspace_meta().tables.get('born_to_die'))
-        self.assertIsNone(self._keyspace_meta().indexes.get('ix_born_to_die_name'))
-        self.assertEqual(0, len(self._keyspace_meta().indexes))
+        assert self._keyspace_meta().tables.get('born_to_die') is None
+        assert self._keyspace_meta().indexes.get('ix_born_to_die_name') is None
+        assert 0 == len(self._keyspace_meta().indexes)
 
     @since('2.1')
     def test_creating_and_dropping_user_types(self):
-        self.assertEqual(0, len(self._keyspace_meta().user_types))
+        assert 0 == len(self._keyspace_meta().user_types)
         self.session.execute("CREATE TYPE soon_to_die (foo text, bar int)")
-        self.assertEqual(1, len(self._keyspace_meta().user_types))
+        assert 1 == len(self._keyspace_meta().user_types)
 
         ut_meta = self._keyspace_meta().user_types['soon_to_die']
-        self.assertEqual('ks', ut_meta.keyspace)
-        self.assertEqual('soon_to_die', ut_meta.name)
-        self.assertEqual(['foo', 'bar'], ut_meta.field_names)
-        self.assertEqual(['text', 'int'], ut_meta.field_types)
+        assert 'ks' == ut_meta.keyspace
+        assert 'soon_to_die' == ut_meta.name
+        assert ['foo', 'bar'] == ut_meta.field_names
+        assert ['text', 'int'] == ut_meta.field_types
 
         self.session.execute("DROP TYPE soon_to_die")
-        self.assertEqual(0, len(self._keyspace_meta().user_types))
+        assert 0 == len(self._keyspace_meta().user_types)
 
     @since('2.2')
     def test_creating_and_dropping_udf(self):
-        self.assertEqual(0, len(self._keyspace_meta().functions), "expected to start with no indexes")
+        assert 0, len(self._keyspace_meta().functions) == "expected to start with no indexes"
         self.session.execute("""
                 CREATE OR REPLACE FUNCTION ks.wasteful_function (input double)
                     CALLED ON NULL INPUT
                     RETURNS double
                     LANGUAGE java AS 'return Double.valueOf(Math.log(input.doubleValue()));';
             """)
-        self.assertEqual(1, len(self._keyspace_meta().functions), "udf count should be 1")
+        assert 1, len(self._keyspace_meta().functions) == "udf count should be 1"
         udf_meta = self._keyspace_meta().functions['wasteful_function(double)']
-        self.assertEqual('ks', udf_meta.keyspace)
-        self.assertEqual('wasteful_function', udf_meta.name)
-        self.assertEqual(['double'], udf_meta.argument_types)
-        self.assertEqual(['input'], udf_meta.argument_names)
-        self.assertEqual('double', udf_meta.return_type)
-        self.assertEqual('java', udf_meta.language)
-        self.assertEqual('return Double.valueOf(Math.log(input.doubleValue()));', udf_meta.body)
-        self.assertTrue(udf_meta.called_on_null_input)
+        assert 'ks' == udf_meta.keyspace
+        assert 'wasteful_function' == udf_meta.name
+        assert ['double'] == udf_meta.argument_types
+        assert ['input'] == udf_meta.argument_names
+        assert 'double' == udf_meta.return_type
+        assert 'java' == udf_meta.language
+        assert 'return Double.valueOf(Math.log(input.doubleValue()));' == udf_meta.body
+        assert udf_meta.called_on_null_input
         self.session.execute("DROP FUNCTION ks.wasteful_function")
-        self.assertEqual(0, len(self._keyspace_meta().functions), "expected udf list to be back to zero")
+        assert 0, len(self._keyspace_meta().functions) == "expected udf list to be back to zero"
 
     @since('2.2')
     def test_creating_and_dropping_uda(self):
-        self.assertEqual(0, len(self._keyspace_meta().functions), "expected to start with no indexes")
-        self.assertEqual(0, len(self._keyspace_meta().aggregates), "expected to start with no aggregates")
+        assert 0, len(self._keyspace_meta().functions) == "expected to start with no indexes"
+        assert 0, len(self._keyspace_meta().aggregates) == "expected to start with no aggregates"
         self.session.execute('''
                 CREATE FUNCTION ks.max_val(current int, candidate int)
                 CALLED ON NULL INPUT
@@ -612,33 +615,33 @@ class TestSchemaMetadata(Tester):
                 STYPE int
                 INITCOND -1
             ''')
-        self.assertEqual(1, len(self._keyspace_meta().functions), "udf count should be 1")
-        self.assertEqual(1, len(self._keyspace_meta().aggregates), "uda count should be 1")
+        assert 1, len(self._keyspace_meta().functions) == "udf count should be 1"
+        assert 1, len(self._keyspace_meta().aggregates) == "uda count should be 1"
         udf_meta = self._keyspace_meta().functions['max_val(int,int)']
         uda_meta = self._keyspace_meta().aggregates['kind_of_max_agg(int)']
 
-        self.assertEqual('ks', udf_meta.keyspace)
-        self.assertEqual('max_val', udf_meta.name)
-        self.assertEqual(['int', 'int'], udf_meta.argument_types)
-        self.assertEqual(['current', 'candidate'], udf_meta.argument_names)
-        self.assertEqual('int', udf_meta.return_type)
-        self.assertEqual('java', udf_meta.language)
-        self.assertEqual('if (current == null) return candidate; else return Math.max(current, candidate);', udf_meta.body)
-        self.assertTrue(udf_meta.called_on_null_input)
+        assert 'ks' == udf_meta.keyspace
+        assert 'max_val' == udf_meta.name
+        assert ['int', 'int'] == udf_meta.argument_types
+        assert ['current', 'candidate'] == udf_meta.argument_names
+        assert 'int' == udf_meta.return_type
+        assert 'java' == udf_meta.language
+        assert 'if (current == null) return candidate; else return Math.max(current, candidate);' == udf_meta.body
+        assert udf_meta.called_on_null_input
 
-        self.assertEqual('ks', uda_meta.keyspace)
-        self.assertEqual('kind_of_max_agg', uda_meta.name)
-        self.assertEqual(['int'], uda_meta.argument_types)
-        self.assertEqual('max_val', uda_meta.state_func)
-        self.assertEqual('int', uda_meta.state_type)
-        self.assertEqual(None, uda_meta.final_func)
-        self.assertEqual('-1', uda_meta.initial_condition)
-        self.assertEqual('int', uda_meta.return_type)
+        assert 'ks' == uda_meta.keyspace
+        assert 'kind_of_max_agg' == uda_meta.name
+        assert ['int'] == uda_meta.argument_types
+        assert 'max_val' == uda_meta.state_func
+        assert 'int' == uda_meta.state_type
+        assert None == uda_meta.final_func
+        assert '-1' == uda_meta.initial_condition
+        assert 'int' == uda_meta.return_type
 
         self.session.execute("DROP AGGREGATE ks.kind_of_max_agg")
-        self.assertEqual(0, len(self._keyspace_meta().aggregates), "expected uda list to be back to zero")
+        assert 0, len(self._keyspace_meta().aggregates) == "expected uda list to be back to zero"
         self.session.execute("DROP FUNCTION ks.max_val")
-        self.assertEqual(0, len(self._keyspace_meta().functions), "expected udf list to be back to zero")
+        assert 0, len(self._keyspace_meta().functions) == "expected udf list to be back to zero"
 
     def test_basic_table_datatype(self):
         establish_basic_datatype_table(self.cluster.version(), self.session)

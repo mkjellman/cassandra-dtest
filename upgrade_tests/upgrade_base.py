@@ -1,8 +1,8 @@
 import os
 import sys
 import time
+import pytest
 from abc import ABCMeta
-from unittest import skipIf
 
 from ccmlib.common import get_version_from_build, is_win
 from tools.jmxutils import remove_perf_disable_shared_mem
@@ -29,7 +29,8 @@ def switch_jdks(major_version_int):
         os.environ['JAVA_HOME'] = os.environ[new_java_home]
 
 
-@skipIf(sys.platform == 'win32', 'Skip upgrade tests on Windows')
+@pytest.mark.upgrade_test
+@pytest.mark.skipif(sys.platform == 'win32', reason='Skip upgrade tests on Windows')
 class UpgradeTester(Tester, metaclass=ABCMeta):
     """
     When run in 'normal' upgrade mode without specifying any version to run,
@@ -50,17 +51,11 @@ class UpgradeTester(Tester, metaclass=ABCMeta):
         # don't alter ignore_log_patterns on the class, just the obj for this test
         ignore_log_patterns = [_known_teardown_race_error]
 
-    def __init__(self, *args, **kwargs):
-        try:
-            self.ignore_log_patterns
-        except AttributeError:
-            self.ignore_log_patterns = []
-
-        self.ignore_log_patterns = self.ignore_log_patterns[:] + [
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = fixture_dtest_setup.ignore_log_patterns + [
             r'RejectedExecutionException.*ThreadPoolExecutor has shut down',  # see  CASSANDRA-12364
         ]
-        self.enable_for_jolokia = False
-        super(UpgradeTester, self).__init__(*args, **kwargs)
 
     def setUp(self):
         self.validate_class_config()
@@ -78,7 +73,7 @@ class UpgradeTester(Tester, metaclass=ABCMeta):
         cl = self.CL if cl is None else cl
         self.CL = cl  # store for later use in do_upgrade
 
-        self.assertGreaterEqual(nodes, 2, "backwards compatibility tests require at least two nodes")
+        assert nodes, 2 >= "backwards compatibility tests require at least two nodes"
 
         self.protocol_version = protocol_version
 
@@ -102,8 +97,8 @@ class UpgradeTester(Tester, metaclass=ABCMeta):
         cluster.populate(nodes)
         node1 = cluster.nodelist()[0]
         cluster.set_install_dir(version=self.UPGRADE_PATH.starting_version)
-        self.enable_for_jolokia = kwargs.pop('jolokia', False)
-        if self.enable_for_jolokia:
+        self.fixture_dtest_setup.enable_for_jolokia = kwargs.pop('jolokia', False)
+        if self.fixture_dtest_setup.enable_for_jolokia:
             remove_perf_disable_shared_mem(node1)
 
         cluster.start(wait_for_binary_proto=True)
@@ -168,7 +163,7 @@ class UpgradeTester(Tester, metaclass=ABCMeta):
         if use_thrift:
             node1.set_configuration_options(values={'start_rpc': 'true'})
 
-        if self.enable_for_jolokia:
+        if self.fixture_dtest_setup.enable_for_jolokia:
             remove_perf_disable_shared_mem(node1)
 
         node1.start(wait_for_binary_proto=True, wait_other_notice=True)
@@ -244,4 +239,4 @@ class UpgradeTester(Tester, metaclass=ABCMeta):
              if subclasses else
              '')
         )
-        self.assertIsNotNone(self.UPGRADE_PATH, no_upgrade_path_error)
+        assert self.UPGRADE_PATH is not None, no_upgrade_path_error

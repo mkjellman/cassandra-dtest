@@ -165,7 +165,7 @@ class PageAssertionMixin(object):
     """Can be added to subclasses of unittest.Tester"""
 
     def assertEqualIgnoreOrder(self, actual, expected):
-        return self.assertItemsEqual(actual, expected)
+       assert actual == expected
 
     def assertIsSubsetOf(self, subset, superset):
-        self.assertLessEqual(flatten_into_set(subset), flatten_into_set(superset))
+        assert flatten_into_set(subset) <= flatten_into_set(superset)

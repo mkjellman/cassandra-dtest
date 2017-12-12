@@ -1,15 +1,17 @@
 import os
 import time
+import pytest
+import parse
 
 import ccmlib.common
-import parse
 from ccmlib.node import ToolError
 
 from dtest import Tester, debug
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, enable_jmx_ssl, make_mbean,
                             remove_perf_disable_shared_mem)
 from tools.misc import generate_ssl_stores
+
+since = pytest.mark.since
 
 
 class TestJMX(Tester):
@@ -18,7 +20,6 @@ class TestJMX(Tester):
         Check functioning of nodetool netstats, especially with restarts.
         @jira_ticket CASSANDRA-8122, CASSANDRA-6577
         """
-
         cluster = self.cluster
         cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
@@ -27,7 +28,7 @@ class TestJMX(Tester):
         node1.flush()
         node1.stop(gently=False)
 
-        with self.assertRaisesRegex(ToolError, "ConnectException: 'Connection refused( \(Connection refused\))?'."):
+        with pytest.raisesRegex(ToolError, "ConnectException: 'Connection refused( \(Connection refused\))?'."):
             node1.nodetool('netstats')
 
         # don't wait; we're testing for when nodetool is called on a node mid-startup
@@ -42,14 +43,14 @@ class TestJMX(Tester):
             try:
                 node1.nodetool('netstats')
             except Exception as e:
-                self.assertNotIn('java.lang.reflect.UndeclaredThrowableException', str(e),
+                assert 'java.lang.reflect.UndeclaredThrowableException' not in str(e,
                                  'Netstats failed with UndeclaredThrowableException (CASSANDRA-8122)')
                 if not isinstance(e, ToolError):
                     raise
                 else:
                     self.assertRegex(str(e), "ConnectException: 'Connection refused( \(Connection refused\))?'.")
 
-        self.assertTrue(running, msg='node1 never started')
+        assert running, 'node1 never started'
 
     def test_table_metric_mbeans(self):
         """
@@ -77,18 +78,18 @@ class TestJMX(Tester):
 
         with JolokiaAgent(node1) as jmx:
             mem_size = jmx.read_attribute(memtable_size, "Value")
-            self.assertGreater(int(mem_size), 10000)
+            assert int(mem_size) > 10000
 
             on_disk_size = jmx.read_attribute(disk_size, "Count")
-            self.assertEqual(int(on_disk_size), 0)
+            assert int(on_disk_size) == 0
 
             node1.flush()
 
             on_disk_size = jmx.read_attribute(disk_size, "Count")
-            self.assertGreater(int(on_disk_size), 10000)
+            assert int(on_disk_size) > 10000
 
             sstables = jmx.read_attribute(sstable_count, "Value")
-            self.assertGreaterEqual(int(sstables), 1)
+            assert int(sstables) >= 1
 
     @since('3.0')
     def test_mv_metric_mbeans_release(self):
@@ -132,32 +133,32 @@ class TestJMX(Tester):
                                  "but wasn't!"
 
         with JolokiaAgent(node) as jmx:
-            self.assertIsNotNone(jmx.read_attribute(table_memtable_size, "Value"),
+            assert jmx.read_attribute(table_memtable_size is not None, "Value",
                                  missing_metric_message.format("AllMemtablesHeapSize", "testtable"))
-            self.assertIsNotNone(jmx.read_attribute(table_view_read_time, "Count"),
+            assert jmx.read_attribute(table_view_read_time is not None, "Count",
                                  missing_metric_message.format("ViewReadTime", "testtable"))
-            self.assertIsNotNone(jmx.read_attribute(table_view_lock_time, "Count"),
+            assert jmx.read_attribute(table_view_lock_time is not None, "Count",
                                  missing_metric_message.format("ViewLockAcquireTime", "testtable"))
-            self.assertIsNotNone(jmx.read_attribute(mv_memtable_size, "Value"),
+            assert jmx.read_attribute(mv_memtable_size is not None, "Value",
                                  missing_metric_message.format("AllMemtablesHeapSize", "testmv"))
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
 
         node.run_cqlsh(cmds="DROP KEYSPACE mvtest;")
         with JolokiaAgent(node) as jmx:
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_memtable_size, attribute="Value", verbose=False)
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_lock_time, attribute="Count", verbose=False)
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=table_view_read_time, attribute="Count", verbose=False)
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_memtable_size, attribute="Value", verbose=False)
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_lock_time, attribute="Count", verbose=False)
-            self.assertRaisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
+            pytest.raisesRegex(Exception, ".*InstanceNotFoundException.*", jmx.read_attribute,
                                     mbean=mv_view_read_time, attribute="Count", verbose=False)
 
     def test_compactionstats(self):
@@ -208,9 +209,9 @@ class TestJMX(Tester):
 
             # We want to make sure that the progress is increasing,
             # and that values other than zero are displayed.
-            self.assertGreater(updated_progress, progress)
-            self.assertGreaterEqual(progress, 0)
-            self.assertGreater(updated_progress, 0)
+            assert updated_progress > progress
+            assert progress >= 0
+            assert updated_progress > 0
 
             # Block until the major compaction is complete
             # Otherwise nodetool will throw an exception
@@ -230,7 +231,6 @@ class TestJMX(Tester):
         Check functioning of nodetool failuredetector.
         @jira_ticket CASSANDRA-9526
         """
-
         cluster = self.cluster
         cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
@@ -243,17 +243,17 @@ class TestJMX(Tester):
         endpoint1 = endpoint1values[0][1:-1]
         endpoint2 = endpoint2values[0][1:-1]
 
-        self.assertItemsEqual([endpoint1, endpoint2], ['127.0.0.2', '127.0.0.3'])
+        assert [endpoint1, endpoint2] == ['127.0.0.2', '127.0.0.3']
 
         endpoint1phi = float(endpoint1values[1])
         endpoint2phi = float(endpoint2values[1])
 
         max_phi = 2.0
-        self.assertGreater(endpoint1phi, 0.0)
-        self.assertLess(endpoint1phi, max_phi)
+        assert endpoint1phi > 0.0
+        assert endpoint1phi < max_phi
 
-        self.assertGreater(endpoint2phi, 0.0)
-        self.assertLess(endpoint2phi, max_phi)
+        assert endpoint2phi > 0.0
+        assert endpoint2phi < max_phi
 
     @since('4.0')
     def test_set_get_batchlog_replay_throttle(self):
@@ -274,7 +274,7 @@ class TestJMX(Tester):
             jmx.write_attribute(mbean, 'BatchlogReplayThrottleInKB', 4096)
             self.assertTrue(len(node.grep_log('Updating batchlog replay throttle to 4096 KB/s, 2048 KB/s per endpoint',
                                               filename='debug.log')) > 0)
-            self.assertEqual(4096, jmx.read_attribute(mbean, 'BatchlogReplayThrottleInKB'))
+            assert 4096, jmx.read_attribute(mbean == 'BatchlogReplayThrottleInKB')
 
 
 @since('3.9')
@@ -283,10 +283,10 @@ class TestJMXSSL(Tester):
     truststore_password = 'cassandra'
 
     def truststore(self):
-        return os.path.join(self.test_path, 'truststore.jks')
+        return os.path.join(self.fixture_dtest_setup.test_path, 'truststore.jks')
 
     def keystore(self):
-        return os.path.join(self.test_path, 'keystore.jks')
+        return os.path.join(self.fixture_dtest_setup.test_path, 'keystore.jks')
 
     def test_jmx_connection(self):
         """
@@ -315,7 +315,7 @@ class TestJMXSSL(Tester):
         self.assert_insecure_connection_rejected(node)
 
         # specifying only the truststore containing the server cert should fail
-        with self.assertRaisesRegex(ToolError, ".*SSLHandshakeException.*"):
+        with pytest.raisesRegex(ToolError, ".*SSLHandshakeException.*"):
             node.nodetool("info --ssl -Djavax.net.ssl.trustStore={ts} -Djavax.net.ssl.trustStorePassword={ts_pwd}"
                           .format(ts=self.truststore(), ts_pwd=self.truststore_password))
 
@@ -329,14 +329,14 @@ class TestJMXSSL(Tester):
         """
         Attempts to connect to JMX (via nodetool) without any client side ssl parameters, expecting failure
         """
-        with self.assertRaises(ToolError):
+        with pytest.raises(ToolError):
             node.nodetool("info")
 
     def _populateCluster(self, require_client_auth=False):
         cluster = self.cluster
         cluster.populate(1)
 
-        generate_ssl_stores(self.test_path)
+        generate_ssl_stores(self.fixture_dtest_setup.test_path)
         if require_client_auth:
             ts = self.truststore()
             ts_pwd = self.truststore_password

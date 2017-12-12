@@ -3,7 +3,9 @@ from cassandra.policies import FallthroughRetryPolicy
 from cassandra.query import SimpleStatement
 
 from dtest import Tester
-from tools.decorators import since
+
+import pytest
+since = pytest.mark.since
 
 KEYSPACE = "readfailures"
 
@@ -59,7 +61,7 @@ class TestReadFailures(Tester):
         if self.expected_expt is None:
             session.execute(statement)
         else:
-            with self.assertRaises(self.expected_expt) as cm:
+            with pytest.raises(self.expected_expt) as cm:
                 # On 2.1, we won't return the ReadTimeout from coordinator until actual timeout,
                 # so we need to up the default timeout of the driver session
                 session.execute(statement, timeout=15)
@@ -71,14 +73,14 @@ class TestReadFailures(Tester):
         where at least one node responded with some expected code.
         This is meant for testing failure exceptions on protocol v5.
         """
-        self.assertIsNotNone(exception)
-        self.assertIsNotNone(exception.error_code_map)
+        assert exception is not None
+        assert exception.error_code_map is not None
         expected_code_found = False
         for error_code in list(exception.error_code_map.values()):
             if error_code == expected_code:
                 expected_code_found = True
                 break
-        self.assertTrue(expected_code_found, "The error code map did not contain " + str(expected_code))
+        assert expected_code_found, "The error code map did not contain " + str(expected_code)
 
     @since('2.1')
     def test_tombstone_failure_v3(self):

@@ -2,13 +2,15 @@ import glob
 import os
 import subprocess
 import time
+import pytest
 
 from ccmlib import common
 from ccmlib.node import ToolError
 
 from dtest import Tester, debug
-from tools.decorators import since
 from tools.intervention import InterruptCompaction
+
+since = pytest.mark.since
 
 # These must match the stress schema names
 KeyspaceName = 'keyspace1'
@@ -38,12 +40,12 @@ class SSTableUtilTest(Tester):
 
         self._create_data(node, KeyspaceName, TableName, 100000)
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
-        self.assertEqual(0, len(tmpfiles))
+        assert 0 == len(tmpfiles)
 
         node.compact()
         time.sleep(5)
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
-        self.assertEqual(0, len(tmpfiles))
+        assert 0 == len(tmpfiles)
 
     def test_abortedcompaction(self):
         """
@@ -61,8 +63,8 @@ class SSTableUtilTest(Tester):
 
         self._create_data(node, KeyspaceName, TableName, numrecords)
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
-        self.assertTrue(len(finalfiles) > 0, "Expected to find some final files")
-        self.assertEqual(0, len(tmpfiles), "Expected no tmp files")
+        assert len(finalfiles) > 0, "Expected to find some final files"
+        assert 0, len(tmpfiles) == "Expected no tmp files"
 
         t = InterruptCompaction(node, TableName, filename=log_file_name, delay=2)
         t.start()
@@ -95,7 +97,7 @@ class SSTableUtilTest(Tester):
         node.wait_for_compactions()
 
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
-        self.assertEqual(0, len(tmpfiles))
+        assert 0 == len(tmpfiles)
 
         debug("Running stress to ensure data is readable")
         self._read_data(node, numrecords)
@@ -133,16 +135,16 @@ class SSTableUtilTest(Tester):
             expected_tmpfiles = _normcase_all(expected_tmpfiles)
 
         debug("Comparing all files...")
-        self.assertEqual(sstablefiles, allfiles)
+        assert sstablefiles == allfiles
 
         debug("Comparing final files...")
-        self.assertEqual(expected_finalfiles, finalfiles)
+        assert expected_finalfiles == finalfiles
 
         debug("Comparing tmp files...")
-        self.assertEqual(expected_tmpfiles, tmpfiles)
+        assert expected_tmpfiles == tmpfiles
 
         debug("Comparing op logs...")
-        self.assertEqual(expected_oplogs, oplogs)
+        assert expected_oplogs == oplogs
 
         return finalfiles, tmpfiles
 
@@ -168,7 +170,7 @@ class SSTableUtilTest(Tester):
 
         (stdout, stderr) = p.communicate()
 
-        self.assertEqual(p.returncode, 0, "Error invoking sstableutil; returned {code}".format(code=p.returncode))
+        assert p.returncode, 0 == "Error invoking sstableutil; returned {code}".format(code=p.returncode)
 
         if stdout:
             debug(stdout)

@@ -1,13 +1,15 @@
 import os
 import os.path
+import pytest
 
 from dtest import Tester, create_ks
 from tools.assertions import assert_almost_equal
 from tools.data import create_c1c2_table, insert_c1c2, query_c1c2
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 from tools.misc import new_node
+
+since = pytest.mark.since
 
 
 @since('3.2')

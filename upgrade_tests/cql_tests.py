@@ -1,10 +1,9 @@
-# coding: utf-8
-
 import itertools
 import math
 import random
 import struct
 import time
+import pytest
 from collections import OrderedDict
 from distutils.version import LooseVersion
 from unittest import skip, skipUnless
@@ -27,11 +26,13 @@ from thrift_tests import get_thrift_client
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_none, assert_one, assert_row_count)
 from tools.data import rows_to_list
-from tools.decorators import since
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs
 
+since = pytest.mark.since
 
+
+@pytest.mark.upgrade_test
 class TestCQL(UpgradeTester):
 
     def test_static_cf(self):
@@ -79,7 +80,6 @@ class TestCQL(UpgradeTester):
     @since('2.0', max_version='3')  # 3.0+ not compatible with protocol version 2
     def test_large_collection_errors(self):
         """ For large collections, make sure that we are printing warnings """
-
         for version in self.get_node_versions():
             if version >= '3.0':
                 pytest.skip('version {} not compatible with protocol version 2'.format(version))
@@ -89,7 +89,7 @@ class TestCQL(UpgradeTester):
 
         cluster = self.cluster
         node1 = cluster.nodelist()[0]
-        self.ignore_log_patterns = ["Detected collection for table"]
+        self.fixture_dtest_setup.ignore_log_patterns = ["Detected collection for table"]
 
         cursor.execute("""
             CREATE TABLE maps (
@@ -876,7 +876,6 @@ class TestCQL(UpgradeTester):
         Test simple deletion and in particular check for #4193 bug
         @jira_ticket CASSANDRA-4193
         """
-
         cursor = self.prepare()
 
         cursor.execute("""
@@ -1040,11 +1039,11 @@ class TestCQL(UpgradeTester):
             assert_length_equal(res, 2)
 
             for r in res:
-                self.assertIsInstance(r[2], (int, int))
+                assert isinstance(r[2], (int, int))
                 if r[0] == 1:
-                    self.assertIsNone(r[3], res)
+                    assert r[3] is None, res
                 else:
-                    self.assertIsInstance(r[3], (int, int))
+                    assert isinstance(r[3], (int, int))
 
             # wrap writetime(), ttl() in other functions (test for CASSANDRA-8451)
             res = list(cursor.execute("SELECT k, c, blobAsBigint(bigintAsBlob(writetime(c))), ttl(c) FROM test"))
@@ -1052,22 +1051,22 @@ class TestCQL(UpgradeTester):
             assert_length_equal(res, 2)
 
             for r in res:
-                self.assertIsInstance(r[2], (int, int))
+                assert isinstance(r[2], (int, int))
                 if r[0] == 1:
-                    self.assertIsNone(r[3], res)
+                    assert r[3] is None, res
                 else:
-                    self.assertIsInstance(r[3], (int, int))
+                    assert isinstance(r[3], (int, int))
 
             res = list(cursor.execute("SELECT k, c, writetime(c), blobAsInt(intAsBlob(ttl(c))) FROM test"))
 
             assert_length_equal(res, 2)
 
             for r in res:
-                self.assertIsInstance(r[2], (int, int))
+                assert isinstance(r[2], (int, int))
                 if r[0] == 1:
-                    self.assertIsNone(r[3], res)
+                    assert r[3] is None, res
                 else:
-                    self.assertIsInstance(r[3], (int, int))
+                    assert isinstance(r[3], (int, int))
 
             assert_invalid(cursor, "SELECT k, c, writetime(k) FROM test")
 
@@ -1147,7 +1146,6 @@ class TestCQL(UpgradeTester):
 
     def test_range_tombstones(self):
         """ Test deletion by 'composite prefix' (range tombstones) """
-
         # Uses 3 nodes just to make sure RowMutation are correctly serialized
         cursor = self.prepare(nodes=3)
 
@@ -1586,13 +1584,13 @@ class TestCQL(UpgradeTester):
                 # sanity check on the query
                 fetch_slice = SlicePredicate(slice_range=SliceRange('', '', False, 100))
                 row = client.get_slice(key, ColumnParent(column_family='cf'), fetch_slice, ThriftConsistencyLevel.ALL)
-                self.assertEqual(6, len(row), row)
+                assert 6, len(row) == row
                 cols = OrderedDict([(cosc.column.name, cosc.column.value) for cosc in row])
                 debug(cols)
-                self.assertEqual(['a', 'b', 'c', 'd', 'e', 'static1'], list(cols.keys()))
-                self.assertEqual('val0', cols['a'])
-                self.assertEqual('val4', cols['e'])
-                self.assertEqual(struct.pack('>i', 1), cols['static1'])
+                assert ['a', 'b', 'c', 'd', 'e', 'static1'] == list(cols.keys())
+                assert 'val0' == cols['a']
+                assert 'val4' == cols['e']
+                assert struct.pack('>i', 1) == cols['static1']
 
                 # delete a slice of dynamic columns
                 slice_range = SliceRange('b', 'd', False, 100)
@@ -1602,13 +1600,13 @@ class TestCQL(UpgradeTester):
 
                 # check remaining columns
                 row = client.get_slice(key, ColumnParent(column_family='cf'), fetch_slice, ThriftConsistencyLevel.ALL)
-                self.assertEqual(3, len(row), row)
+                assert 3, len(row) == row
                 cols = OrderedDict([(cosc.column.name, cosc.column.value) for cosc in row])
                 debug(cols)
-                self.assertEqual(['a', 'e', 'static1'], list(cols.keys()))
-                self.assertEqual('val0', cols['a'])
-                self.assertEqual('val4', cols['e'])
-                self.assertEqual(struct.pack('>i', 1), cols['static1'])
+                assert ['a', 'e', 'static1'] == list(cols.keys())
+                assert 'val0' == cols['a']
+                assert 'val4' == cols['e']
+                assert struct.pack('>i', 1) == cols['static1']
 
     def test_row_existence(self):
         """
@@ -1730,7 +1728,6 @@ class TestCQL(UpgradeTester):
         Test a regression from #1337
         @jira_ticket CASSANDRA-1337
         """
-
         cursor = self.prepare()
 
         cursor.execute("""
@@ -1817,7 +1814,6 @@ class TestCQL(UpgradeTester):
         Test for LIMIT bugs from #4579
         @jira_ticket CASSANDRA-4579
         """
-
         cursor = self.prepare(ordered=True)
         cursor.execute("""
             CREATE TABLE testcf (
@@ -1876,7 +1872,6 @@ class TestCQL(UpgradeTester):
         Test for NPE when trying to select a slice from a composite table
         @jira_ticket CASSANDRA-4532
         """
-
         cursor = self.prepare()
         cursor.execute("""
             CREATE TABLE compositetest(
@@ -1907,7 +1902,6 @@ class TestCQL(UpgradeTester):
         Test for #4612 bug and more generally order by when multiple C* rows are queried
         @jira_ticket CASSANDRA-4612
         """
-
         cursor = self.prepare(ordered=True)
         cursor.execute("""
             CREATE TABLE test(
@@ -2005,7 +1999,6 @@ class TestCQL(UpgradeTester):
         Test for the validation bug of #4709
         @jira_ticket CASSANDRA-4709
         """
-
         cursor = self.prepare()
         cursor.execute("create table t1 (pk varchar primary key, col1 varchar, col2 varchar);")
         cursor.execute("create index t1_c1 on t1(col1);")
@@ -2028,7 +2021,6 @@ class TestCQL(UpgradeTester):
         Test for #4716 bug and more generally for good behavior of ordering
         @jira_ticket CASSANDRA-4716
         """
-
         cursor = self.prepare()
         cursor.execute("""
             CREATE TABLE test1 (
@@ -2102,7 +2094,6 @@ class TestCQL(UpgradeTester):
         @jira_ticket CASSANDRA-4760
         @jira_ticket CASSANDRA-4759
         """
-
         cursor = self.prepare()
         cursor.execute("""
             CREATE TABLE test (
@@ -2598,7 +2589,7 @@ class TestCQL(UpgradeTester):
             rows = list(cursor.execute(select_statement, [0, in_values]))
 
             assert_length_equal(rows, 1)
-            self.assertEqual((0, 0, 0), rows[0])
+            assert (0, 0, 0) == rows[0]
 
             # insert approximately 1000 random rows between 0 and 10k
             clustering_values = set([random.randint(0, 9999) for _ in range(1000)])
@@ -2722,7 +2713,7 @@ class TestCQL(UpgradeTester):
                 res = cursor.execute("SELECT * FROM t1 WHERE a = {a}".format(a=i))
                 read_count += len(rows_to_list(res))
             debug("Querying for individual keys retrieved {c} results".format(c=read_count))
-            self.assertEqual(read_count, 100)
+            assert read_count == 100
             # now a range slice, again all 100 rows should be retrievable
             res = rows_to_list(cursor.execute("SELECT * FROM t1"))
             read_count = len(res)
@@ -2829,7 +2820,6 @@ class TestCQL(UpgradeTester):
         a secondary index is involved.
         @jira_ticket CASSANDRA-5240
         """
-
         cursor = self.prepare()
 
         cursor.execute("""
@@ -3212,28 +3202,28 @@ class TestCQL(UpgradeTester):
 
             # test aliasing count(*)
             res = cursor.execute('SELECT count(*) AS user_count FROM users')
-            self.assertEqual('user_count', res[0]._fields[0])
-            self.assertEqual(5, res[0].user_count)
+            assert 'user_count' == res[0]._fields[0]
+            assert 5 == res[0].user_count
 
             # test aliasing regular value
             res = cursor.execute('SELECT name AS user_name FROM users WHERE id = 0')
-            self.assertEqual('user_name', res[0]._fields[0])
-            self.assertEqual('name0', res[0].user_name)
+            assert 'user_name' == res[0]._fields[0]
+            assert 'name0' == res[0].user_name
 
             # test aliasing writetime
             res = cursor.execute('SELECT writeTime(name) AS name_writetime FROM users WHERE id = 0')
-            self.assertEqual('name_writetime', res[0]._fields[0])
-            self.assertEqual(0, res[0].name_writetime)
+            assert 'name_writetime' == res[0]._fields[0]
+            assert 0 == res[0].name_writetime
 
             # test aliasing ttl
             res = cursor.execute('SELECT ttl(name) AS name_ttl FROM users WHERE id = 0')
-            self.assertEqual('name_ttl', res[0]._fields[0])
-            self.assertIn(res[0].name_ttl, (9, 10))
+            assert 'name_ttl' == res[0]._fields[0]
+            assert res[0].name_ttl, (9 in 10)
 
             # test aliasing a regular function
             res = cursor.execute('SELECT intAsBlob(id) AS id_blob FROM users WHERE id = 0')
-            self.assertEqual('id_blob', res[0]._fields[0])
-            self.assertEqual('\x00\x00\x00\x00', res[0].id_blob)
+            assert 'id_blob' == res[0]._fields[0]
+            assert '\x00\x00\x00\x00' == res[0].id_blob
 
             debug("Current node version is {}".format(self.get_node_version(is_upgraded)))
 
@@ -3579,7 +3569,6 @@ class TestCQL(UpgradeTester):
     @since('2.1')
     def test_more_user_types(self):
         """ user type test that does a little more nesting"""
-
         cursor = self.prepare()
 
         cursor.execute("""
@@ -3793,9 +3782,9 @@ class TestCQL(UpgradeTester):
             # but assert element-wise because NaN != NaN
             assert_length_equal(selected, 3)
             assert_length_equal(selected[0], 1)
-            self.assertTrue(math.isnan(selected[0][0]))
-            self.assertEqual(selected[1], [float("inf")])
-            self.assertEqual(selected[2], [float("-inf")])
+            assert math.isnan(selected[0][0])
+            assert selected[1] == [float("inf")]
+            assert selected[2] == [float("-inf")]
 
     def test_static_columns(self):
         cursor = self.prepare()
@@ -3821,7 +3810,7 @@ class TestCQL(UpgradeTester):
             # Check that writetime works (#7081) -- we can't predict the exact value easily so
             # we just check that it's non zero
             row = cursor.execute("SELECT s, writetime(s) FROM test WHERE k=0")
-            self.assertTrue(list(row[0])[0] == 42 and list(row[0])[1] > 0)
+            assert list(row[0])[0] == 42 and list(row[0])[1] > 0
 
             cursor.execute("INSERT INTO test(k, p, s, v) VALUES (0, 0, 12, 0)")
             cursor.execute("INSERT INTO test(k, p, s, v) VALUES (0, 1, 24, 1)")
@@ -4089,14 +4078,14 @@ class TestCQL(UpgradeTester):
 
             cursor.default_fetch_size = 7
             rows = list(cursor.execute("SELECT DISTINCT k, s FROM test"))
-            self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
-            self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
+            assert list(range(10)) == sorted([r[0] for r in rows])
+            assert list(range(10)) == sorted([r[1] for r in rows])
 
             keys = ",".join(map(str, list(range(10))))
 
             rows = list(cursor.execute("SELECT DISTINCT k, s FROM test WHERE k IN ({})".format(keys)))
-            self.assertEqual(list(range(10)), [r[0] for r in rows])
-            self.assertEqual(list(range(10)), [r[1] for r in rows])
+            assert list(range(10)) == [r[0] for r in rows]
+            assert list(range(10)) == [r[1] for r in rows]
 
             # additional testing for CASSANRA-8087
             for i in range(10):
@@ -4107,38 +4096,37 @@ class TestCQL(UpgradeTester):
             for fetch_size in (None, 2, 5, 7, 10, 24, 25, 26, 1000):
                 cursor.default_fetch_size = fetch_size
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2"))
-                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
-                self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
+                assert list(range(10)) == sorted([r[0] for r in rows])
+                assert list(range(10)) == sorted([r[1] for r in rows])
 
                 rows = list(cursor.execute("SELECT DISTINCT k, s2 FROM test2"))
-                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
-                self.assertEqual(list(range(1, 11)), sorted([r[1] for r in rows]))
+                assert list(range(10)) == sorted([r[0] for r in rows])
+                assert list(range(1, 11)) == sorted([r[1] for r in rows])
 
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2 LIMIT 10"))
-                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
-                self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
+                assert list(range(10)) == sorted([r[0] for r in rows])
+                assert list(range(10)) == sorted([r[1] for r in rows])
 
                 keys = ",".join(map(str, list(range(10))))
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2 WHERE k IN (%s)" % (keys,)))
-                self.assertEqual(list(range(10)), [r[0] for r in rows])
-                self.assertEqual(list(range(10)), [r[1] for r in rows])
+                assert list(range(10)) == [r[0] for r in rows]
+                assert list(range(10)) == [r[1] for r in rows]
 
                 keys = ",".join(map(str, list(range(10))))
                 rows = list(cursor.execute("SELECT DISTINCT k, s2 FROM test2 WHERE k IN (%s)" % (keys,)))
-                self.assertEqual(list(range(10)), [r[0] for r in rows])
-                self.assertEqual(list(range(1, 11)), [r[1] for r in rows])
+                assert list(range(10)) == [r[0] for r in rows]
+                assert list(range(1, 11)) == [r[1] for r in rows]
 
                 keys = ",".join(map(str, list(range(10))))
                 rows = list(cursor.execute("SELECT DISTINCT k, s1 FROM test2 WHERE k IN (%s) LIMIT 10" % (keys,)))
-                self.assertEqual(list(range(10)), sorted([r[0] for r in rows]))
-                self.assertEqual(list(range(10)), sorted([r[1] for r in rows]))
+                assert list(range(10)) == sorted([r[0] for r in rows])
+                assert list(range(10)) == sorted([r[1] for r in rows])
 
     def test_select_count_paging(self):
         """
         Test for the #6579 'select count' paging bug
         @jira_ticket CASSANDRA-6579
         """
-
         cursor = self.prepare()
         cursor.execute("create table test(field1 text, field2 timeuuid, field3 boolean, primary key(field1, field2));")
         cursor.execute("create index test_index on test(field3);")
@@ -4209,7 +4197,6 @@ class TestCQL(UpgradeTester):
         """
         @jira_ticket CASSANDRA-8062
         """
-
         cursor = self.prepare(protocol_version=2)
         cursor.execute("CREATE TABLE test (k int, c1 int, c2 text, PRIMARY KEY (k, c1, c2))")
 
@@ -4224,10 +4211,10 @@ class TestCQL(UpgradeTester):
 
             p = cursor.prepare("SELECT * FROM test WHERE k=? AND (c1, c2) IN ?")
             rows = list(cursor.execute(p, (0, [(0, 'b'), (0, 'c')])))
-            self.assertEqual(2, len(rows))
+            assert 2 == len(rows)
             assert_length_equal(rows, 2)
-            self.assertEqual((0, 0, 'b'), rows[0])
-            self.assertEqual((0, 0, 'c'), rows[1])
+            assert (0, 0, 'b') == rows[0]
+            assert (0, 0, 'c') == rows[1]
 
     def test_in_with_desc_order(self):
         cursor = self.prepare()
@@ -4255,7 +4242,6 @@ class TestCQL(UpgradeTester):
         Test that columns don't need to be selected for ORDER BY when there is a IN
         @jira_ticket CASSANDRA-4911
         """
-
         cursor = self.prepare()
         cursor.execute("CREATE TABLE test (k int, c1 int, c2 int, v int, PRIMARY KEY (k, c1, c2))")
 
@@ -4290,7 +4276,7 @@ class TestCQL(UpgradeTester):
             # we should also be able to use functions in the select clause (additional test for CASSANDRA-8286)
             results = list(cursor.execute("SELECT writetime(v) FROM test WHERE k IN (1, 0) ORDER BY c1 ASC"))
             # since we don't know the write times, just assert that the order matches the order we expect
-            self.assertEqual(results, list(sorted(results)))
+            assert results == list(sorted(results))
 
     def test_cas_and_compact(self):
         """
@@ -4440,7 +4426,6 @@ class TestCQL(UpgradeTester):
         expanded functionality from CASSANDRA-6839
         @jira_ticket CASSANDRA-6839
         """
-
         cursor = self.prepare()
 
         cursor.execute("""
@@ -5081,7 +5066,7 @@ class TestCQL(UpgradeTester):
                 cursor.execute("insert into ks.invalid_string_literals (k, c) VALUES (0, '\xc2\x01')")
                 self.fail("Expected error")
             except ProtocolException as e:
-                self.assertTrue("Cannot decode string as UTF8" in str(e))
+                assert "Cannot decode string as UTF8" in str(e)
 
     def test_negative_timestamp(self):
         cursor = self.prepare()

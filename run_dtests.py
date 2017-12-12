@@ -25,10 +25,13 @@ example:
 import subprocess
 import sys
 import os
+import re
 from collections import namedtuple
 from os import getcwd, environ
 from tempfile import NamedTemporaryFile
+from bs4 import BeautifulSoup
 
+import pytest
 from _pytest.config import Parser
 import argparse
 
@@ -103,7 +106,7 @@ class RunDTests():
             return
         print (msg)
 
-    def run(self, *kwargs):
+    def run(self, argv):
         parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(prog,
                                                                                                              max_help_position=100,
                                                                                                              width=200))
@@ -124,93 +127,170 @@ class RunDTests():
         # add all of the options from the pytest Parser we created, and add them into our ArgumentParser instance
         pytest_custom_opts = pytest_parser._anonymous
         for opt in pytest_custom_opts.options:
-            parser.add_argument(opt._long_opts[0], action=opt._attrs['action'], default=opt._attrs['default'], help=opt._attrs['help'])
+            parser.add_argument(opt._long_opts[0], action=opt._attrs['action'],
+                                default=opt._attrs.get('default', None),
+                                help=opt._attrs.get('help', None))
+
+        parser.add_argument("--dtest-runner-debug", action="store_true", default=False)
+        parser.add_argument("--dtest-runner-quiet", action="store_true", default=False)
+        parser.add_argument("--dtest-print-tests-only", action="store_true", default=False,
+                            help="Print list of all tests found eligible for execution given the provided options.")
+        parser.add_argument("--pytest-options", action="store", default=None,
+                            help="Additional command line arguments to proxy directly thru when invoking pytest.")
+        parser.add_argument("--dtest-tests", action="store", default=None,
+                            help="Comma separated list of test files, test classes, or test methods to execute.")
 
         args = parser.parse_args()
 
-        nose_options = args['--nose-options'] or ''
-        nose_option_list = nose_options.split()
-        test_list = args['TESTS']
-        nose_argv = nose_option_list + test_list
+        if not args.dtest_print_tests_only and args.cassandra_dir is None:
+            if args.cassandra_version is None:
+                raise Exception("Required dtest arguments were missing! You must provide either --cassandra-dir "
+                                "or --cassandra-version. Refer to the documentation or invoke the help with --help.")
+
+        #nose_options = args['--nose-options'] or ''
+        #nose_option_list = nose_options.split()
+        #test_list = args['TESTS']
+        #nose_argv = nose_option_list + test_list
 
         self.verbosity_level = 1  # default verbosity level
-        if args['--runner-debug']:
+        if args.dtest_runner_debug:
             self.verbosity_level = 2
-        if args['--runner-quiet']:  # --debug and --quiet are mutually exclusive, enforced by docopt
+        if args.dtest_runner_quiet:  # --debug and --quiet are mutually exclusive, enforced by docopt
             self.verbosity_level = 0
 
         # Get dictionaries corresponding to each point in the configuration matrix
         # we want to run, then generate a config object for each of them.
         self.log_debug('Generating configurations from the following matrix:\n\t{}'.format(args))
 
-        all_configs = []
-        results = []
-        for config in all_configs:
-            self.log_info('Running dtests with config object {}'.format(config))
+        args_to_invoke_pytest = []
+        if args.pytest_options:
+            for arg in args.pytest_options.split(" "):
+                args_to_invoke_pytest.append("'{the_arg}'".format(the_arg=arg))
 
-            # Generate a file that runs nose, passing in config as the
-            # configuration object.
-            #
-            # Yes, this is icky. The reason we do it is because we're dealing with
-            # global configuration. We've decided global, nosetests-run-level
-            # configuration is the way to go. This means we don't want to call
-            # nose.main() multiple times in the same Python interpreter -- I have
-            # not yet found a way to re-execute modules (thus getting new
-            # module-level configuration) for each call. This didn't even work for
-            # me with exec(script, {}, {}). So, here we are.
-            #
-            # How do we execute code in a new interpreter each time? Generate the
-            # code as text, then shell out to a new interpreter.
-            to_execute = (
-                    "import nose\n" +
-                    "from plugins.dtestconfig import DtestConfigPlugin, GlobalConfigObject\n" +
-                    "from plugins.dtestxunit import DTestXunit\n" +
-                    "from plugins.dtesttag import DTestTag\n" +
-                    "from plugins.dtestcollect import DTestCollect\n" +
-                    "import sys\n" +
-                    "print sys.getrecursionlimit()\n" +
-                    "print sys.setrecursionlimit(8000)\n" +
-                    (
-                    "nose.main(addplugins=[DtestConfigPlugin({config}), DTestXunit(), DTestCollect(), DTestTag()])\n" if "TEST_TAG" in environ else "nose.main(addplugins=[DtestConfigPlugin({config}), DTestCollect(), DTestXunit()])\n")
-            ).format(config=repr(config))
-            temp = NamedTemporaryFile(dir=getcwd())
-            self.log_debug('Writing the following to {}:'.format(temp.name))
+        for arg in argv:
+            if arg == "--pytest-options" or arg.startswith("--dtest-"):
+                continue
+            args_to_invoke_pytest.append("'{the_arg}'".format(the_arg=arg))
 
-            self.log_debug('```\n{to_execute}```\n'.format(to_execute=to_execute))
-            temp.write(to_execute)
-            temp.flush()
+        if args.dtest_print_tests_only:
+            args_to_invoke_pytest.append("'--collect-only'")
 
-            # We pass nose_argv as options to the python call to maintain
-            # compatibility with the nosetests command. Arguments passed in via the
-            # command line are treated one way, args passed in as
-            # nose.main(argv=...) are treated another. Compare with the options
-            # -xsv for an example.
-            cmd_list = [sys.executable, temp.name] + nose_argv
-            self.log_debug('subprocess.call-ing {cmd_list}'.format(cmd_list=cmd_list))
+        if args.dtest_tests:
+            for test in args.dtest_tests.split(","):
+                args_to_invoke_pytest.append("'{test_name}'".format(test_name=test))
 
-            if args['--dry-run']:
-                print('Would run the following command:\n\t{}'.format(cmd_list))
-                with open(temp.name, 'r') as f:
-                    contents = f.read()
-                print('{temp_name} contains:\n```\n{contents}```\n'.format(
-                    temp_name=temp.name,
-                    contents=contents
-                ))
+        original_raw_cmd_args = ", ".join(args_to_invoke_pytest)
+
+        print("args to call with: [%s]" % original_raw_cmd_args)
+
+        to_execute = (
+                "import pytest\n" +
+                (
+                "pytest.main([{options}])\n").format(options=original_raw_cmd_args)
+                #"pytest.main(['--collect-only', '--use-vnodes'])\n")
+                #"pytest.main(['--collect-only', '-p', 'no:terminal'], plugins=[my_plugin])\n")
+                #"nose.main(addplugins=[DtestConfigPlugin({config}), DTestXunit(), DTestCollect(), DTestTag()])\n" if "TEST_TAG" in environ else "nose.main(addplugins=[DtestConfigPlugin({config}), DTestCollect(), DTestXunit()])\n")
+        )
+        temp = NamedTemporaryFile(dir=getcwd())
+        self.log_debug('Writing the following to {}:'.format(temp.name))
+
+        self.log_debug('```\n{to_execute}```\n'.format(to_execute=to_execute))
+        temp.write(to_execute.encode("utf-8"))
+        temp.flush()
+
+        # We pass nose_argv as options to the python call to maintain
+        # compatibility with the nosetests command. Arguments passed in via the
+        # command line are treated one way, args passed in as
+        # nose.main(argv=...) are treated another. Compare with the options
+        # -xsv for an example.
+        cmd_list = [sys.executable, temp.name]
+        self.log_debug('subprocess.call-ing {cmd_list}'.format(cmd_list=cmd_list))
+
+        sp = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ.copy())
+
+        if args.dtest_print_tests_only:
+            stdout, stderr = sp.communicate()
+
+            if stderr:
+                print(stderr.decode("utf-8"))
+                result = sp.returncode
+                exit(result)
+
+            all_collected_test_modules = collect_test_modules(stdout)
+            #print("Collected %d Test Modules" % len(all_collected_test_modules))
+            print(" ".join(all_collected_test_modules))
+        else:
+            while True:
+                output = sp.stdout.readline()
+                output_str = output.decode("utf-8")
+                if output_str == '' and sp.poll() is not None:
+                    break
+                if output_str:
+                    print(output_str.strip())
+
+        exit(sp.returncode)
+
+
+def collect_test_modules(stdout):
+    """
+    Takes the xml-ish (no, it's not actually xml so we need to format it a bit) --collect-only output as printed
+    by pytest to stdout and normalizes it to get a list of all collected tests in a human friendly format
+    :param stdout: the stdout from pytest (should have been invoked with the --collect-only cmdline argument)
+    :return: a formatted list of collected test modules in format test_file.py::TestClass::test_function
+    """
+    # unfortunately, pytest emits xml like output -- but it's not actually xml, so we'll fail to parse
+    # if we try. first step is to fix up the pytest output to create well formatted xml
+    xml_line_regex_pattern = re.compile("^([\s])*<(Module|Class|Function|Instance) '(.*)'>")
+    is_first_module = True
+    is_first_class = True
+    test_collect_xml_lines = []
+    for line in stdout.decode("utf-8").split('\n'):
+        re_ret = re.search(xml_line_regex_pattern, line)
+        if re_ret:
+            if not is_first_module and re_ret.group(2) == "Module":
+                test_collect_xml_lines.append("</Module>")
+                is_first_class = True
+            elif re_ret.group(2) == "Module":
+                is_first_class = True
+                is_first_module = False
+                pass
+            elif not is_first_class and re_ret.group(2) == "Class":
+                test_collect_xml_lines.append("    </Instance>")
+                test_collect_xml_lines.append("  </Class>")
+            elif re_ret.group(2) == "Class":
+                is_first_class = False
+                pass
+
+            if re_ret.group(2) == "Function":
+                test_collect_xml_lines.append(
+                    "        <Function name=\"{name}\"></Function>".format(name=re_ret.group(3)))
+            elif re_ret.group(2) == "Class":
+                test_collect_xml_lines.append("  <Class name=\"{name}\">".format(name=re_ret.group(3)))
+            elif re_ret.group(2) == "Module":
+                test_collect_xml_lines.append("<Module name=\"{name}\">".format(name=re_ret.group(3)))
             else:
-                results.append(subprocess.call(cmd_list, env=os.environ.copy()))
-            # separate the end of the last subprocess.call output from the
-            # beginning of the next by printing a newline.
-            print()
+                test_collect_xml_lines.append(line)
 
-        # If this answer:
-        # http://stackoverflow.com/a/21788998/3408454
-        # is to be believed, nosetests will exit with 0 on success, 1 on test or
-        # other failure, and 2 on printing usage. We'll just grab the max of the
-        # runs we saw -- if one printed usage, the whole run "printed usage", if
-        # none printed usage, and one or more failed, we failed, else success.
-        if not results:
-            results = [0]
-        exit(max(results))
+    test_collect_xml_lines.append("    </Instance>")
+    test_collect_xml_lines.append("  </Class>")
+    test_collect_xml_lines.append("</Module>")
+
+    all_collected_test_modules = []
+
+    # parse the now valid xml
+    test_collect_xml = BeautifulSoup("\n".join(test_collect_xml_lines), "lxml-xml")
+
+    # find all Modules (followed by classes in those modules, and then finally functions)
+    for module in test_collect_xml.findAll("Module"):
+        for test_class in module.findAll("Class"):
+            for function in test_class.findAll("Function"):
+                # adds to test list in format like test_file.py::TestClass::test_function for every test function found
+                all_collected_test_modules.append("{module_name}::{class_name}::{function_name}"
+                                                  .format(module_name=module.attrs['name'],
+                                                          class_name=test_class.attrs['name'],
+                                                          function_name=function.attrs['name']))
+
+    return all_collected_test_modules
 
 
 if __name__ == '__main__':

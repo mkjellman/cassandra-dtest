@@ -1,22 +1,25 @@
 """
 Home for upgrade-related tests that don't fit in with the core upgrade testing in dtest.upgrade_through_versions
 """
+import glob
+import os
+import re
+import time
+import pytest
+
 from unittest import skipUnless
 
 from cassandra import ConsistencyLevel as CL
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, debug
-from tools.decorators import since
 from tools.jmxutils import (JolokiaAgent, make_mbean)
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs
 
-import glob
-import os
-import re
-import time
+since = pytest.mark.since
 
 
+@pytest.mark.upgrade_test
 class TestForRegressions(UpgradeTester):
     """
     Catch-all class for regression tests on specific versions.
@@ -64,7 +67,7 @@ class TestForRegressions(UpgradeTester):
 
             for symbol, year in symbol_years:
                 count = s[1].execute("select count(*) from financial.symbol_history where symbol='{}' and year={};".format(symbol, year))[0][0]
-                self.assertEqual(count, expected_rows, "actual {} did not match expected {}".format(count, expected_rows))
+                assert count == expected_rows, "actual {} did not match expected {}".format(count, expected_rows)
 
     def test13294(self):
         """
@@ -112,9 +115,9 @@ class TestForRegressions(UpgradeTester):
                 sstables_after = self.get_all_sstables(node1)
                 # since autocompaction is disabled and we compact a single sstable above
                 # the number of sstables after should be the same as before.
-                self.assertEqual(len(sstables_before), len(sstables_after))
+                assert len(sstables_before) == len(sstables_after)
                 checked = True
-        self.assertTrue(checked)
+        assert checked
 
     @since('3.0.14', max_version='3.0.99')
     def test_schema_agreement(self):

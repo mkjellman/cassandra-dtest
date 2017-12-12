@@ -1,8 +1,7 @@
-# coding: utf-8
-
 import itertools
 import struct
 import time
+import pytest
 
 from cassandra import ConsistencyLevel, InvalidRequest
 from cassandra.metadata import NetworkTopologyStrategy, SimpleStrategy
@@ -20,10 +19,11 @@ from thrift_tests import get_thrift_client
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_none, assert_one, assert_unavailable)
 from tools.data import rows_to_list
-from tools.decorators import since
 from tools.metadata_wrapper import (UpdatingClusterMetadataWrapper,
                                     UpdatingKeyspaceMetadataWrapper,
                                     UpdatingTableMetadataWrapper)
+
+since = pytest.mark.since
 
 
 class CQLTester(Tester):
@@ -84,24 +84,24 @@ class StorageProxyCQLTester(CQLTester):
         session = self.prepare(create_keyspace=False)
         meta = UpdatingClusterMetadataWrapper(session.cluster)
 
-        self.assertNotIn('ks', meta.keyspaces)
+        assert 'ks' not in meta.keyspaces
         session.execute("CREATE KEYSPACE ks WITH replication = "
                         "{ 'class':'SimpleStrategy', 'replication_factor':1} "
                         "AND DURABLE_WRITES = true")
-        self.assertIn('ks', meta.keyspaces)
+        assert 'ks' in meta.keyspaces
 
         ks_meta = UpdatingKeyspaceMetadataWrapper(session.cluster, ks_name='ks')
-        self.assertTrue(ks_meta.durable_writes)
-        self.assertIsInstance(ks_meta.replication_strategy, SimpleStrategy)
+        assert ks_meta.durable_writes
+        assert isinstance(ks_meta.replication_strategy, SimpleStrategy)
 
         session.execute("ALTER KEYSPACE ks WITH replication = "
                         "{ 'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1 } "
                         "AND DURABLE_WRITES = false")
-        self.assertFalse(ks_meta.durable_writes)
-        self.assertIsInstance(ks_meta.replication_strategy, NetworkTopologyStrategy)
+        assert not ks_meta.durable_writes
+        assert isinstance(ks_meta.replication_strategy, NetworkTopologyStrategy)
 
         session.execute("DROP KEYSPACE ks")
-        self.assertNotIn('ks', meta.keyspaces)
+        assert 'ks' not in meta.keyspaces
 
     def test_table(self):
         """
@@ -122,12 +122,12 @@ class StorageProxyCQLTester(CQLTester):
         ks_meta = UpdatingKeyspaceMetadataWrapper(session.cluster, ks_name='ks')
 
         session.execute("CREATE TABLE test1 (k int PRIMARY KEY, v1 int)")
-        self.assertIn('test1', ks_meta.tables)
+        assert 'test1' in ks_meta.tables
 
         t1_meta = UpdatingTableMetadataWrapper(session.cluster, ks_name='ks', table_name='test1')
 
         session.execute("ALTER TABLE test1 ADD v2 int")
-        self.assertIn('v2', t1_meta.columns)
+        assert 'v2' in t1_meta.columns
 
         for i in range(0, 10):
             session.execute("INSERT INTO test1 (k, v1, v2) VALUES ({i}, {i}, {i})".format(i=i))
@@ -139,7 +139,7 @@ class StorageProxyCQLTester(CQLTester):
         assert_none(session, "SELECT * FROM test1")
 
         session.execute("DROP TABLE test1")
-        self.assertNotIn('test1', ks_meta.tables)
+        assert 'test1' not in ks_meta.tables
 
     @since("2.0", max_version="3.X")
     def test_table_compact_storage(self):
@@ -160,7 +160,7 @@ class StorageProxyCQLTester(CQLTester):
         ks_meta = UpdatingKeyspaceMetadataWrapper(session.cluster, ks_name='ks')
 
         session.execute("CREATE TABLE test2 (k int, c1 int, v1 int, PRIMARY KEY (k, c1)) WITH COMPACT STORAGE")
-        self.assertIn('test2', ks_meta.tables)
+        assert 'test2' in ks_meta.tables
 
         for i in range(0, 10):
             session.execute("INSERT INTO test2 (k, c1, v1) VALUES ({i}, {i}, {i})".format(i=i))
@@ -172,7 +172,7 @@ class StorageProxyCQLTester(CQLTester):
         assert_none(session, "SELECT * FROM test2")
 
         session.execute("DROP TABLE test2")
-        self.assertNotIn('test2', ks_meta.tables)
+        assert 'test2' not in ks_meta.tables
 
     def test_index(self):
         """
@@ -191,7 +191,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute("CREATE TABLE test3 (k int PRIMARY KEY, v1 int, v2 int)")
         table_meta = UpdatingTableMetadataWrapper(session.cluster, ks_name='ks', table_name='test3')
         session.execute("CREATE INDEX testidx ON test3 (v1)")
-        self.assertIn('testidx', table_meta.indexes)
+        assert 'testidx' in table_meta.indexes
 
         for i in range(0, 10):
             session.execute("INSERT INTO test3 (k, v1, v2) VALUES ({i}, {i}, {i})".format(i=i))
@@ -199,7 +199,7 @@ class StorageProxyCQLTester(CQLTester):
         assert_one(session, "SELECT * FROM test3 WHERE v1 = 0", [0, 0, 0])
 
         session.execute("DROP INDEX testidx")
-        self.assertNotIn('testidx', table_meta.indexes)
+        assert 'testidx' not in table_meta.indexes
 
     def test_type(self):
         """
@@ -220,18 +220,18 @@ class StorageProxyCQLTester(CQLTester):
         ks_meta = UpdatingKeyspaceMetadataWrapper(session.cluster, ks_name='ks')
 
         session.execute("CREATE TYPE address_t (street text, city text, zip_code int)")
-        self.assertIn('address_t', ks_meta.user_types)
+        assert 'address_t' in ks_meta.user_types
 
         session.execute("CREATE TABLE test4 (id int PRIMARY KEY, address frozen<address_t>)")
 
         session.execute("ALTER TYPE address_t ADD phones set<text>")
-        self.assertIn('phones', ks_meta.user_types['address_t'].field_names)
+        assert 'phones' in ks_meta.user_types['address_t'].field_names
 
         # drop the table so we can safely drop the type it uses
         session.execute("DROP TABLE test4")
 
         session.execute("DROP TYPE address_t")
-        self.assertNotIn('address_t', ks_meta.user_types)
+        assert 'address_t' not in ks_meta.user_types
 
     def test_user(self):
         """
@@ -249,7 +249,7 @@ class StorageProxyCQLTester(CQLTester):
         def get_usernames():
             return [user.name for user in session.execute('LIST USERS')]
 
-        self.assertNotIn('user1', get_usernames())
+        assert 'user1' not in get_usernames()
 
         session.execute("CREATE USER user1 WITH PASSWORD 'secret'")
         # use patient to retry until it works, because it takes some time for
@@ -261,7 +261,7 @@ class StorageProxyCQLTester(CQLTester):
         self.patient_cql_connection(node1, user='user1', password='secret^2')
 
         session.execute("DROP USER user1")
-        self.assertNotIn('user1', get_usernames())
+        assert 'user1' not in get_usernames()
 
     def test_statements(self):
         """
@@ -428,16 +428,16 @@ class StorageProxyCQLTester(CQLTester):
                    [[0]])
 
         # test invalid query
-        with self.assertRaises(InvalidRequest):
+        with pytest.raises(InvalidRequest):
             session.execute("SELECT * FROM test_filter WHERE k1 = 0")
 
-        with self.assertRaises(InvalidRequest):
+        with pytest.raises(InvalidRequest):
             session.execute("SELECT * FROM test_filter WHERE k1 = 0 AND k2 > 0")
 
-        with self.assertRaises(InvalidRequest):
+        with pytest.raises(InvalidRequest):
             session.execute("SELECT * FROM test_filter WHERE k1 >= 0 AND k2 in (0,1,2)")
 
-        with self.assertRaises(InvalidRequest):
+        with pytest.raises(InvalidRequest):
             session.execute("SELECT * FROM test_filter WHERE k2 > 0")
 
     def test_batch(self):
@@ -496,7 +496,7 @@ class MiscellaneousCQLTester(CQLTester):
 
         cluster = self.cluster
         node1 = cluster.nodelist()[0]
-        self.ignore_log_patterns = ["Detected collection for table"]
+        self.fixture_dtest_setup.ignore_log_patterns = ["Detected collection for table"]
 
         session.execute("""
             CREATE TABLE maps (
@@ -606,7 +606,7 @@ class MiscellaneousCQLTester(CQLTester):
         # but since the protocol requires strings to be valid UTF-8, the error
         # response to this is a ProtocolException, not an error about the
         # nonexistent column
-        with self.assertRaisesRegex(ProtocolException, 'Cannot decode string as UTF8'):
+        with pytest.raisesRegex(ProtocolException, 'Cannot decode string as UTF8'):
             session.execute("insert into invalid_string_literals (k, c) VALUES (0, '\xc2\x01')")
 
     def test_prepared_statement_invalidation(self):
@@ -633,19 +633,19 @@ class MiscellaneousCQLTester(CQLTester):
         wildcard_prepared = session.prepare("SELECT * FROM test")
         explicit_prepared = session.prepare("SELECT k, a, b, c FROM test")
         result = session.execute(wildcard_prepared.bind(None))
-        self.assertEqual(result, [(0, 0, 0, 0)])
+        assert result, [(0, 0, 0 == 0)]
 
         session.execute("ALTER TABLE test DROP c")
         result = session.execute(wildcard_prepared.bind(None))
         # wildcard select can be automatically re-prepared by the driver
-        self.assertEqual(result, [(0, 0, 0)])
+        assert result, [(0, 0 == 0)]
         # but re-preparing the statement with explicit columns should fail
         # (see PYTHON-207 for why we expect InvalidRequestException instead of the normal exc)
         assert_invalid(session, explicit_prepared.bind(None), expected=InvalidRequest)
 
         session.execute("ALTER TABLE test ADD d int")
         result = session.execute(wildcard_prepared.bind(None))
-        self.assertEqual(result, [(0, 0, 0, None)])
+        assert result, [(0, 0, 0 == None)]
 
         if self.cluster.version() < LooseVersion('3.0'):
             explicit_prepared = session.prepare("SELECT k, a, b, d FROM test")
@@ -654,10 +654,10 @@ class MiscellaneousCQLTester(CQLTester):
             # by the driver, but the re-preparation should succeed
             session.execute("ALTER TABLE test ALTER d TYPE blob")
             result = session.execute(wildcard_prepared.bind(None))
-            self.assertEqual(result, [(0, 0, 0, None)])
+            assert result, [(0, 0, 0 == None)]
 
             result = session.execute(explicit_prepared.bind(None))
-            self.assertEqual(result, [(0, 0, 0, None)])
+            assert result, [(0, 0, 0 == None)]
 
     def test_range_slice(self):
         """
@@ -693,14 +693,13 @@ class MiscellaneousCQLTester(CQLTester):
         session.execute("INSERT INTO test (k, v) VALUES ('bar', 1)")
 
         res = list(session.execute("SELECT * FROM test"))
-        self.assertEqual(len(res), 2, msg=res)
+        assert len(res) == 2, res
 
     def test_many_columns(self):
         """
         Test for tables with thousands of columns.
         For CASSANDRA-11621.
         """
-
         session = self.prepare()
         width = 5000
         cluster = self.cluster

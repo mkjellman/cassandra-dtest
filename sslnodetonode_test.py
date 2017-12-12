@@ -1,25 +1,25 @@
-import pytest
-
 import os
 import os.path
 import shutil
 import time
+import pytest
 
 from dtest import Tester
 from tools import sslkeygen
-from tools.decorators import since
+
+since = pytest.mark.since
 
 # as the error message logged will be different per netty ssl implementation (jdk vs openssl (libre vs boring vs ...)),
 # the best we can do is just look for a SSLHandshakeException
 _LOG_ERR_HANDSHAKE = "javax.net.ssl.SSLHandshakeException"
 _LOG_ERR_GENERAL = "javax.net.ssl.SSLException"
 
+
 @since('3.6')
 class TestNodeToNodeSSLEncryption(Tester):
 
     def test_ssl_enabled(self):
         """Should be able to start with valid ssl options"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
         credNode2 = sslkeygen.generate_credentials("127.0.0.2", credNode1.cakeystore, credNode1.cacert)
 
@@ -29,7 +29,6 @@ class TestNodeToNodeSSLEncryption(Tester):
 
     def test_ssl_correct_hostname_with_validation(self):
         """Should be able to start with valid ssl options"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
         credNode2 = sslkeygen.generate_credentials("127.0.0.2", credNode1.cakeystore, credNode1.cacert)
 
@@ -41,7 +40,6 @@ class TestNodeToNodeSSLEncryption(Tester):
 
     def test_ssl_wrong_hostname_no_validation(self):
         """Should be able to start with valid ssl options"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.80")
         credNode2 = sslkeygen.generate_credentials("127.0.0.81", credNode1.cakeystore, credNode1.cacert)
 
@@ -52,7 +50,6 @@ class TestNodeToNodeSSLEncryption(Tester):
 
     def test_ssl_wrong_hostname_with_validation(self):
         """Should be able to start with valid ssl options"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.80")
         credNode2 = sslkeygen.generate_credentials("127.0.0.81", credNode1.cakeystore, credNode1.cacert)
 
@@ -62,16 +59,15 @@ class TestNodeToNodeSSLEncryption(Tester):
         self.cluster.start(no_wait=True)
 
         found = self._grep_msg(self.node1, _LOG_ERR_HANDSHAKE, _LOG_ERR_GENERAL)
-        self.assertTrue(found)
+        assert found
 
         found = self._grep_msg(self.node2, _LOG_ERR_HANDSHAKE, _LOG_ERR_GENERAL)
-        self.assertTrue(found)
+        assert found
 
         self.cluster.stop()
 
     def test_ssl_client_auth_required_fail(self):
         """peers need to perform mutual auth (cient auth required), but do not supply the local cert"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
         credNode2 = sslkeygen.generate_credentials("127.0.0.2")
 
@@ -82,17 +78,16 @@ class TestNodeToNodeSSLEncryption(Tester):
         time.sleep(2)
 
         found = self._grep_msg(self.node1, _LOG_ERR_HANDSHAKE, _LOG_ERR_GENERAL)
-        self.assertTrue(found)
+        assert found
 
         found = self._grep_msg(self.node2, _LOG_ERR_HANDSHAKE, _LOG_ERR_GENERAL)
-        self.assertTrue(found)
+        assert found
 
         self.cluster.stop()
-        self.assertTrue(found)
+        assert found
 
     def test_ssl_client_auth_required_succeed(self):
         """peers need to perform mutual auth (cient auth required), but do not supply the loca cert"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
         credNode2 = sslkeygen.generate_credentials("127.0.0.2", credNode1.cakeystore, credNode1.cacert)
         sslkeygen.import_cert(credNode1.basedir, 'ca127.0.0.2', credNode2.cacert, credNode1.cakeystore)
@@ -105,7 +100,6 @@ class TestNodeToNodeSSLEncryption(Tester):
 
     def test_ca_mismatch(self):
         """CA mismatch should cause nodes to fail to connect"""
-
         credNode1 = sslkeygen.generate_credentials("127.0.0.1")
         credNode2 = sslkeygen.generate_credentials("127.0.0.2")  # mismatching CA!
 
@@ -116,7 +110,7 @@ class TestNodeToNodeSSLEncryption(Tester):
 
         found = self._grep_msg(self.node1, _LOG_ERR_HANDSHAKE)
         self.cluster.stop()
-        self.assertTrue(found)
+        assert found
 
     @since('4.0')
     def test_optional_outbound_tls(self):

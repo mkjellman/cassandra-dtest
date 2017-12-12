@@ -1,10 +1,10 @@
 import time
-
 import pytest
 
 from dtest import debug
 from repair_tests.repair_test import BaseRepairTest
-from tools.decorators import since
+
+since = pytest.mark.since
 
 LEGACY_SSTABLES_JVM_ARGS = ["-Dcassandra.streamdes.initial_mem_buffer_size=1",
                             "-Dcassandra.streamdes.max_mem_buffer_size=5",
@@ -13,9 +13,9 @@ LEGACY_SSTABLES_JVM_ARGS = ["-Dcassandra.streamdes.initial_mem_buffer_size=1",
 
 # We don't support directly upgrading from 2.2 to 4.0 so disabling this on 4.0.
 # TODO: we should probably not hardcode versions?
+@pytest.mark.upgrade_test
 @since('3.0', max_version='4')
 class TestUpgradeRepair(BaseRepairTest):
-    __test__ = True
 
     @since('3.0')
     def test_repair_after_upgrade(self):

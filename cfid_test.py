@@ -31,8 +31,8 @@ class TestCFID(Tester):
             self.fail("Path to sstables not valid.")
 
         # check that there are 5 unique directories
-        self.assertEqual(len(cfs), 5)
+        assert len(cfs) == 5
 
         # check that these are in fact column family directories
         for dire in cfs:
-            self.assertTrue(dire[0:2] == 'cf')
+            assert dire[0:2] == 'cf'

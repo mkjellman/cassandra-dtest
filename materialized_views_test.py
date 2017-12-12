@@ -3,11 +3,10 @@ import re
 import sys
 import time
 import traceback
+import pytest
 from functools import partial
 from multiprocessing import Process, Queue
 from unittest import skip, skipIf
-
-import pytest
 
 from cassandra import ConsistencyLevel, WriteFailure
 from cassandra.cluster import NoHostAvailable
@@ -23,9 +22,10 @@ from tools.assertions import (assert_all, assert_crc_check_chance_equal,
                               assert_invalid, assert_none, assert_one,
                               assert_unavailable)
 from tools.data import rows_to_list
-from tools.decorators import since
 from tools.misc import new_node
 from tools.jmxutils import (JolokiaAgent, make_mbean, remove_perf_disable_shared_mem)
+
+since = pytest.mark.since
 
 # CASSANDRA-10978. Migration wait (in seconds) to use in bootstrapping tests. Needed to handle
 # pathological case of flushing schema keyspace for multiple data directories. See CASSANDRA-6696
@@ -136,16 +136,15 @@ class TestMaterializedViews(Tester):
                 # CASSANDRA-13069 - Ensure replayed mutations are removed from the batchlog
                 node_session = self.patient_exclusive_cql_connection(node)
                 result = list(node_session.execute("SELECT count(*) FROM system.batches;"))
-                self.assertEqual(result[0].count, 0)
+                assert result[0].count == 0
 
     def test_create(self):
         """Test the materialized view creation"""
-
         session = self.prepare(user_table=True)
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(len(result), 1, "Expecting 1 materialized view, got" + str(result))
+        assert len(result) == 1, "Expecting 1 materialized view == got" + str(result)
 
     def test_gcgs_validation(self):
         """Verify that it's not possible to create or set a too low gc_grace_seconds on MVs"""
@@ -187,26 +186,24 @@ class TestMaterializedViews(Tester):
 
     def test_insert(self):
         """Test basic insertions"""
-
         session = self.prepare(user_table=True)
 
         self._insert_data(session)
 
         result = list(session.execute("SELECT * FROM users;"))
-        self.assertEqual(len(result), 4, "Expecting {} users, got {}".format(4, len(result)))
+        assert len(result) == 4, "Expecting {} users, got {}".format(4 == len(result))
 
         result = list(session.execute("SELECT * FROM users_by_state WHERE state='TX';"))
-        self.assertEqual(len(result), 2, "Expecting {} users, got {}".format(2, len(result)))
+        assert len(result) == 2, "Expecting {} users, got {}".format(2 == len(result))
 
         result = list(session.execute("SELECT * FROM users_by_state WHERE state='CA';"))
-        self.assertEqual(len(result), 1, "Expecting {} users, got {}".format(1, len(result)))
+        assert len(result) == 1, "Expecting {} users, got {}".format(1 == len(result))
 
         result = list(session.execute("SELECT * FROM users_by_state WHERE state='MA';"))
-        self.assertEqual(len(result), 0, "Expecting {} users, got {}".format(0, len(result)))
+        assert len(result) == 0, "Expecting {} users, got {}".format(0 == len(result))
 
     def test_populate_mv_after_insert(self):
         """Test that a view is OK when created with existing data"""
-
         session = self.prepare(consistency_level=ConsistencyLevel.QUORUM)
 
         session.execute("CREATE TABLE t (id int PRIMARY KEY, v int)")
@@ -228,7 +225,6 @@ class TestMaterializedViews(Tester):
 
     def test_populate_mv_after_insert_wide_rows(self):
         """Test that a view is OK when created with existing data with wide rows"""
-
         session = self.prepare(consistency_level=ConsistencyLevel.QUORUM)
 
         session.execute("CREATE TABLE t (id int, v int, PRIMARY KEY (id, v))")
@@ -251,7 +247,6 @@ class TestMaterializedViews(Tester):
 
     def test_crc_check_chance(self):
         """Test that crc_check_chance parameter is properly populated after mv creation and update"""
-
         session = self.prepare()
 
         session.execute("CREATE TABLE t (id int PRIMARY KEY, v int)")
@@ -266,7 +261,6 @@ class TestMaterializedViews(Tester):
 
     def test_prepared_statement(self):
         """Test basic insertions with prepared statement"""
-
         session = self.prepare(user_table=True)
 
         insertPrepared = session.prepare(
@@ -283,20 +277,19 @@ class TestMaterializedViews(Tester):
         session.execute(insertPrepared.bind(('user4', 'ch@ngem3d', 'm', 'TX', 1974)))
 
         result = list(session.execute("SELECT * FROM users;"))
-        self.assertEqual(len(result), 4, "Expecting {} users, got {}".format(4, len(result)))
+        assert len(result) == 4, "Expecting {} users, got {}".format(4, len(result))
 
         result = list(session.execute(selectPrepared.bind(['TX'])))
-        self.assertEqual(len(result), 2, "Expecting {} users, got {}".format(2, len(result)))
+        assert len(result) == 2, "Expecting {} users, got {}".format(2, len(result))
 
         result = list(session.execute(selectPrepared.bind(['CA'])))
-        self.assertEqual(len(result), 1, "Expecting {} users, got {}".format(1, len(result)))
+        assert len(result) == 1, "Expecting {} users, got {}".format(1, len(result))
 
         result = list(session.execute(selectPrepared.bind(['MA'])))
-        self.assertEqual(len(result), 0, "Expecting {} users, got {}".format(0, len(result)))
+        assert len(result) == 0, "Expecting {} users, got {}".format(0, len(result))
 
     def test_immutable(self):
         """Test that a materialized view is immutable"""
-
         session = self.prepare(user_table=True)
 
         # cannot insert
@@ -321,7 +314,6 @@ class TestMaterializedViews(Tester):
 
     def test_drop_mv(self):
         """Test that we can drop a view properly"""
-
         session = self.prepare(user_table=True)
 
         # create another materialized view
@@ -331,22 +323,21 @@ class TestMaterializedViews(Tester):
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(len(result), 2, "Expecting {} materialized view, got {}".format(2, len(result)))
+        assert len(result) == 2 == "Expecting {} materialized view, got {}".format(2, len(result))
 
         session.execute("DROP MATERIALIZED VIEW ks.users_by_state;")
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(len(result), 1, "Expecting {} materialized view, got {}".format(1, len(result)))
+        assert len(result) == 1, "Expecting {} materialized view, got {}".format(1, len(result))
 
     def test_drop_column(self):
         """Test that we cannot drop a column if it is used by a MV"""
-
         session = self.prepare(user_table=True)
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        self.assertEqual(len(result), 1, "Expecting {} materialized view, got {}".format(1, len(result)))
+        assert len(result) == 1, "Expecting {} materialized view, got {}".format(1, len(result))
 
         assert_invalid(
             session,
@@ -356,7 +347,6 @@ class TestMaterializedViews(Tester):
 
     def test_drop_table(self):
         """Test that we cannot drop a table without deleting its MVs first"""
-
         session = self.prepare(user_table=True)
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
@@ -391,7 +381,6 @@ class TestMaterializedViews(Tester):
 
     def test_clustering_column(self):
         """Test that we can use clustering columns as primary key for a materialized view"""
-
         session = self.prepare(consistency_level=ConsistencyLevel.QUORUM)
 
         session.execute(("CREATE TABLE users (username varchar, password varchar, gender varchar, "
@@ -408,10 +397,10 @@ class TestMaterializedViews(Tester):
         self._insert_data(session)
 
         result = list(session.execute("SELECT * FROM ks.users_by_state_birth_year WHERE state='TX'"))
-        self.assertEqual(len(result), 2, "Expecting {} users, got {}".format(2, len(result)))
+        assert len(result) == 2, "Expecting {} users, got {}".format(2, len(result))
 
         result = list(session.execute("SELECT * FROM ks.users_by_state_birth_year WHERE state='TX' AND birth_year=1968"))
-        self.assertEqual(len(result), 1, "Expecting {} users, got {}".format(1, len(result)))
+        assert len(result) == 1, "Expecting {} users, got {}".format(1, len(result))
 
     def _add_dc_after_mv_test(self, rf):
         """
@@ -667,7 +656,6 @@ class TestMaterializedViews(Tester):
 
     def test_allow_filtering(self):
         """Test that allow filtering works as usual for a materialized view"""
-
         session = self.prepare()
 
         session.execute("CREATE TABLE t (id int PRIMARY KEY, v int, v2 text, v3 decimal)")
@@ -683,7 +671,7 @@ class TestMaterializedViews(Tester):
             assert_one(session, "SELECT * FROM t_by_v WHERE v = {v}".format(v=i), [i, i, 'a', 3.0])
 
         rows = list(session.execute("SELECT * FROM t_by_v2 WHERE v2 = 'a'"))
-        self.assertEqual(len(rows), 1000, "Expected 1000 rows but got {}".format(len(rows)))
+        assert len(rows), 1000 == "Expected 1000 rows but got {}".format(len(rows))
 
         assert_invalid(session, "SELECT * FROM t_by_v WHERE v = 1 AND v2 = 'a'")
         assert_invalid(session, "SELECT * FROM t_by_v2 WHERE v2 = 'a' AND v = 1")
@@ -702,7 +690,6 @@ class TestMaterializedViews(Tester):
 
     def test_secondary_index(self):
         """Test that secondary indexes cannot be created on a materialized view"""
-
         session = self.prepare()
 
         session.execute("CREATE TABLE t (id int PRIMARY KEY, v int, v2 text, v3 decimal)")
@@ -716,7 +703,6 @@ class TestMaterializedViews(Tester):
         Test that TTL works as expected for a materialized view
         @expected_result The TTL is propagated properly between tables.
         """
-
         session = self.prepare()
         session.execute("CREATE TABLE t (id int PRIMARY KEY, v int, v2 int, v3 int)")
         session.execute(("CREATE MATERIALIZED VIEW t_by_v2 AS SELECT * FROM t "
@@ -731,14 +717,13 @@ class TestMaterializedViews(Tester):
         time.sleep(20)
 
         rows = list(session.execute("SELECT * FROM t_by_v2"))
-        self.assertEqual(len(rows), 0, "Expected 0 rows but got {}".format(len(rows)))
+        assert len(rows), 0 == "Expected 0 rows but got {}".format(len(rows))
 
     def test_query_all_new_column(self):
         """
         Test that a materialized view created with a 'SELECT *' works as expected when adding a new column
         @expected_result The new column is present in the view.
         """
-
         session = self.prepare(user_table=True)
 
         self._insert_data(session)
@@ -752,8 +737,8 @@ class TestMaterializedViews(Tester):
         session.execute("ALTER TABLE users ADD first_name varchar;")
 
         results = list(session.execute("SELECT * FROM users_by_state WHERE state = 'TX' AND username = 'user1'"))
-        self.assertEqual(len(results), 1)
-        self.assertTrue(hasattr(results[0], 'first_name'), 'Column "first_name" not found')
+        assert len(results) == 1
+        assert hasattr(results[0], 'first_name'), 'Column "first_name" not found'
         assert_one(
             session,
             "SELECT * FROM users_by_state WHERE state = 'TX' AND username = 'user1'",
@@ -765,7 +750,6 @@ class TestMaterializedViews(Tester):
         Test that a materialized view created with 'SELECT <col1, ...>' works as expected when adding a new column
         @expected_result The new column is not present in the view.
         """
-
         session = self.prepare(user_table=True)
 
         session.execute(("CREATE MATERIALIZED VIEW users_by_state2 AS SELECT username FROM users "
@@ -782,8 +766,8 @@ class TestMaterializedViews(Tester):
         session.execute("ALTER TABLE users ADD first_name varchar;")
 
         results = list(session.execute("SELECT * FROM users_by_state2 WHERE state = 'TX' AND username = 'user1'"))
-        self.assertEqual(len(results), 1)
-        self.assertFalse(hasattr(results[0], 'first_name'), 'Column "first_name" found in view')
+        assert len(results) == 1
+        assert not hasattr(results[0], 'first_name'), 'Column "first_name" found in view'
         assert_one(
             session,
             "SELECT * FROM users_by_state2 WHERE state = 'TX' AND username = 'user1'",
@@ -795,7 +779,6 @@ class TestMaterializedViews(Tester):
         Test that a materialized view created with a 'SELECT *' works as expected when renaming a column
         @expected_result The column is also renamed in the view.
         """
-
         session = self.prepare(user_table=True)
 
         self._insert_data(session)
@@ -809,8 +792,8 @@ class TestMaterializedViews(Tester):
         session.execute("ALTER TABLE users RENAME username TO user")
 
         results = list(session.execute("SELECT * FROM users_by_state WHERE state = 'TX' AND user = 'user1'"))
-        self.assertEqual(len(results), 1)
-        self.assertTrue(hasattr(results[0], 'user'), 'Column "user" not found')
+        assert len(results) == 1
+        assert hasattr(results[0], 'user'), 'Column "user" not found'
         assert_one(
             session,
             "SELECT state, user, birth_year, gender FROM users_by_state WHERE state = 'TX' AND user = 'user1'",
@@ -822,7 +805,6 @@ class TestMaterializedViews(Tester):
         Test that column renaming is atomically done between a table and its materialized views
         @jira_ticket CASSANDRA-12952
         """
-
         session = self.prepare(nodes=1, user_table=True, install_byteman=True)
         node = self.cluster.nodelist()[0]
 
@@ -838,7 +820,7 @@ class TestMaterializedViews(Tester):
         self.allow_log_errors = True
         script_version = '4x' if self.cluster.version() >= '4' else '3x'
         node.byteman_submit(['./byteman/merge_schema_failure_{}.btm'.format(script_version)])
-        with self.assertRaises(NoHostAvailable):
+        with pytest.raises(NoHostAvailable):
             session.execute("ALTER TABLE users RENAME username TO user")
 
         debug('Restarting node')
@@ -860,7 +842,6 @@ class TestMaterializedViews(Tester):
 
     def test_lwt(self):
         """Test that lightweight transaction behave properly with a materialized view"""
-
         session = self.prepare()
 
         session.execute("CREATE TABLE t (id int PRIMARY KEY, v int, v2 text, v3 decimal)")
@@ -908,7 +889,7 @@ class TestMaterializedViews(Tester):
 
         debug("Verify that only the 10 first rows changed.")
         results = list(session.execute("SELECT * FROM t_by_v;"))
-        self.assertEqual(len(results), 1000)
+        assert len(results) == 1000
         for i in range(1000):
             v = i + 2000 if i < 10 else i
             assert_one(
@@ -927,7 +908,7 @@ class TestMaterializedViews(Tester):
 
         debug("Verify that only the 10 first rows have been deleted.")
         results = list(session.execute("SELECT * FROM t_by_v;"))
-        self.assertEqual(len(results), 990)
+        assert len(results) == 990
         for i in range(10, 1000):
             assert_one(
                 session,
@@ -937,7 +918,6 @@ class TestMaterializedViews(Tester):
 
     def test_interrupt_build_process(self):
         """Test that an interupted MV build process is resumed as it should"""
-
         session = self.prepare(options={'hinted_handoff_enabled': False})
         node1, node2, node3 = self.cluster.nodelist()
 
@@ -982,7 +962,7 @@ class TestMaterializedViews(Tester):
 
         debug("Verify all data")
         result = list(session.execute("SELECT count(*) FROM t_by_v;"))
-        self.assertEqual(result[0].count, 10000)
+        assert result[0].count == 10000
         for i in range(10000):
             assert_one(
                 session,
@@ -1195,24 +1175,24 @@ class TestMaterializedViews(Tester):
         query = SimpleStatement("SELECT * FROM mv WHERE k = 1 AND a = 1", consistency_level=ConsistencyLevel.ALL)
         result = session.execute(query, trace=True)
         self.check_trace_events(result.get_query_trace(), True)
-        self.assertEqual(0, len(result.current_rows))
+        assert 0 == len(result.current_rows)
 
         # For k = 1 & a = 1, second time no digest mismatch
         result = session.execute(query, trace=True)
         self.check_trace_events(result.get_query_trace(), False)
         assert_none(session, "SELECT * FROM mv WHERE k = 1 AND a = 1")
-        self.assertEqual(0, len(result.current_rows))
+        assert 0 == len(result.current_rows)
 
         # For k = 1 & a = 2, We should get a digest mismatch of data and repaired for a = 2
         query = SimpleStatement("SELECT * FROM mv WHERE k = 1 AND a = 2", consistency_level=ConsistencyLevel.ALL)
         result = session.execute(query, trace=True)
         self.check_trace_events(result.get_query_trace(), True)
-        self.assertEqual(1, len(result.current_rows))
+        assert 1 == len(result.current_rows)
 
         # For k = 1 & a = 2, second time no digest mismatch
         result = session.execute(query, trace=True)
         self.check_trace_events(result.get_query_trace(), False)
-        self.assertEqual(1, len(result.current_rows))
+        assert 1 == len(result.current_rows)
         assert_one(session, "SELECT k,a,b,writetime(b) FROM mv WHERE k = 1", [1, 2, 1, 20])
 
         time.sleep(3)
@@ -1221,12 +1201,12 @@ class TestMaterializedViews(Tester):
         result = session.execute(query, trace=True)
         self.check_trace_events(result.get_query_trace(), True)
         debug(result.current_rows)
-        self.assertEqual(0, len(result.current_rows))
+        assert 0 == len(result.current_rows)
 
         # For k = 2 & a = 2, second time no digest mismatch
         result = session.execute(query, trace=True)
         self.check_trace_events(result.get_query_trace(), False)
-        self.assertEqual(0, len(result.current_rows))
+        assert 0 == len(result.current_rows)
 
     @since('3.0')
     def test_expired_liveness_with_limit_rf1_nodes1(self):
@@ -1509,7 +1489,7 @@ class TestMaterializedViews(Tester):
             )
             result = session.execute(query, trace=True)
             self.check_trace_events(result.get_query_trace(), False)
-            self.assertEqual(self._rows_to_list(result.current_rows), [[i, i, 'a', 3.0]])
+            assert self._rows_to_list(result.current_rows), [[i, i, 'a' == 3.0]]
 
     def test_base_replica_repair(self):
         self._base_replica_repair_test()
@@ -1601,7 +1581,6 @@ class TestMaterializedViews(Tester):
         """
         Test that a materialized view are consistent after a more complex repair.
         """
-
         session = self.prepare(rf=5, options={'hinted_handoff_enabled': False}, nodes=5)
         node1, node2, node3, node4, node5 = self.cluster.nodelist()
 
@@ -1809,7 +1788,6 @@ class TestMaterializedViews(Tester):
         """
         Test that a materialized view are consistent after a more complex repair.
         """
-
         session = self.prepare(rf=5, options={'hinted_handoff_enabled': False}, nodes=5)
         node1, node2, node3, node4, node5 = self.cluster.nodelist()
 
@@ -1899,7 +1877,6 @@ class TestMaterializedViews(Tester):
         Test complex MV select statements
         @jira_ticket CASSANDRA-9664
         """
-
         cluster = self.cluster
         cluster.populate(3).start()
         node1 = cluster.nodelist()[0]
@@ -2052,7 +2029,7 @@ class TestMaterializedViews(Tester):
         cluster.start()
 
         # node3 should have received and ignored the creation of the MV over the dropped table
-        self.assertTrue(node3.grep_log('Not adding view users_by_state because the base table'))
+        assert node3.grep_log('Not adding view users_by_state because the base table')
 
     def test_base_view_consistency_on_failure_after_mv_apply(self):
         self._test_base_view_consistency_on_crash("after")
@@ -2070,7 +2047,7 @@ class TestMaterializedViews(Tester):
         """
 
         self.cluster.set_batch_commitlog(enabled=True)
-        self.ignore_log_patterns = [r'Dummy failure', r"Failed to force-recycle all segments"]
+        self.fixture_dtest_setup.ignore_log_patterns = [r'Dummy failure', r"Failed to force-recycle all segments"]
         self.prepare(rf=1, install_byteman=True)
         node1, node2, node3 = self.cluster.nodelist()
         session = self.patient_exclusive_cql_connection(node1)
@@ -2094,8 +2071,8 @@ class TestMaterializedViews(Tester):
             except WriteFailure:
                 failed = True
 
-        self.assertTrue(failed, "Should fail at least once.")
-        self.assertTrue(node1.grep_log("Dummy failure"), "Should throw Dummy failure")
+        assert failed, "Should fail at least once."
+        assert node1.grep_log("Dummy failure"), "Should throw Dummy failure"
 
         missing_entries = 0
         session = self.patient_exclusive_cql_connection(node1)
@@ -2112,7 +2089,7 @@ class TestMaterializedViews(Tester):
                 missing_entries += 1
 
         debug("Missing entries {}".format(missing_entries))
-        self.assertTrue(missing_entries > 0, )
+        assert missing_entries > 0
 
         debug('Restarting node1 to ensure commit log is replayed')
         node1.stop(wait_other_notice=True)
@@ -2132,8 +2109,8 @@ class TestMaterializedViews(Tester):
             base_entry = rows_to_list(session.execute(SimpleStatement("SELECT * FROM t WHERE id = {}".format(i),
                                                       consistency_level=ConsistencyLevel.ONE)))
 
-            self.assertTrue(base_entry, "Both base {} and view entry {} should exist.".format(base_entry, view_entry))
-            self.assertTrue(view_entry, "Both base {} and view entry {} should exist.".format(base_entry, view_entry))
+            assert base_entry, "Both base {} and view entry {} should exist.".format(base_entry, view_entry)
+            assert view_entry, "Both base {} and view entry {} should exist.".format(base_entry, view_entry)
 
 
 # For read verification

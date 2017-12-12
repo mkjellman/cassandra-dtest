@@ -1,4 +1,5 @@
 import time
+import pytest
 from datetime import datetime
 from distutils.version import LooseVersion
 from threading import Event
@@ -8,10 +9,10 @@ from cassandra import ReadFailure
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node, TimeoutError
 
-import pytest
 
 from dtest import Tester, debug, get_ip_from_node, create_ks
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 class NotificationWaiter(object):
@@ -108,12 +109,12 @@ class TestPushedNotifications(Tester):
         for waiter in waiters:
             debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(60.0)
-            self.assertEqual(1, len(notifications), notifications)
+            assert 1, len(notifications) == notifications
             notification = notifications[0]
             change_type = notification["change_type"]
             address, port = notification["address"]
-            self.assertEqual("MOVED_NODE", change_type)
-            self.assertEqual(get_ip_from_node(node1), address)
+            assert "MOVED_NODE" == change_type
+            assert get_ip_from_node(node1) == address
 
     @pytest.mark.no_vnodes
     def test_move_single_node_localhost(self):
@@ -148,14 +149,13 @@ class TestPushedNotifications(Tester):
         for waiter in waiters:
             debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(30.0)
-            self.assertEqual(1 if waiter.node is node1 else 0, len(notifications), notifications)
+            assert 1 if waiter.node is node1 else 0, len(notifications) == notifications
 
     def test_restart_node(self):
         """
         @jira_ticket CASSANDRA-7816
         Restarting a node should generate exactly one DOWN and one UP notification
         """
-
         self.cluster.populate(2).start(wait_for_binary_proto=True, wait_other_notice=True)
         node1, node2 = self.cluster.nodelist()
 
@@ -177,16 +177,16 @@ class TestPushedNotifications(Tester):
             node2.start(wait_other_notice=True)
             debug("Waiting for notifications from {}".format(waiter.address))
             notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=expected_notifications)
-            self.assertEqual(expected_notifications, len(notifications), notifications)
+            assert expected_notifications, len(notifications) == notifications
             for notification in notifications:
-                self.assertEqual(get_ip_from_node(node2), notification["address"][0])
-            self.assertEqual("DOWN", notifications[0]["change_type"])
+                assert get_ip_from_node(node2) == notification["address"][0]
+            assert "DOWN" == notifications[0]["change_type"]
             if version >= '2.2':
-                self.assertEqual("UP", notifications[1]["change_type"])
+                assert "UP" == notifications[1]["change_type"]
             else:
                 # pre 2.2, we'll receive both a NEW_NODE and an UP notification,
                 # but the order is not guaranteed
-                self.assertEqual({"NEW_NODE", "UP"}, set([n["change_type"] for n in notifications[1:]]))
+                assert {"NEW_NODE", "UP"} == set([n["change_type"] for n in notifications[1:]])
 
             waiter.clear_notifications()
 
@@ -217,7 +217,7 @@ class TestPushedNotifications(Tester):
         # check that node1 did not send UP or DOWN notification for node2
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=30.0, num_notifications=2)
-        self.assertEqual(0, len(notifications), notifications)
+        assert 0, len(notifications) == notifications
 
     @since("2.2")
     def test_add_and_remove_node(self):
@@ -247,11 +247,11 @@ class TestPushedNotifications(Tester):
         node2.start(wait_other_notice=True)
         debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-        self.assertEqual(2, len(notifications), notifications)
+        assert 2, len(notifications) == notifications
         for notification in notifications:
-            self.assertEqual(get_ip_from_node(node2), notification["address"][0])
-            self.assertEqual("NEW_NODE", notifications[0]["change_type"])
-            self.assertEqual("UP", notifications[1]["change_type"])
+            assert get_ip_from_node(node2) == notification["address"][0]
+            assert "NEW_NODE" == notifications[0]["change_type"]
+            assert "UP" == notifications[1]["change_type"]
 
         debug("Removing second node...")
         waiter.clear_notifications()
@@ -259,11 +259,11 @@ class TestPushedNotifications(Tester):
         node2.stop(gently=False)
         debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
-        self.assertEqual(2, len(notifications), notifications)
+        assert 2, len(notifications) == notifications
         for notification in notifications:
-            self.assertEqual(get_ip_from_node(node2), notification["address"][0])
-            self.assertEqual("REMOVED_NODE", notifications[0]["change_type"])
-            self.assertEqual("DOWN", notifications[1]["change_type"])
+            assert get_ip_from_node(node2) == notification["address"][0]
+            assert "REMOVED_NODE" == notifications[0]["change_type"]
+            assert "DOWN" == notifications[1]["change_type"]
 
     def change_rpc_address_to_localhost(self):
         """
@@ -289,7 +289,6 @@ class TestPushedNotifications(Tester):
         Creating, updating and dropping a keyspace, a table and a materialized view
         will generate the correct schema change notifications.
         """
-
         self.cluster.populate(2).start(wait_for_binary_proto=True)
         node1, node2 = self.cluster.nodelist()
 
@@ -309,7 +308,7 @@ class TestPushedNotifications(Tester):
 
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=8)
-        self.assertEqual(8, len(notifications), notifications)
+        assert 8, len(notifications) == notifications
         self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'KEYSPACE'}, notifications[0])
         self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 't'}, notifications[1])
         self.assertDictContainsSubset({'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 't'}, notifications[2])
@@ -333,7 +332,6 @@ class TestVariousNotifications(Tester):
         read_request_timeout_in_ms.
         @jira_ticket CASSANDRA-7886
         """
-
         have_v5_protocol = self.cluster.version() >= LooseVersion('3.10')
 
         self.allow_log_errors = True
@@ -375,8 +373,8 @@ class TestVariousNotifications(Tester):
             except ReadFailure as exc:
                 if have_v5_protocol:
                     # at least one replica should have responded with a tombstone error
-                    self.assertIsNotNone(exc.error_code_map)
-                    self.assertEqual(0x0001, list(exc.error_code_map.values())[0])
+                    assert exc.error_code_map is not None
+                    assert 0x0001 == list(exc.error_code_map.values())[0]
             except Exception:
                 raise
             else:
@@ -408,8 +406,8 @@ class TestVariousNotifications(Tester):
             except ReadFailure as exc:
                 if have_v5_protocol:
                     # at least one replica should have responded with a tombstone error
-                    self.assertIsNotNone(exc.error_code_map)
-                    self.assertEqual(0x0001, list(exc.error_code_map.values())[0])
+                    assert exc.error_code_map is not None
+                    assert 0x0001 == list(exc.error_code_map.values())[0]
             except Exception:
                 raise
             else:

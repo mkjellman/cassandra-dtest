@@ -58,7 +58,7 @@ class UpdatingMetadataWrapperBaseTest(TestCase):
             wrapper._wrapped.__getitem__.side_effect = hash
             # check mocking correctness
             self.assertNotEqual(wrapper['foo'], wrapper._wrapped['bar'])
-            self.assertEqual(wrapper['bar'], wrapper._wrapped['bar'])
+            assert wrapper['bar'] == wrapper._wrapped['bar']
 
 
 class UpdatingTableMetadataWrapperTest(TestCase):
@@ -177,7 +177,7 @@ class UpdatingKeyspaceMetadataWrapperTest(TestCase):
         self.cluster_mock.metadata.keyspaces.__getitem__.side_effect = hash
         # check mocking correctness
         self.assertNotEqual(self.wrapper._wrapped, self.cluster_mock.metadata.keyspaces['foo'])
-        self.assertEqual(self.wrapper._wrapped, self.cluster_mock.metadata.keyspaces[self.ks_name_sentinel])
+        assert self.wrapper._wrapped == self.cluster_mock.metadata.keyspaces[self.ks_name_sentinel]
 
     def test_repr(self):
         self.assertEqual(

@@ -1,9 +1,11 @@
 import os
 import tempfile
+import pytest
 
 from dtest import Tester, debug, create_ks
 from tools.data import rows_to_list
-from tools.decorators import since
+
+since = pytest.mark.since
 
 
 @since('0', '2.2.X')
@@ -42,9 +44,8 @@ class TestJson(Tester):
 
         res = session.execute("SELECT * FROM Test. users")
 
-        self.assertItemsEqual(rows_to_list(res),
-                              [['frodo', 1985, 'male', 'pass@', 'CA'],
-                               ['sam', 1980, 'male', '@pass', 'NY']])
+        assert rows_to_list(res) == [['frodo', 1985, 'male', 'pass@', 'CA'],
+                               ['sam', 1980, 'male', '@pass', 'NY']]
 
         debug("Flushing and stopping cluster...")
         node1.flush()
@@ -98,7 +99,6 @@ class TestJson(Tester):
 
         debug("data: " + str(res))
 
-        self.assertItemsEqual(rows_to_list(res),
-                              [['frodo', 1985, 'male', 'pass@', 'CA'],
+        assert rows_to_list(res) == [['frodo', 1985, 'male', 'pass@', 'CA'],
                                ['sam', 1980, 'male', '@pass', 'NY'],
-                               ['gandalf', 1955, 'male', 'p@$$', 'WA']])
+                               ['gandalf', 1955, 'male', 'p@$$', 'WA']]

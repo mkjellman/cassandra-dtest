@@ -2,10 +2,9 @@ import queue
 import sys
 import threading
 import time
+import pytest
 from collections import OrderedDict, namedtuple
 from copy import deepcopy
-
-import pytest
 
 from cassandra import ConsistencyLevel, consistency_value_to_name
 from cassandra.query import SimpleStatement
@@ -15,16 +14,17 @@ from tools.assertions import (assert_all, assert_length_equal, assert_none,
 from dtest import MultiError, Tester, debug, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns,
                         query_c1c2, rows_to_list)
-from tools.decorators import since
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
+
+since = pytest.mark.since
 
 ExpectedConsistency = namedtuple('ExpectedConsistency', ('num_write_nodes', 'num_read_nodes', 'is_strong'))
 
 
 class TestHelper(Tester):
 
-    def __init__(self, *args, **kwargs):
-        Tester.__init__(self, *args, **kwargs)
+    @pytest.fixture(scope="class", autouse=True)
+    def fixture_create_test_lock(self):
         self.lock = threading.Lock()
 
     def log(self, message):
@@ -208,7 +208,7 @@ class TestHelper(Tester):
         expected = [[userid, age]] if age else []
         ret = rows_to_list(res) == expected
         if check_ret:
-            self.assertTrue(ret, "Got {} from {}, expected {} at {}".format(rows_to_list(res), session.cluster.contact_points, expected, consistency_value_to_name(consistency)))
+            assert ret, "Got {} from {}, expected {} at {}".format(rows_to_list(res), session.cluster.contact_points, expected, consistency_value_to_name(consistency))
         return ret
 
     def create_counters_table(self, session, requires_local_reads):
@@ -1101,7 +1101,7 @@ class TestConsistency(Tester):
         srp = make_mbean('metrics', type='Table', name='ShortReadProtectionRequests', keyspace='test', scope='test')
         with JolokiaAgent(node1) as jmx:
             # 4 srp requests for node1 and 5 for node2, total of 9
-            self.assertEqual(9, jmx.read_attribute(srp, 'Count'))
+            assert 9, jmx.read_attribute(srp == 'Count')
 
     @since('3.0')
     def test_12872(self):
@@ -1215,7 +1215,7 @@ class TestConsistency(Tester):
 
             # value 0, 1 and 2 have been deleted
             for i in range(1, 4):
-                self.assertEqual('value{}'.format(i + 2), res[i - 1][1])
+                assert 'value{}'.format(i + 2) == res[i - 1][1]
 
             # Query 3 firsts columns in reverse order
             session = self.patient_cql_connection(node1, 'ks')
@@ -1228,7 +1228,7 @@ class TestConsistency(Tester):
 
             # value 6, 7 and 8 have been deleted
             for i in range(0, 3):
-                self.assertEqual('value{}'.format(5 - i), res[i][1])
+                assert 'value{}'.format(5 - i) == res[i][1]
 
             session.execute('TRUNCATE cf')
 

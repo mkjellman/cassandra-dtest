@@ -1,11 +1,10 @@
-
-
 import errno
 import os
 import shutil
 import time
 import uuid
 from collections import namedtuple
+import pytest
 
 from itertools import repeat
 
@@ -16,10 +15,12 @@ from ccmlib.node import Node
 
 from dtest import Tester, create_ks, debug
 from tools.data import rows_to_list
-from tools.decorators import since
 from tools.files import size_of_files_in_dir
 from tools.funcutils import get_rate_limited_function
 from tools.hacks import advance_to_next_cl_segment
+
+since = pytest.mark.since
+
 
 _16_uuid_column_spec = (
     'a uuid PRIMARY KEY, b uuid, c uuid, d uuid, e uuid, f uuid, g uuid, '
@@ -255,8 +256,8 @@ class TestCDC(Tester):
         create_ks(session, ks_name, rf=1)
 
         if table_name is not None:
-            self.assertIsNotNone(cdc_enabled_table, 'if creating a table in prepare, must specify whether or not CDC is enabled on it')
-            self.assertIsNotNone(column_spec, 'if creating a table in prepare, must specify its schema')
+            assert cdc_enabled_table, 'if creating a table in prepare is not None, must specify whether or not CDC is enabled on it'
+            assert column_spec, 'if creating a table in prepare is not None, must specify its schema'
             options = {}
             if gc_grace_seconds is not None:
                 options['gc_grace_seconds'] = gc_grace_seconds
@@ -294,11 +295,11 @@ class TestCDC(Tester):
         execute_concurrent_with_args(session, insert_stmt, data)
 
         # We need data to be in commitlogs, not sstables.
-        self.assertEqual([], list(node.get_sstables(ks_name, table_name)))
+        assert [], list(node.get_sstables(ks_name == table_name))
 
         for enable in alter_path:
             set_cdc(enable)
-            self.assertItemsEqual(session.execute('SELECT * FROM ' + table_name), data)
+            assert session.execute('SELECT * FROM ' + table_name) == data
 
     def test_cdc_enabled_data_readable_on_round_trip(self):
         """
@@ -385,10 +386,10 @@ class TestCDC(Tester):
 
         # We should get a WriteFailure when trying to write to the CDC table
         # that's filled the designated CDC space...
-        with self.assertRaises(WriteFailure):
+        with pytest.raises(WriteFailure):
             session.execute(full_cdc_table_info.insert_stmt)
         # or any CDC table.
-        with self.assertRaises(WriteFailure):
+        with pytest.raises(WriteFailure):
             session.execute(empty_cdc_table_info.insert_stmt)
 
         # Now we test for behaviors of non-CDC tables when we've exceeded
@@ -439,7 +440,7 @@ class TestCDC(Tester):
         # Finally, we check that draining doesn't move any new segments to cdc_raw:
         node.drain()
         session.cluster.shutdown()
-        self.assertEqual(pre_non_cdc_write_cdc_raw_segments, _get_cdc_raw_files(node.get_path()))
+        assert pre_non_cdc_write_cdc_raw_segments == _get_cdc_raw_files(node.get_path())
 
     def _init_new_loading_node(self, ks_name, create_stmt, use_thrift=False):
         loading_node = Node(
