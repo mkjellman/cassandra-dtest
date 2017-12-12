@@ -181,7 +181,7 @@ class RunDTests():
 
         original_raw_cmd_args = ", ".join(args_to_invoke_pytest)
 
-        print("args to call with: [%s]" % original_raw_cmd_args)
+        self.log_debug("args to call with: [%s]" % original_raw_cmd_args)
 
         to_execute = (
                 "import pytest\n" +
