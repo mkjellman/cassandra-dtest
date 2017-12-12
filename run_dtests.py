@@ -168,7 +168,7 @@ class RunDTests():
                 args_to_invoke_pytest.append("'{the_arg}'".format(the_arg=arg))
 
         for arg in argv:
-            if arg == "--pytest-options" or arg.startswith("--dtest-"):
+            if arg.startswith("--pytest-options") or arg.startswith("--dtest-"):
                 continue
             args_to_invoke_pytest.append("'{the_arg}'".format(the_arg=arg))
 
