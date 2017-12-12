@@ -29,15 +29,16 @@ class TestCommitLog(Tester):
         fixture_dtest_setup.allow_log_errors = True
 
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
-        parse_dtest_config.cluster.populate(1)
-        [self.node1] = parse_dtest_config.cluster.nodelist()
+    def fixture_set_cluster_settings(self, fixture_dtest_setup):
+        fixture_dtest_setup.cluster.populate(1)
+        [self.node1] = fixture_dtest_setup.cluster.nodelist()
 
-        yield parse_dtest_config
+        yield
 
         # Some of the tests change commitlog permissions to provoke failure
         # so this changes them back so we can delete them.
         self._change_commitlog_perms(stat.S_IWRITE | stat.S_IREAD | stat.S_IEXEC)
+
 
     def prepare(self, configuration=None, create_test_keyspace=True, **kwargs):
         if configuration is None:

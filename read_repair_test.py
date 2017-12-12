@@ -14,11 +14,10 @@ since = pytest.mark.since
 class TestReadRepair(Tester):
 
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
-        parse_dtest_config.cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
-        parse_dtest_config.cluster.populate(3).start(wait_for_binary_proto=True)
+    def fixture_set_cluster_settings(self, fixture_dtest_setup):
+        fixture_dtest_setup.cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
+        fixture_dtest_setup.cluster.populate(3).start(wait_for_binary_proto=True)
 
-        return parse_dtest_config
 
     @since('3.0')
     def test_alter_rf_and_run_read_repair(self):
