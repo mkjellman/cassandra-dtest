@@ -65,15 +65,15 @@ RUN_STATIC_UPGRADE_MATRIX = os.environ.get('RUN_STATIC_UPGRADE_MATRIX', '').lowe
 
 CURRENT_TEST = ""
 
-logging.basicConfig(filename=os.path.join(LOG_SAVED_DIR, "dtest.log"),
-                    filemode='w',
+logging.basicConfig(stream=sys.stdout,
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
 
-LOG = logging.getLogger('dtest')
+logger = logging.getLogger()
 # set python-driver log level to INFO by default for dtest
-logging.getLogger('cassandra').setLevel(logging.INFO)
+#logging.getLogger('cassandra').setLevel(logging.INFO)
+logging.getLogger('cassandra').setLevel(logging.DEBUG)
 
 
 def get_sha(repo_dir):
@@ -155,15 +155,17 @@ def reset_environment_vars():
 
 
 def warning(msg):
-    LOG.warning(CURRENT_TEST + ' - ' + str(msg))
-    if PRINT_DEBUG:
-        print("WARN: %s" % str(msg))
+    logger.warning(msg)
+    #logger.warning(CURRENT_TEST + ' - ' + str(msg))
+    #if PRINT_DEBUG:
+    #    print("WARN: %s" % str(msg))
 
 
 def debug(msg):
-    LOG.debug(CURRENT_TEST + ' - ' + str(msg))
-    if PRINT_DEBUG:
-        print("DEBUG: %s" % str(msg))
+    logger.debug(msg)
+    #logger.debug(CURRENT_TEST + ' - ' + str(msg))
+    #if PRINT_DEBUG:
+    #    print("DEBUG: %s" % str(msg))
 
 
 debug("Python driver version in use: {}".format(cassandra.__version__))
@@ -266,7 +268,6 @@ class Tester():
     connections = []
 
     def __getattribute__(self, name):
-        #print(self, name)
         try:
             return object.__getattribute__(self, name)
         except AttributeError:

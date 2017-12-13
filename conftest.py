@@ -9,6 +9,7 @@ import re
 import platform
 import copy
 import inspect
+import sys
 
 from netifaces import AF_INET
 import netifaces as ni
@@ -20,6 +21,13 @@ from ccmlib.common import get_version_from_build, is_win
 
 from dtest import find_libjemalloc, init_default_config, cleanup_cluster, maybe_setup_jacoco, set_log_levels
 from dtest_setup import DTestSetup
+
+logging.basicConfig(stream=sys.stdout,
+                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG)
+
+logger = logging.getLogger()
 
 
 class DTestConfig:
@@ -91,7 +99,7 @@ def pytest_addoption(parser):
 def sufficient_system_resources_for_resource_intensive_tests():
     mem = virtual_memory()
     total_mem_gb = mem.total/1024/1024/1024
-    print("total available system memory is %dGB" % total_mem_gb)
+    logger.info("total available system memory is %dGB" % total_mem_gb)
     # todo kjkj: do not hard code our bound.. for now just do 9 instances at 3gb a piece
     return total_mem_gb >= 9*3
 
@@ -124,7 +132,7 @@ def fixture_maybe_skip_tests_requiring_novnodes(request):
 
 @pytest.fixture(scope='function', autouse=True)
 def fixture_log_test_name_and_date(request):
-    print("Starting execution of %s at %s" % (request.node.name, str(datetime.now())))
+    logger.info("Starting execution of %s at %s" % (request.node.name, str(datetime.now())))
 
 
 def _filter_errors(dtest_setup, errors):
@@ -149,7 +157,7 @@ def check_logs_for_errors(dtest_setup):
                     error_str = error.strip()
 
                 if error_str:
-                    print("Unexpected error in {node_name} log, error: \n{error}".format(node_name=node.name, error=error_str))
+                    logger.error("Unexpected error in {node_name} log, error: \n{error}".format(node_name=node.name, error=error_str))
                     has_errors = True
             return has_errors
 
@@ -205,23 +213,15 @@ def reset_environment_vars(initial_environment):
 #@pytest.fixture(scope='function', autouse=True)
 @pytest.fixture(scope='function', autouse=False)
 def fixture_dtest_setup(request, parse_dtest_config):
-    print("function yield fixture is doing setup")
+    logger.info("function yield fixture is doing setup")
 
     initial_environment = copy.deepcopy(os.environ)
     dtest_setup = DTestSetup()
     dtest_setup.cluster = initialize_cluster(parse_dtest_config, dtest_setup)
 
-    #dtest_config = DTestConfig()
-    #dtest_config.setup(request)
-
-    #initialize_cluster(request, dtest_config)
-
-    runners = []
-    #connections = []
-
     yield dtest_setup
 
-    print("function yield fixture is starting teardown")
+    logger.info("function yield fixture is starting teardown")
     # test_is_ending prevents active log watching from being able to interrupt the test
     # which we don't want to happen once tearDown begins
     #self.test_is_ending = True
@@ -231,15 +231,8 @@ def fixture_dtest_setup(request, parse_dtest_config):
     for con in dtest_setup.connections:
         con.cluster.shutdown()
 
-    for runner in runners:
-        try:
-            runner.stop()
-        except:
-            pass
-
     failed = False
     try:
-        #if not self.allow_log_errors and self.check_logs_for_errors():
         if not dtest_setup.allow_log_errors and check_logs_for_errors(dtest_setup):
             failed = True
             raise AssertionError('Unexpected error in log, see stdout')
@@ -249,7 +242,7 @@ def fixture_dtest_setup(request, parse_dtest_config):
             if failed or not parse_dtest_config.delete_logs:
                 copy_logs(request, dtest_setup.cluster)
         except Exception as e:
-            print("Error saving log:", str(e))
+            logger.error("Error saving log:", str(e))
         finally:
             #log_watch_thread = getattr(self, '_log_watch_thread', None)
             #cleanup_cluster(self.cluster, self.test_path, log_watch_thread)
@@ -365,7 +358,7 @@ def pytest_collection_modifyitems(items, config):
     deselected_items = []
 
     sufficient_system_resources_resource_intensive = sufficient_system_resources_for_resource_intensive_tests()
-    print("has sufficient resources? %s" % sufficient_system_resources_resource_intensive)
+    logger.debug("has sufficient resources? %s" % sufficient_system_resources_resource_intensive)
 
     for item in items:
         #  set a timeout for all tests, it may be overwritten at the test level with an additional marker
@@ -379,16 +372,16 @@ def pytest_collection_modifyitems(items, config):
                 pass
             if config.getoption("--skip-resource-intensive-tests"):
                 deselect_test = True
-                print("SKIP: Deselecting test %s as test marked resource_intensive. To force execution of "
+                logger.info("SKIP: Deselecting test %s as test marked resource_intensive. To force execution of "
                       "this test re-run with the --force-resource-intensive-tests command line argument" % item.name)
             if not sufficient_system_resources_resource_intensive:
                 deselect_test = True
-                print("SKIP: Deselecting resource_intensive test %s due to insufficient system resources" % item.name)
+                logger.info("SKIP: Deselecting resource_intensive test %s due to insufficient system resources" % item.name)
 
         if item.get_marker("no_vnodes"):
             if config.getoption("--use-vnodes"):
                 deselect_test = True
-                print("SKIP: Deselecting test %s as the test requires vnodes to be disabled. To run this test, "
+                logger.info("SKIP: Deselecting test %s as the test requires vnodes to be disabled. To run this test, "
                       "re-run without the --use-vnodes command line argument" % item.name)
 
         for test_item_class in inspect.getmembers(item.module, inspect.isclass):
