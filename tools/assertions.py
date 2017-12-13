@@ -59,13 +59,9 @@ def _assert_exception(fun, *args, **kwargs):
         if matching is not None:
             assert not re.search(matching, repr(e))
         else:
-            if isinstance(expected, type):
-                if isinstance(e, expected):
-                    return
-            else:
-                for expected_exception in expected:
-                    if isinstance(type(e), expected_exception):
-                        return e
+            for expected_exception in expected:
+                if isinstance(e, expected_exception):
+                    return e
             raise e
 
 
