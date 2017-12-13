@@ -120,7 +120,7 @@ class TestIncRepair(Tester):
             self.assertNoRepairedSSTables(node, 'ks')
             session = self.patient_exclusive_cql_connection(node)
             results = list(session.execute("SELECT * FROM system.repairs"))
-            assert len(results), 0 == str(results)
+            assert len(results) == 0, str(results)
 
         # disable compaction so we can verify sstables are marked pending repair
         for node in cluster.nodelist():
@@ -458,7 +458,7 @@ class TestIncRepair(Tester):
 
         assert len(uniquematches) >= 2, uniquematches
 
-        assert max(matchcount) >= 1, matchcount
+        assert int(max(matchcount)) >= 1, matchcount
 
         assert 'Repaired at: 0' in '\n'.join([initialOut1, initialOut2])
 
@@ -489,7 +489,7 @@ class TestIncRepair(Tester):
 
         assert len(uniquematches) >= 2
 
-        assert max(matchcount) >= 2
+        assert int(max(matchcount)) >= 2
 
         assert 'Repaired at: 0' not in '\n'.join([finalOut1, finalOut2])
 

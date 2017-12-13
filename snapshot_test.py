@@ -365,7 +365,8 @@ class TestArchiveCommitlog(SnapshotTester):
             debug("node1 commitlog dir contents after stopping: " + str(os.listdir(commitlog_dir)))
             debug("tmp_commitlog contents after stopping: " + str(os.listdir(tmp_commitlog)))
 
-            self.copy_logs(self.cluster, name=self.id().split(".")[0] + "_pre-restore")
+            pytest_current_test = os.environ.get('PYTEST_CURRENT_TEST')
+            self.copy_logs(self.cluster, name=pytest_current_test + "_pre-restore")
             cleanup_cluster(self.cluster, self.fixture_dtest_setup.test_path)
             self.self.fixture_dtest_setup.test_path = self.fixture_dtest_setup.get_test_path()
             cluster = self.cluster = create_ccm_cluster(self.fixture_dtest_setup.test_path, name='test', config=self.dtest_config)

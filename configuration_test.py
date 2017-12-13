@@ -79,8 +79,7 @@ class TestConfiguration(Tester):
             "This test will not work in this environment; write_to_trigger_fsync does not trigger fsync."
 
         # get a fresh cluster to work on
-        self.tearDown()
-        self.setUp()
+        self.cluster.stop()
 
         node = new_commitlog_cluster_node()
         init_size = commitlog_size(node)

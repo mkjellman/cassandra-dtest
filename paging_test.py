@@ -510,7 +510,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 2
         assert pf.num_results_all(), [400 == 200]
-        assert list_to_hashed_dict(expected_data) == list_to_hashed_dict(pf.all_data())
+        assert set(expected_data) == set(pf.all_data())
 
     def test_paging_with_in_orderby_and_two_partition_keys(self):
         session = self.prepare()
