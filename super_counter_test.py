@@ -3,7 +3,7 @@ import pytest
 
 from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
                                   ConsistencyLevel, CounterColumn)
-from dtest import Tester, debug, create_ks
+from dtest import Tester, debug, create_ks, CASSANDRA_VERSION_FROM_BUILD
 from thrift_tests import get_thrift_client
 from tools.misc import ImmutableMapping
 
@@ -16,7 +16,13 @@ class TestSuperCounterClusterRestart(Tester):
     This test is part of this issue:
     https://issues.apache.org/jira/browse/CASSANDRA-3821
     """
-    cluster_options = ImmutableMapping({'start_rpc': 'true'})
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        """
+        @jira_ticket CASSANDRA-7653
+        """
+        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return parse_dtest_config
 
     def test_functional(self):
         NUM_SUBCOLS = 100

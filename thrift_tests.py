@@ -9,7 +9,8 @@ from thrift.Thrift import TApplicationException
 from thrift.transport import TSocket, TTransport
 
 from tools.assertions import assert_length_equal
-from dtest import (CASSANDRA_VERSION_FROM_BUILD, ReusableClusterTester, debug, init_default_config)
+from tools.misc import ImmutableMapping
+from dtest import (CASSANDRA_VERSION_FROM_BUILD, Tester, debug, init_default_config)
 from thrift_bindings.thrift010 import Cassandra
 from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
                                            ColumnOrSuperColumn, ColumnParent,
@@ -46,71 +47,44 @@ def pid():
 
 
 @since('2.0', max_version='4')
-class ThriftTester(ReusableClusterTester):
-    client = None
-    extra_args = []
-    cluster_options = {'partitioner': 'org.apache.cassandra.dht.ByteOrderedPartitioner',
-                       'start_rpc': 'true'}
+class ThriftTester(Tester):
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+        """
+        @jira_ticket CASSANDRA-7653
+        """
+        parse_dtest_config.cluster_options = ImmutableMapping({'partitioner': 'org.apache.cassandra.dht.ByteOrderedPartitioner',
+                   'start_rpc': 'true'})
+        return parse_dtest_config
 
-    @classmethod
-    def setUpClass(cls):
-        # super() needs to be used here for 'cls' to be bound to the correct class
-        super(ThriftTester, cls).setUpClass()
+    @pytest.fixture(scope='function', autouse=True)
+    def fixture_set_cluster_settings(self, fixture_dtest_setup):
+        init_default_config(fixture_dtest_setup.cluster, ThriftTester.cluster_options)
 
-    def setUp(self):
-        # This is called before the @since annotation has had time to take
-        # effect and we don't want to even try connecting on thrift in 4.0
-        if self.cluster.version() >= '4':
-            return
-
-        ReusableClusterTester.setUp(self)
-
-        # this is ugly, but the whole test module is written against a global client
-        global client
-        client = get_thrift_client()
-        client.transport.open()
-
-    def tearDown(self):
-        # This is called before the @since annotation has had time to take
-        # effect and we don't want to even try connecting on thrift in 4.0
-        if self.cluster.version() >= '4':
-            return
-
-        client.transport.close()
-        ReusableClusterTester.tearDown(self)
-
-    @classmethod
-    def post_initialize_cluster(cls):
-        cluster = cls.cluster
-
-        # This is called before the @since annotation has had time to take
-        # effect and we don't want to even try connecting on thrift in 4.0
-        if cluster.version() >= '4':
-            return
-
-        cluster.populate(1)
-        node1, = cluster.nodelist()
+        fixture_dtest_setup.cluster.populate(1)
+        node1, = fixture_dtest_setup.cluster.nodelist()
 
         # If vnodes are not used, we must set our own initial_token
         # Because ccm will not set a hex token for ByteOrderedPartitioner
         # automatically. It does not matter what token we set as we only
         # ever use one node.
-        if not cls.dtest_config.use_vnodes:
+        if not self.dtest_config.use_vnodes:
             node1.set_configuration_options(values={'initial_token': "a".encode('hex')})
 
-        cluster.start(wait_for_binary_proto=True)
-        cluster.nodelist()[0].watch_log_for("Listening for thrift clients")  # Wait for the thrift port to open
+        fixture_dtest_setup.cluster.start(wait_for_binary_proto=True)
+        fixture_dtest_setup.cluster.nodelist()[0].watch_log_for("Listening for thrift clients")  # Wait for the thrift port to open
         time.sleep(0.1)
-        cls.client = get_thrift_client()
-        cls.client.transport.open()
-        cls.define_schema()
+        # this is ugly, but the whole test module is written against a global client
+        global client
+        client = get_thrift_client()
+        client.transport.open()
+        self.define_schema()
 
-    @classmethod
-    def init_config(cls):
-        init_default_config(cls.cluster, ThriftTester.cluster_options)
+        yield client
 
-    @classmethod
-    def define_schema(cls):
+        client.transport.close()
+
+    def define_schema(self):
         keyspace1 = Cassandra.KsDef('Keyspace1', 'org.apache.cassandra.locator.SimpleStrategy', {'replication_factor': '1'},
                                     cf_defs=[
             Cassandra.CfDef('Keyspace1', 'Standard1'),

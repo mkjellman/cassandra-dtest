@@ -1,6 +1,6 @@
 import os
 
-from collections import OrderedDict
+import pytest
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from thrift_tests import get_thrift_client
@@ -25,29 +25,28 @@ SCHEMA_PATH = os.path.join("./", "upgrade_tests", "supercolumn-data", "cassandra
 TABLES_PATH = os.path.join("./", "upgrade_tests", "supercolumn-data", "cassandra-2.0", "supcols", "cols")
 NAMES = ["Alice", "Bob", "Claire", "Dave", "Ed", "Frank", "Grace"]
 
-
+@pytest.mark.upgrade_test
 class TestSCUpgrade(Tester):
     """
     Tests upgrade between a 2.0 cluster with predefined super columns and all other versions. Verifies data with both
     CQL and Thrift.
     """
-
-    def __init__(self, *args, **kwargs):
-        self.fixture_dtest_setup.ignore_log_patterns = [
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.allow_log_errors = True
+        fixture_dtest_setup.ignore_log_patterns = (
             # This one occurs if we do a non-rolling upgrade, the node
             # it's trying to send the migration to hasn't started yet,
             # and when it does, it gets replayed and everything is fine.
             r'Can\'t send migration request: node.*is down',
-        ]
+        )
         if CASSANDRA_VERSION_FROM_BUILD < '2.2':
             _known_teardown_race_error = (
                 'ScheduledThreadPoolExecutor$ScheduledFutureTask@[0-9a-f]+ '
                 'rejected from org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor'
             )
             # don't alter ignore_log_patterns on the class, just the obj for this test
-            self.ignore_log_patterns += [_known_teardown_race_error]
-
-        Tester.__init__(self, *args, **kwargs)
+            fixture_dtest_setup.ignore_log_patterns += [_known_teardown_race_error]
 
     def prepare(self, num_nodes=1, cassandra_version="git:cassandra-2.1"):
         cluster = self.cluster
