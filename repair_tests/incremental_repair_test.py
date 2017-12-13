@@ -163,7 +163,7 @@ class TestIncRepair(Tester):
         ranges = {'\x00\x00\x00\x08K\xc2\xed\\<\xd3{X\x00\x00\x00\x08r\x04\x89[j\x81\xc4\xe6',
                   '\x00\x00\x00\x08r\x04\x89[j\x81\xc4\xe6\x00\x00\x00\x08\xd8\xcdo\x9e\xcbl\x83\xd4',
                   '\x00\x00\x00\x08\xd8\xcdo\x9e\xcbl\x83\xd4\x00\x00\x00\x08K\xc2\xed\\<\xd3{X'}
-        ranges = {memoryview(b) for b in ranges}
+        ranges = {memoryview(b.encode("utf-8")) for b in ranges}
 
         for node in self.cluster.nodelist():
             session = self.patient_exclusive_cql_connection(node)

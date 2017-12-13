@@ -304,7 +304,7 @@ class TestOfflineTools(Tester):
         session.execute("delete from ks.cf where key = 3")
         node1.flush()
         out, error, _ = node1.run_sstableexpiredblockers(keyspace="ks", column_family="cf")
-        assert "blocks 2 expired sstables from getting dropped" in out
+        assert "blocks 2 expired sstables from getting dropped" in out.decode("utf-8")
 
     # 4.0 removes back compatibility with pre-3.0 versions, so testing upgradesstables for
     # paths from those versions to 4.0 is invalid (and can only fail). There isn't currently

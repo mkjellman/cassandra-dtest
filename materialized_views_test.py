@@ -2288,9 +2288,9 @@ class TestMaterializedViewsConsistency(Tester):
 
         row = row_generate(i, num_partitions)
 
-        async = self.session.execute_async(insert_stmt, row)
+        async_ret = self.session.execute_async(insert_stmt, row)
         errors = partial(handle_errors, row)
-        async.add_callbacks(success_callback, errors)
+        async_ret.add_callbacks(success_callback, errors)
 
     def _populate_rows(self):
         statement = SimpleStatement(
@@ -2344,7 +2344,7 @@ class TestMaterializedViewsConsistency(Tester):
         insert1.consistency_level = writeConsistency
 
         debug("Writing data to base table")
-        for i in range(upper / 10):
+        for i in range(upper // 10):
             self._do_row(insert1, i, num_partitions)
 
         debug("Creating materialized view")
@@ -2356,7 +2356,7 @@ class TestMaterializedViewsConsistency(Tester):
         session.cluster.control_connection.wait_for_schema_agreement()
 
         debug("Writing more data to base table")
-        for i in range(upper / 10, upper):
+        for i in range(upper // 10, upper):
             self._do_row(insert1, i, num_partitions)
 
         # Wait that all requests are done

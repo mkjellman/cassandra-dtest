@@ -114,7 +114,7 @@ class TestReadRepair(Tester):
     def identify_initial_placement(self, keyspace, table, key):
         nodes = self.cluster.nodelist()
         out, _, _ = nodes[0].nodetool("getendpoints alter_rf_test t1 1")
-        address = out.decode("utf-8").split('\n')[-2]
+        address = out.split('\n')[-2]
         initial_replica = None
         non_replicas = []
         for node in nodes:
