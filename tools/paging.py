@@ -1,7 +1,7 @@
 import time
 
 from tools.datahelp import flatten_into_set
-
+from tools.misc import list_to_hashed_dict
 
 class Page(object):
     data = None
@@ -165,7 +165,7 @@ class PageAssertionMixin(object):
     """Can be added to subclasses of unittest.Tester"""
 
     def assertEqualIgnoreOrder(self, actual, expected):
-        assert flatten_into_set(actual) == flatten_into_set(expected)
+        assert list_to_hashed_dict(actual) == list_to_hashed_dict(expected)
 
 
     def assertIsSubsetOf(self, subset, superset):
