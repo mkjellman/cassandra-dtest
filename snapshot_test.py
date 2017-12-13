@@ -521,8 +521,9 @@ class TestArchiveCommitlog(SnapshotTester):
             debug("removing tmp_commitlog: " + tmp_commitlog)
             shutil.rmtree(tmp_commitlog)
 
+
 def assert_directory_not_empty(tmp_commitlog, commitlog_dir):
     tmp_commitlog_dir = set(os.listdir(tmp_commitlog))
-    for commitlog_file in os.listdir(commitlog_dir):
+    for commitlog_file in set(os.listdir(commitlog_dir)):
         tmp_commitlog_dir.discard(commitlog_file)
-    assert len(tmp_commitlog_dir) > 0
+    assert len(tmp_commitlog_dir) != 0

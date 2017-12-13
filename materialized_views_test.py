@@ -322,7 +322,7 @@ class TestMaterializedViews(Tester):
 
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='ks' AND base_table_name='users' ALLOW FILTERING")))
-        assert len(result) == 2 == "Expecting {} materialized view, got {}".format(2, len(result))
+        assert len(result) == 2, "Expecting {} materialized view, got {}".format(2, len(result))
 
         session.execute("DROP MATERIALIZED VIEW ks.users_by_state;")
 
@@ -661,7 +661,7 @@ class TestMaterializedViews(Tester):
             assert_one(session, "SELECT * FROM t_by_v WHERE v = {v}".format(v=i), [i, i, 'a', 3.0])
 
         rows = list(session.execute("SELECT * FROM t_by_v2 WHERE v2 = 'a'"))
-        assert len(rows), 1000 == "Expected 1000 rows but got {}".format(len(rows))
+        assert len(rows) == 1000, "Expected 1000 rows but got {}".format(len(rows))
 
         assert_invalid(session, "SELECT * FROM t_by_v WHERE v = 1 AND v2 = 'a'")
         assert_invalid(session, "SELECT * FROM t_by_v2 WHERE v2 = 'a' AND v = 1")
@@ -707,7 +707,7 @@ class TestMaterializedViews(Tester):
         time.sleep(20)
 
         rows = list(session.execute("SELECT * FROM t_by_v2"))
-        assert len(rows), 0 == "Expected 0 rows but got {}".format(len(rows))
+        assert len(rows) == 0, "Expected 0 rows but got {}".format(len(rows))
 
     def test_query_all_new_column(self):
         """
@@ -2308,7 +2308,7 @@ class TestMaterializedViewsConsistency(Tester):
 
         @jira_ticket CASSANDRA-10981
         """
-        self._consistent_reads_after_write_test(1)
+        self._consistent_reads_after_write_test(int(1))
 
     def test_multi_partition_consistent_reads_after_write(self):
         """
@@ -2316,7 +2316,7 @@ class TestMaterializedViewsConsistency(Tester):
 
         @jira_ticket CASSANDRA-10981
         """
-        self._consistent_reads_after_write_test(20)
+        self._consistent_reads_after_write_test(int(20))
 
     def _consistent_reads_after_write_test(self, num_partitions):
 

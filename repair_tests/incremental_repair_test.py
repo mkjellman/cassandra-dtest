@@ -338,7 +338,7 @@ class TestIncRepair(Tester):
                 node.nodetool('compact keyspace1 standard1')
 
         for out in (node.run_sstablemetadata(keyspace='keyspace1').stdout for node in cluster.nodelist()):
-            assert 'Repaired at: 0' not in out
+            assert 'Repaired at: 0' not in out.decode("utf-8")
 
     def test_multiple_repair(self):
         """
@@ -447,8 +447,8 @@ class TestIncRepair(Tester):
         node2.run_sstablerepairedset(keyspace='keyspace1')
         node2.start(wait_for_binary_proto=True)
 
-        initialOut1 = node1.run_sstablemetadata(keyspace='keyspace1').stdout
-        initialOut2 = node2.run_sstablemetadata(keyspace='keyspace1').stdout
+        initialOut1 = node1.run_sstablemetadata(keyspace='keyspace1').stdout.decode("utf-8")
+        initialOut2 = node2.run_sstablemetadata(keyspace='keyspace1').stdout.decode("utf-8")
 
         matches = findall('(?<=Repaired at:).*', '\n'.join([initialOut1, initialOut2]))
         debug("Repair timestamps are: {}".format(matches))
@@ -456,11 +456,11 @@ class TestIncRepair(Tester):
         uniquematches = set(matches)
         matchcount = Counter(matches)
 
-        assert len(uniquematches), 2 >= uniquematches
+        assert len(uniquematches) >= 2, uniquematches
 
-        assert max(matchcount), 1 >= matchcount
+        assert max(matchcount) >= 1, matchcount
 
-        assert 'Repaired at: 0', '\n'.join([initialOut1 in initialOut2])
+        assert 'Repaired at: 0' in '\n'.join([initialOut1, initialOut2])
 
         node1.stop()
         node2.stress(['write', 'n=15K', 'no-warmup', '-schema', 'replication(factor=2)'])
@@ -491,7 +491,7 @@ class TestIncRepair(Tester):
 
         assert max(matchcount) >= 2
 
-        assert 'Repaired at: 0', '\n'.join([finalOut1 not in finalOut2])
+        assert 'Repaired at: 0' not in '\n'.join([finalOut1, finalOut2])
 
     def test_compaction(self):
         """

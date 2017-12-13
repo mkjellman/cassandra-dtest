@@ -75,9 +75,8 @@ class TestConfiguration(Tester):
         debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
         write_to_trigger_fsync(durable_session, 'ks', 'tab')
 
-        self.assertGreater(commitlog_size(durable_node), durable_init_size,
-                           msg='This test will not work in this environment; '
-                               'write_to_trigger_fsync does not trigger fsync.')
+        assert commitlog_size(durable_node) > durable_init_size, \
+            "This test will not work in this environment; write_to_trigger_fsync does not trigger fsync."
 
         # get a fresh cluster to work on
         self.tearDown()
@@ -93,8 +92,7 @@ class TestConfiguration(Tester):
         session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
         session.execute('ALTER KEYSPACE ks WITH DURABLE_WRITES=true')
         write_to_trigger_fsync(session, 'ks', 'tab')
-        self.assertGreater(commitlog_size(node), init_size,
-                           msg='ALTER KEYSPACE was not respected')
+        assert commitlog_size(node) > init_size, "ALTER KEYSPACE was not respected"
 
     def overlapping_data_folders(self):
         """

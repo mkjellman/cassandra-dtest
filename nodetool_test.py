@@ -88,7 +88,7 @@ class TestNodetool(Tester):
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             assert 0 == len(err), err
             debug(out)
-            pytest.raises(out, match=r'.* \d+ ms')
+            assert re.search(r'.* \d+ ms', out)
 
         # set all of the timeouts to 123
         for timeout_type in types:
@@ -122,7 +122,7 @@ class TestNodetool(Tester):
         # Do a first try without any keypace, we shouldn't have the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        assert not re.search(notice_message, out.decode("utf-8"))
+        assert not re.search(notice_message, out)
 
         session = self.patient_cql_connection(node)
         session.execute("CREATE KEYSPACE ks1 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':1}")
@@ -130,14 +130,14 @@ class TestNodetool(Tester):
         # With 1 keyspace, we should still not get the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        assert not re.search(notice_message, out.decode("utf-8"))
+        assert not re.search(notice_message, out)
 
         session.execute("CREATE KEYSPACE ks2 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':1}")
 
         # With 2 keyspaces with the same settings, we should not get the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        assert not re.search(notice_message, out.decode("utf-8"))
+        assert not re.search(notice_message, out)
 
         session.execute("CREATE KEYSPACE ks3 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':3}")
 

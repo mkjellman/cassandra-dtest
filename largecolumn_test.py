@@ -1,7 +1,7 @@
 import pytest
+import re
 
 from dtest import Tester, debug
-from plugins.assert_tools import assert_regexp_matches
 
 since = pytest.mark.since
 
@@ -29,9 +29,9 @@ class TestLargeColumn(Tester):
         output, err, _ = node.nodetool("gcstats")
         debug(output)
         output = output.split("\n")
-        assert_regexp_matches(output[0].strip(), 'Interval')
+        assert re.search('Interval', output[0].strip())
         fields = output[1].split()
-        assert len(fields) == 6, "Expected output from nodetool gcstats has at least six fields. However >= fields is: {}".format(fields)
+        assert len(fields) >= 6, "Expected output from nodetool gcstats has at least six fields. However >= fields is: {}".format(fields)
         for field in fields:
             assert is_number(field.strip()) or field == 'NaN', "Expected numeric from fields from nodetool gcstats. However, field.strip() is: {}".format(field.strip())
         return fields[6]

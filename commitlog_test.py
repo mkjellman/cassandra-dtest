@@ -16,6 +16,7 @@ from parse import parse
 from dtest import Tester, debug, create_ks
 from tools.assertions import assert_almost_equal, assert_none, assert_one
 from tools.data import rows_to_list
+from tools.misc import list_to_hashed_dict
 
 since = pytest.mark.since
 
@@ -283,7 +284,7 @@ class TestCommitLog(Tester):
         debug("Make query and ensure data is present")
         session = self.patient_cql_connection(node1)
         res = session.execute("SELECT * FROM Test. users")
-        assert rows_to_list(res) [['gandalf', 1955, 'male', 'p@$$', 'WA']]
+        assert list_to_hashed_dict(rows_to_list(res)) == list_to_hashed_dict([['gandalf', 1955, 'male', 'p@$$', 'WA']])
 
     def test_default_segment_size(self):
         """
@@ -565,7 +566,7 @@ class TestCommitLog(Tester):
         assert len(os.listdir(cl_dir)) > 0
         for cl in os.listdir(cl_dir):
             # read the header and find the crc location
-            with open(os.path.join(cl_dir, cl), 'r') as f:
+            with open(os.path.join(cl_dir, cl), 'rb') as f:
                 f.seek(0)
                 crc_pos = 12
                 f.seek(crc_pos)
@@ -583,17 +584,17 @@ class TestCommitLog(Tester):
 
             # rewrite it with imaginary compressor
             assert 'LZ4Compressor' in header_bytes
-            header_bytes = header_bytes.replace('LZ4Compressor', 'LZ5Compressor')
+            header_bytes = header_bytes.replace('LZ4Compressor'.encode("utf-8"), 'LZ5Compressor'.encode("utf-8"))
             assert 'LZ4Compressor' not in header_bytes
             assert 'LZ5Compressor' in header_bytes
-            with open(os.path.join(cl_dir, cl), 'w') as f:
+            with open(os.path.join(cl_dir, cl), 'wb') as f:
                 f.seek(0)
                 f.write(header_bytes)
                 f.seek(crc_pos)
                 f.write(struct.pack('>i', get_header_crc(header_bytes)))
 
             # verify we wrote everything correctly
-            with open(os.path.join(cl_dir, cl), 'r') as f:
+            with open(os.path.join(cl_dir, cl), 'rb') as f:
                 f.seek(0)
                 assert f.read(header_length) == header_bytes
                 f.seek(crc_pos)

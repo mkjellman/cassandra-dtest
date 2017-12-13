@@ -4,11 +4,12 @@ import pytest
 
 from dtest import Tester, debug, create_ks
 from tools.data import rows_to_list
+from tools.misc import list_to_hashed_dict
 
 since = pytest.mark.since
 
 
-@since('0', '2.2.X')
+@since('0', max_version='2.2.X')
 class TestJson(Tester):
 
     def test_json_tools(self):
@@ -44,8 +45,8 @@ class TestJson(Tester):
 
         res = session.execute("SELECT * FROM Test. users")
 
-        assert rows_to_list(res) == [['frodo', 1985, 'male', 'pass@', 'CA'],
-                               ['sam', 1980, 'male', '@pass', 'NY']]
+        assert list_to_hashed_dict(rows_to_list(res)) == list_to_hashed_dict([['frodo', 1985, 'male', 'pass@', 'CA'],
+                               ['sam', 1980, 'male', '@pass', 'NY']])
 
         debug("Flushing and stopping cluster...")
         node1.flush()

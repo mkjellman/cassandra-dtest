@@ -295,7 +295,7 @@ class TestCDC(Tester):
         execute_concurrent_with_args(session, insert_stmt, data)
 
         # We need data to be in commitlogs, not sstables.
-        assert [], list(node.get_sstables(ks_name, table_name))
+        assert [] == list(node.get_sstables(ks_name, table_name))
 
         for enable in alter_path:
             set_cdc(enable)

@@ -419,12 +419,12 @@ class TestBatch(Tester):
             if received_responses is not None:
                 msg = "Expecting received_responses to be {}, got: {}".format(
                     received_responses, e.received_responses,)
-                assert e.received_responses, received_responses == msg
+                assert e.received_responses == received_responses, msg
         except Unavailable as e:
             if received_responses is not None:
                 msg = "Expecting alive_replicas to be {}, got: {}".format(
                     received_responses, e.alive_replicas,)
-                assert e.alive_replicas, received_responses == msg
+                assert e.alive_replicas == received_responses, msg
         except Exception as e:
             assert False, "Expecting TimedOutException, got:" + str(e)
         else:

@@ -1334,8 +1334,8 @@ class TestConsistency(Tester):
             query_c1c2(session, n, ConsistencyLevel.ONE)
 
     def test_quorum_available_during_failure(self):
-        CL = ConsistencyLevel.QUORUM
-        RF = 3
+        cl = ConsistencyLevel.QUORUM
+        rf = 3
 
         logger.debug("Creating a ring")
         cluster = self.cluster
@@ -1348,18 +1348,18 @@ class TestConsistency(Tester):
 
         logger.debug("Set to talk to node 2")
         session = self.patient_cql_connection(node2)
-        create_ks(session, 'ks', RF)
+        create_ks(session, 'ks', rf)
         create_c1c2_table(self, session)
 
         logger.debug("Generating some data")
-        insert_c1c2(session, n=100, consistency=CL)
+        insert_c1c2(session, n=100, consistency=cl)
 
         logger.debug("Taking down node1")
         node1.stop(wait_other_notice=True)
 
         logger.debug("Reading back data.")
         for n in range(100):
-            query_c1c2(session, n, CL)
+            query_c1c2(session, n, cl)
 
     def stop_node(self, node_number):
         to_stop = self.cluster.nodes["node%d" % node_number]
