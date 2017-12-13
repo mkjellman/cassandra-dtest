@@ -72,10 +72,30 @@ def generate_ssl_stores(base_dir, passphrase='cassandra'):
 
 
 def list_to_hashed_dict(list):
+    """
+    takes a list and hashes the contents and puts them into a dict so the contents can be compared
+    without order. unfortunately, we need to do a little massaging of our input; the result from
+    the driver can return a OrderedMapSerializedKey (e.g. [0, 9, OrderedMapSerializedKey([(10, 11)])])
+    but our "expected" list is simply a list of elements (or list of list). this means if we
+    hash the values as is we'll get different results. to avoid this, when we see a dict,
+    convert the raw values (key, value) into a list and insert that list into a new list
+    :param list the list to convert into a dict
+    :return: a dict containing the contents fo the list with the hashed contents
+    """
     hashed_dict = dict()
     for item_lst in list:
-        list_digest = hashlib.sha256(str(item_lst).encode('utf-8', 'ignore')).hexdigest()
-        hashed_dict[list_digest] = item_lst
+        normalized_list = []
+        for item in item_lst:
+            if hasattr(item, "items"):
+                tmp_list = []
+                for a, b in item.items():
+                    tmp_list.append(a)
+                    tmp_list.append(b)
+                normalized_list.append(tmp_list)
+            else:
+                normalized_list.append(item)
+        list_digest = hashlib.sha256(str(normalized_list).encode('utf-8', 'ignore')).hexdigest()
+        hashed_dict[list_digest] = normalized_list
     return hashed_dict
 
 
