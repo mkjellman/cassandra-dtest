@@ -53,16 +53,14 @@ def _assert_exception(fun, *args, **kwargs):
             fun(None)
         else:
             fun(*args)
-
-        assert False, "Expecting query to raise an exception, but nothing was raised."
-    except Exception as e:
+    except expected as e:
         if matching is not None:
-            assert not re.search(matching, repr(e))
-        else:
-            for expected_exception in expected:
-                if isinstance(e, expected_exception):
-                    return e
-            raise e
+            regex = re.compile(matching)
+            assert regex.match(repr(e)) is None
+    except Exception as e:
+        raise e
+    else:
+        assert False, "Expecting query to raise an exception, but nothing was raised."
 
 
 def assert_exception(session, query, matching=None, expected=None):
