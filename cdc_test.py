@@ -256,8 +256,8 @@ class TestCDC(Tester):
         create_ks(session, ks_name, rf=1)
 
         if table_name is not None:
-            assert cdc_enabled_table, 'if creating a table in prepare is not None, must specify whether or not CDC is enabled on it'
-            assert column_spec, 'if creating a table in prepare is not None, must specify its schema'
+            assert cdc_enabled_table is not None, 'if creating a table in prepare is not None, must specify whether or not CDC is enabled on it'
+            assert column_spec is not None, 'if creating a table in prepare is not None, must specify its schema'
             options = {}
             if gc_grace_seconds is not None:
                 options['gc_grace_seconds'] = gc_grace_seconds
@@ -295,7 +295,7 @@ class TestCDC(Tester):
         execute_concurrent_with_args(session, insert_stmt, data)
 
         # We need data to be in commitlogs, not sstables.
-        assert [], list(node.get_sstables(ks_name == table_name))
+        assert [], list(node.get_sstables(ks_name, table_name))
 
         for enable in alter_path:
             set_cdc(enable)
@@ -376,9 +376,8 @@ class TestCDC(Tester):
         debug('beginning data insert to fill CDC commitlogs')
         rows_loaded = _write_to_cdc_WriteFailure(session, full_cdc_table_info.insert_stmt)
 
-        self.assertLess(0, rows_loaded,
-                        'No CDC rows inserted. This may happen when '
-                        'cdc_total_space_in_mb > commitlog_segment_size_in_mb')
+        assert 0 < rows_loaded, 'No CDC rows inserted. ' \
+                                'This may happen when cdc_total_space_in_mb > commitlog_segment_size_in_mb'
 
         commitlog_dir = os.path.join(node.get_path(), 'commitlogs')
         commitlogs_size = size_of_files_in_dir(commitlog_dir)

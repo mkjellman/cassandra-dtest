@@ -475,24 +475,24 @@ class TestCommitLog(Tester):
         assert len(os.listdir(cl_dir)) > 0
         for cl in os.listdir(cl_dir):
             # locate the CRC location
-            with open(os.path.join(cl_dir, cl), 'r') as f:
+            with open(os.path.join(cl_dir, cl), 'rb') as f:
                 f.seek(0)
-                version = struct.unpack('>i', f.read(4).encode("utf-8"))[0]
+                version = struct.unpack('>i', f.read(4))[0]
                 crc_pos = 12
                 if version >= 5:
                     f.seek(crc_pos)
-                    psize = struct.unpack('>h', f.read(2).encode("utf-8"))[0] & 0xFFFF
+                    psize = struct.unpack('>h', f.read(2))[0] & 0xFFFF
                     crc_pos += 2 + psize
 
             # rewrite it with crap
-            with open(os.path.join(cl_dir, cl), 'w') as f:
+            with open(os.path.join(cl_dir, cl), 'wb') as f:
                 f.seek(crc_pos)
-                f.write(struct.pack('>i', str(123456).encode("utf-8")))
+                f.write(struct.pack('>i', 123456))
 
             # verify said crap
-            with open(os.path.join(cl_dir, cl), 'r') as f:
+            with open(os.path.join(cl_dir, cl), 'rb') as f:
                 f.seek(crc_pos)
-                crc = struct.unpack('>i', f.read(4).encode("utf-8"))[0]
+                crc = struct.unpack('>i', f.read(4))[0]
                 assert crc == 123456
 
         mark = node.mark_log()

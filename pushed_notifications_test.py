@@ -149,7 +149,7 @@ class TestPushedNotifications(Tester):
         for waiter in waiters:
             debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(30.0)
-            assert 1 if waiter.node is node1 else 0, len(notifications) == notifications
+            assert 1 if waiter.node is node1 else 0 == len(notifications), notifications
 
     def test_restart_node(self):
         """

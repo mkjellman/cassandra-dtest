@@ -354,7 +354,7 @@ class TestArchiveCommitlog(SnapshotTester):
             debug("node1 commitlog dir contents: " + str(os.listdir(commitlog_dir)))
             debug("tmp_commitlog contents: " + str(os.listdir(tmp_commitlog)))
 
-            assert set(os.listdir(tmp_commitlog)) - set(os.listdir(commitlog_dir)) != set()
+            assert_directory_not_empty(tmp_commitlog, commitlog_dir)
 
             cluster.flush()
             cluster.compact()
@@ -499,7 +499,7 @@ class TestArchiveCommitlog(SnapshotTester):
 
             cluster.flush()
 
-            assert set(os.listdir(tmp_commitlog)) - set(os.listdir(commitlog_dir)) != set()
+            assert_directory_not_empty(tmp_commitlog, commitlog_dir)
 
             debug("Flushing and doing first restart")
             cluster.compact()
@@ -520,3 +520,9 @@ class TestArchiveCommitlog(SnapshotTester):
         finally:
             debug("removing tmp_commitlog: " + tmp_commitlog)
             shutil.rmtree(tmp_commitlog)
+
+def assert_directory_not_empty(tmp_commitlog, commitlog_dir):
+    tmp_commitlog_dir = set(os.listdir(tmp_commitlog))
+    for commitlog_file in os.listdir(commitlog_dir):
+        tmp_commitlog_dir.discard(commitlog_file)
+    assert len(tmp_commitlog_dir) > 0

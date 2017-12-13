@@ -10,6 +10,7 @@ from cassandra.query import (SimpleStatement, dict_factory,
                              named_tuple_factory, tuple_factory)
 
 from dtest import Tester, debug, run_scenarios, create_ks
+from tools.misc import list_to_hashed_dict
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_one)
 from tools.data import rows_to_list
@@ -114,7 +115,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.num_results_all(), [5 == 4]
 
         # make sure expected and actual have same data elements (ignoring order)
-        self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
+        assert list_to_hashed_dict(pf.all_data()) == list_to_hashed_dict(expected_data)
 
     def test_with_equal_results_to_page_size(self):
         session = self.prepare()
@@ -142,7 +143,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 1
 
         # make sure expected and actual have same data elements (ignoring order)
-        self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
+        assert list_to_hashed_dict(pf.all_data()) == list_to_hashed_dict(expected_data)
 
     def test_undefined_page_size_default(self):
         """
@@ -171,7 +172,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.num_results_all(), [5000 == 1]
 
         # make sure expected and actual have same data elements (ignoring order)
-        self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
+        assert list_to_hashed_dict(pf.all_data()) == list_to_hashed_dict(expected_data)
 
 
 @since('2.0')
@@ -401,22 +402,20 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         assert pf.num_results_all(), [4 == 3]
 
         # make sure the allow filtering query matches the expected results (ignoring order)
-        self.assertEqualIgnoreOrder(
-            pf.all_data(),
-            parse_data_into_dicts(
-                """
-                |id|value           |
-                +--+----------------+
-                |2 |and more testing|
-                |3 |and more testing|
-                |4 |and more testing|
-                |5 |and more testing|
-                |7 |and more testing|
-                |8 |and more testing|
-                |9 |and more testing|
-                """, format_funcs={'id': int, 'value': str}
-            )
+        expected = parse_data_into_dicts(
+            """
+            |id|value           |
+            +--+----------------+
+            |2 |and more testing|
+            |3 |and more testing|
+            |4 |and more testing|
+            |5 |and more testing|
+            |7 |and more testing|
+            |8 |and more testing|
+            |9 |and more testing|
+            """, format_funcs={'id': int, 'value': str}
         )
+        assert list_to_hashed_dict(pf.all_data()) == list_to_hashed_dict(expected)
 
 
 @since('2.0')
@@ -446,7 +445,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 4
         assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
 
-        self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
+        assert list_to_hashed_dict(pf.all_data()) == list_to_hashed_dict(expected_data)
 
     def test_paging_across_multi_wide_rows(self):
         session = self.prepare()
@@ -473,7 +472,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 4
         assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
 
-        self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
+        assert list_to_hashed_dict(pf.all_data()) == list_to_hashed_dict(expected_data)
 
     def test_paging_using_secondary_indexes(self):
         session = self.prepare()
@@ -511,7 +510,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 2
         assert pf.num_results_all(), [400 == 200]
-        self.assertEqualIgnoreOrder(expected_data, pf.all_data())
+        assert list_to_hashed_dict(expected_data) == list_to_hashed_dict(pf.all_data())
 
     def test_paging_with_in_orderby_and_two_partition_keys(self):
         session = self.prepare()
@@ -1689,7 +1688,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 2
         assert pf.num_results_all(), [400 == 200]
-        self.assertEqualIgnoreOrder(expected_data, pf.all_data())
+        assert list_to_hashed_dict(expected_data) == list_to_hashed_dict(pf.all_data())
 
     def test_static_columns_with_empty_non_static_columns_paging(self):
         """

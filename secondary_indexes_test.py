@@ -928,7 +928,7 @@ class TestSecondaryIndexesOnCollections(Tester):
         session.cluster.refresh_schema_metadata()
         table_meta = session.cluster.metadata.keyspaces["map_double_index"].tables["map_tbl"]
         assert 3 == len(table_meta.indexes)
-        assert ['map_keys', 'map_values', 'map_entries'] == table_meta.indexes
+        assert {'map_keys', 'map_values', 'map_entries'} == set(table_meta.indexes.keys())
         assert 3 == len(session.cluster.metadata.keyspaces["map_double_index"].indexes)
 
         assert 'map_keys' in table_meta.export_as_string()
