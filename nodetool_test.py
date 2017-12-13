@@ -1,5 +1,6 @@
 import os
 import pytest
+import re
 
 from ccmlib.node import ToolError
 from dtest import Tester, debug
@@ -59,10 +60,12 @@ class TestNodetool(Tester):
             debug(out_str)
             for line in out_str.split(os.linesep):
                 if line.startswith('Data Center'):
-                    assert line.endswith(node.data_center), "Expected dc {} for {} but got {}".format(node.data_center, node.address(), line.rsplit(None, 1)[-1])
+                    assert line.endswith(node.data_center), \
+                        "Expected dc {} for {} but got {}".format(node.data_center, node.address(), line.rsplit(None, 1)[-1])
                 elif line.startswith('Rack'):
                     rack = "rack{}".format(i % 2)
-                    assert line.endswith(rack), "Expected rack {} for {} but got {}".format(rack, node.address(), line.rsplit(None, 1)[-1])
+                    assert line.endswith(rack), \
+                        "Expected rack {} for {} but got {}".format(rack, node.address(), line.rsplit(None, 1)[-1])
 
     @since('3.4')
     def test_nodetool_timeout_commands(self):
@@ -119,7 +122,7 @@ class TestNodetool(Tester):
         # Do a first try without any keypace, we shouldn't have the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        self.assertNotRegexpMatches(out, notice_message)
+        assert not re.search(notice_message, out.decode("utf-8"))
 
         session = self.patient_cql_connection(node)
         session.execute("CREATE KEYSPACE ks1 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':1}")
@@ -127,21 +130,21 @@ class TestNodetool(Tester):
         # With 1 keyspace, we should still not get the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        self.assertNotRegexpMatches(out, notice_message)
+        assert not re.search(notice_message, out.decode("utf-8"))
 
         session.execute("CREATE KEYSPACE ks2 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':1}")
 
         # With 2 keyspaces with the same settings, we should not get the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        self.assertNotRegexpMatches(out, notice_message)
+        assert not re.search(notice_message, out.decode("utf-8"))
 
         session.execute("CREATE KEYSPACE ks3 WITH replication = { 'class':'SimpleStrategy', 'replication_factor':3}")
 
         # With a keyspace without the same replication factor, we should get the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        pytest.raises(out, match=notice_message)
+        assert re.search(notice_message, out)
 
     @since('4.0')
     def test_set_get_batchlog_replay_throttle(self):
@@ -161,7 +164,8 @@ class TestNodetool(Tester):
 
         # Set and get throttle with nodetool, ensuring that the rate change is logged
         node.nodetool('setbatchlogreplaythrottle 2048')
-        assert len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint', filename='debug.log')) >= 0
+        assert len(node.grep_log('Updating batchlog replay throttle to 2048 KB/s, 1024 KB/s per endpoint',
+                                 filename='debug.log')) >= 0
         assert 'Batchlog replay throttle: 2048 KB/s' in node.nodetool('getbatchlogreplaythrottle').stdout
 
     @since('3.0')
@@ -174,20 +178,19 @@ class TestNodetool(Tester):
         cluster = self.cluster
         cluster.populate(1)
         node = cluster.nodelist()[0]
-        remove_perf_disable_shared_mem(node) # for jmx
+        remove_perf_disable_shared_mem(node)  # for jmx
         cluster.start()
 
         session = self.patient_cql_connection(node)
 
-        query = "CREATE KEYSPACE IF NOT EXISTS test WITH replication = {'class': 'NetworkTopologyStrategy', 'datacenter1': 2};"
+        query = "CREATE KEYSPACE IF NOT EXISTS test WITH replication " \
+                "= {'class': 'NetworkTopologyStrategy', 'datacenter1': 2};"
         session.execute(query)
 
         query = 'CREATE TABLE test.test (pk int, ck int, PRIMARY KEY (pk, ck));'
         session.execute(query)
 
         ss = make_mbean('db', type='StorageService')
-
-        schema_version = ''
 
         # get initial schema version
         with JolokiaAgent(node) as jmx:
@@ -205,7 +208,7 @@ class TestNodetool(Tester):
 
         # validate that schema version wasn't automatically updated
         with JolokiaAgent(node) as jmx:
-            assert schema_version, jmx.read_attribute(ss == 'SchemaVersion')
+            assert schema_version == jmx.read_attribute(ss, 'SchemaVersion')
 
         # make sure the new column wasn't automagically picked up
         assert_invalid(session, 'INSERT INTO test.test (pk, ck, val) VALUES (0, 1, 2);')
