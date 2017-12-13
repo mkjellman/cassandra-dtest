@@ -309,14 +309,31 @@ class TestPushedNotifications(Tester):
         debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=8)
         assert 8 == len(notifications), notifications
-        self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'KEYSPACE'}, notifications[0])
-        self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 't'}, notifications[1])
-        self.assertDictContainsSubset({'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 't'}, notifications[2])
-        self.assertDictContainsSubset({'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 'mv'}, notifications[3])
-        self.assertDictContainsSubset({'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 'mv'}, notifications[4])
-        self.assertDictContainsSubset({'change_type': 'DROPPED', 'target_type': 'TABLE', 'table': 'mv'}, notifications[5])
-        self.assertDictContainsSubset({'change_type': 'DROPPED', 'target_type': 'TABLE', 'table': 't'}, notifications[6])
-        self.assertDictContainsSubset({'change_type': 'DROPPED', 'target_type': 'KEYSPACE'}, notifications[7])
+        # assert dict contains subset
+        expected = {'change_type': 'CREATED', 'target_type': 'KEYSPACE'}
+        assert set(notifications[0].keys()) >= expected.keys() and {k: notifications[0][k] for k in expected if
+                                                                    k in notifications[0]} == expected
+        expected = {'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 't'}
+        assert set(notifications[1].keys()) >= expected.keys() and {k: notifications[1][k] for k in expected if
+                                                                    k in notifications[1]} == expected
+        expected = {'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 't'}
+        assert set(notifications[2].keys()) >= expected.keys() and {k: notifications[2][k] for k in expected if
+                                                                    k in notifications[2]} == expected
+        expected = {'change_type': 'CREATED', 'target_type': 'TABLE', 'table': 'mv'}
+        assert set(notifications[3].keys()) >= expected.keys() and {k: notifications[3][k] for k in expected if
+                                                                    k in notifications[3]} == expected
+        expected = {'change_type': 'UPDATED', 'target_type': 'TABLE', 'table': 'mv'}
+        assert set(notifications[4].keys()) >= expected.keys() and {k: notifications[4][k] for k in expected if
+                                                                    k in notifications[4]} == expected
+        expected = {'change_type': 'DROPPED', 'target_type': 'TABLE', 'table': 'mv'}
+        assert set(notifications[5].keys()) >= expected.keys() and {k: notifications[5][k] for k in expected if
+                                                                    k in notifications[5]} == expected
+        expected = {'change_type': 'DROPPED', 'target_type': 'TABLE', 'table': 't'}
+        assert set(notifications[6].keys()) >= expected.keys() and {k: notifications[6][k] for k in expected if
+                                                                    k in notifications[6]} == expected
+        expected = {'change_type': 'DROPPED', 'target_type': 'KEYSPACE'}
+        assert set(notifications[7].keys()) >= expected.keys() and {k: notifications[7][k] for k in expected if
+                                                                    k in notifications[7]} == expected
 
 
 class TestVariousNotifications(Tester):
