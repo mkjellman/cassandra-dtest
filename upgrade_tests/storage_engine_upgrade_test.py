@@ -4,7 +4,7 @@ import pytest
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from sstable_generation_loading_test import BaseSStableLoaderTest
-from thrift_bindings.v22.Cassandra import (ConsistencyLevel, Deletion,
+from thrift_bindings.thrift010.Cassandra import (ConsistencyLevel, Deletion,
                                            Mutation, SlicePredicate,
                                            SliceRange)
 from thrift_tests import composite, get_thrift_client, i32

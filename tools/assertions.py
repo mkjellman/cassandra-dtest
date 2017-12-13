@@ -1,4 +1,3 @@
-
 import re
 from time import sleep
 from tools.misc import list_to_hashed_dict
@@ -9,9 +8,9 @@ from cassandra.query import SimpleStatement
 
 
 """
-The assertion methods in this file are used to structure, execute, and test different queries and scenarios. Use these anytime you are trying
-to check the content of a table, the row count of a table, if a query should raise an exception, etc. These methods handle error messaging
-well, and will help discovering and treating bugs.
+The assertion methods in this file are used to structure, execute, and test different queries and scenarios. 
+Use these anytime you are trying to check the content of a table, the row count of a table, if a query should 
+raise an exception, etc. These methods handle error messaging well, and will help discovering and treating bugs.
 
 An example:
 Imagine some table, test:
@@ -73,7 +72,8 @@ def assert_exception(session, query, matching=None, expected=None):
 
 def assert_unavailable(fun, *args):
     """
-    Attempt to execute a function, and assert Unavailable, WriteTimeout, WriteFailure, ReadTimeout, or ReadFailure exception is raised.
+    Attempt to execute a function, and assert Unavailable, WriteTimeout, WriteFailure,
+    ReadTimeout, or ReadFailure exception is raised.
     @param fun Function to be executed
     @param *args Arguments to be passed to the function
 
@@ -106,8 +106,10 @@ def assert_unauthorized(session, query, message):
     @param message Expected error message
 
     Examples:
-    assert_unauthorized(session, "ALTER USER cassandra NOSUPERUSER", "You aren't allowed to alter your own superuser status")
-    assert_unauthorized(cathy, "ALTER TABLE ks.cf ADD val int", "User cathy has no ALTER permission on <table ks.cf> or any of its parents")
+    assert_unauthorized(session, "ALTER USER cassandra NOSUPERUSER",
+                        "You aren't allowed to alter your own superuser status")
+    assert_unauthorized(cathy, "ALTER TABLE ks.cf ADD val int",
+                        "User cathy has no ALTER permission on <table ks.cf> or any of its parents")
     """
     assert_exception(session, query, matching=message, expected=Unauthorized)
 
@@ -185,16 +187,17 @@ def assert_almost_equal(*args, **kwargs):
     vmax = max(args)
     vmin = min(args)
     error_message = '' if 'error_message' not in kwargs else kwargs['error_message']
-    assert vmin > vmax * (1.0 - error) or vmin == vmax, "values not within {:.2f}% of the max: {} ({})".format(error * 100, args, error_message)
+    assert vmin > vmax * (1.0 - error) or vmin == vmax, \
+        "values not within {:.2f}% of the max: {} ({})".format(error * 100, args, error_message)
 
 
 def assert_row_count(session, table_name, expected, where=None):
     """
     Assert the number of rows in a table matches expected.
-    @params session Session to use
+    @param session Session to use
     @param table_name Name of the table to query
     @param expected Number of rows expected to be in table
-
+    @param where string to append to CQL select query as where clause
     Examples:
     assert_row_count(self.session1, 'ttl_table', 1)
     """
@@ -214,6 +217,7 @@ def assert_crc_check_chance_equal(session, table, expected, ks="ks", view=False)
     Assert crc_check_chance equals expected for a given table or view
     @param session Session to use
     @param table Name of the table or view to check
+    @param expected Expected value to assert on that query result matches
     @param ks Optional Name of the keyspace
     @param view Optional Boolean flag indicating if the table is a view
 
@@ -226,13 +230,13 @@ def assert_crc_check_chance_equal(session, table, expected, ks="ks", view=False)
     """
     if view:
         assert_one(session,
-                   "SELECT crc_check_chance from system_schema.views WHERE keyspace_name = 'ks' AND "
-                   "view_name = '{table}';".format(table=table),
+                   "SELECT crc_check_chance from system_schema.views WHERE keyspace_name = '{keyspace}' AND "
+                   "view_name = '{table}';".format(keyspace=ks, table=table),
                    [expected])
     else:
         assert_one(session,
-                   "SELECT crc_check_chance from system_schema.tables WHERE keyspace_name = 'ks' AND "
-                   "table_name = '{table}';".format(table=table),
+                   "SELECT crc_check_chance from system_schema.tables WHERE keyspace_name = '{keyspace}' AND "
+                   "table_name = '{table}';".format(keyspace=ks, table=table),
                    [expected])
 
 
@@ -245,8 +249,9 @@ def assert_length_equal(object_with_length, expected_length):
     Examples:
     assert_length_equal(res, nb_counter)
     """
-    assert len(object_with_length) == expected_length, "Expected {} to have length {}, but instead is of length {}".format(object_with_length,
-                                                                                     expected_length, len(object_with_length))
+    assert len(object_with_length) == expected_length, \
+        "Expected {} to have length {}, but instead is of length {}"\
+        .format(object_with_length, expected_length, len(object_with_length))
 
 
 def assert_not_running(node):

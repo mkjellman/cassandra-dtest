@@ -4,8 +4,8 @@ import pytest
 from cassandra.query import dict_factory
 
 from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
-from thrift_bindings.v22 import Cassandra
-from thrift_bindings.v22.Cassandra import (Column, ColumnDef,
+from thrift_bindings.thrift010 import Cassandra
+from thrift_bindings.thrift010.Cassandra import (Column, ColumnDef,
                                            ColumnParent, ConsistencyLevel,
                                            SlicePredicate, SliceRange)
 from thrift_tests import _i64, get_thrift_client

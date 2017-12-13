@@ -1,9 +1,9 @@
 import pytest
 
 from dtest import Tester
-from thrift_bindings.v22.ttypes import \
+from thrift_bindings.thrift010.ttypes import \
     ConsistencyLevel as ThriftConsistencyLevel
-from thrift_bindings.v22.ttypes import (CfDef, Column, ColumnOrSuperColumn,
+from thrift_bindings.thrift010.ttypes import (CfDef, Column, ColumnOrSuperColumn,
                                         ColumnParent, KsDef, Mutation,
                                         SlicePredicate, SliceRange,
                                         SuperColumn)

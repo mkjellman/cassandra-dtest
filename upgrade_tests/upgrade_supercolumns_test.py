@@ -3,9 +3,20 @@ import os
 from collections import OrderedDict
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
-from pycassa.pool import ConnectionPool
-from pycassa.columnfamily import ColumnFamily
+from thrift_tests import get_thrift_client
 from tools.assertions import assert_all
+
+from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
+                                           ColumnOrSuperColumn, ColumnParent,
+                                           ColumnPath, ColumnSlice,
+                                           ConsistencyLevel, CounterColumn,
+                                           Deletion, IndexExpression,
+                                           IndexOperator, IndexType,
+                                           InvalidRequestException, KeyRange,
+                                           KeySlice, KsDef, MultiSliceRequest,
+                                           Mutation, NotFoundException,
+                                           SlicePredicate, SliceRange,
+                                           SuperColumn)
 
 
 # Use static supercolumn data to reduce total test time and avoid driver issues connecting to C* 1.2.
@@ -54,11 +65,16 @@ class TestSCUpgrade(Tester):
         if self.cluster.version() >= '4':
             return
 
-        pool = ConnectionPool("supcols", pool_size=1)
-        super_col_fam = ColumnFamily(pool, "cols")
+        node = self.cluster.nodelist()[0]
+        host, port = node.network_interfaces['thrift']
+        client = get_thrift_client(host, port)
+        client.transport.open()
+        client.set_keyspace('supcols')
+        p = SlicePredicate(slice_range=SliceRange('', '', False, 1000))
         for name in NAMES:
-            super_col_value = super_col_fam.get(name)
-            assert OrderedDict([(('attr', 'name'), name)]) == super_col_value
+            super_col_value = client.get_slice(name, ColumnParent("cols"), p, ConsistencyLevel.ONE)
+            debug("get_slice(%s) returned %s" % (name, super_col_value))
+            assert name == super_col_value[0].column.value
 
     def verify_with_cql(self, session):
         session.execute("USE supcols")
@@ -120,7 +136,7 @@ class TestSCUpgrade(Tester):
 
     def test_upgrade_super_columns_through_all_versions(self):
         self._upgrade_super_columns_through_versions_test(upgrade_path=['git:cassandra-2.2', 'git:cassandra-3.0',
-                                                                        'git:cassandra-3.9', 'git:trunk'])
+                                                                        'git:cassandra-3.11', 'git:trunk'])
 
     def test_upgrade_super_columns_through_limited_versions(self):
         self._upgrade_super_columns_through_versions_test(upgrade_path=['git:cassandra-3.0', 'git:trunk'])

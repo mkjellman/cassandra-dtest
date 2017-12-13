@@ -11,9 +11,9 @@ from cassandra.query import SimpleStatement
 
 from dtest import ReusableClusterTester, debug, Tester, create_ks
 from distutils.version import LooseVersion
-from thrift_bindings.v22.ttypes import \
+from thrift_bindings.thrift010.ttypes import \
     ConsistencyLevel as ThriftConsistencyLevel
-from thrift_bindings.v22.ttypes import (CfDef, Column, ColumnOrSuperColumn,
+from thrift_bindings.thrift010.ttypes import (CfDef, Column, ColumnOrSuperColumn,
                                         Mutation)
 from thrift_tests import get_thrift_client
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,

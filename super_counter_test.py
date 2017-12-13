@@ -1,7 +1,7 @@
 import time
 import pytest
 
-from cql.cassandra.ttypes import (CfDef, ColumnParent, ColumnPath,
+from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
                                   ConsistencyLevel, CounterColumn)
 from dtest import Tester, debug, create_ks
 from thrift_tests import get_thrift_client

@@ -10,8 +10,8 @@ from thrift.transport import TSocket, TTransport
 
 from tools.assertions import assert_length_equal
 from dtest import (CASSANDRA_VERSION_FROM_BUILD, ReusableClusterTester, debug, init_default_config)
-from thrift_bindings.v22 import Cassandra
-from thrift_bindings.v22.Cassandra import (CfDef, Column, ColumnDef,
+from thrift_bindings.thrift010 import Cassandra
+from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
                                            ColumnOrSuperColumn, ColumnParent,
                                            ColumnPath, ColumnSlice,
                                            ConsistencyLevel, CounterColumn,
@@ -22,7 +22,7 @@ from thrift_bindings.v22.Cassandra import (CfDef, Column, ColumnDef,
                                            Mutation, NotFoundException,
                                            SlicePredicate, SliceRange,
                                            SuperColumn)
-from tools.assertions import assert_all, assert_none, assert_one
+from tools.assertions import (assert_all, assert_none, assert_one)
 
 since = pytest.mark.since
 

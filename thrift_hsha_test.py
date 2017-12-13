@@ -4,10 +4,10 @@ import shlex
 import subprocess
 import time
 import unittest
-
-import pycassa
+import pytest
 
 from dtest import DEFAULT_DIR, Tester, debug, create_ks
+from thrift_tests import get_thrift_client
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 
@@ -57,9 +57,10 @@ class ThriftHSHATest(Tester):
         session.execute("CREATE TABLE \"CF\" (key text PRIMARY KEY, val text) WITH COMPACT STORAGE;")
 
         def make_connection():
-            pool = pycassa.ConnectionPool('test', timeout=None)
-            cf = pycassa.ColumnFamily(pool, 'CF')
-            return pool
+            host, port = node1.network_interfaces['thrift']
+            client = get_thrift_client(host, port)
+            client.transport.open()
+            return client
 
         pools = []
         connected_thrift_clients = make_mbean('metrics', type='Client', name='connectedThriftClients')
@@ -71,8 +72,8 @@ class ThriftHSHATest(Tester):
             node1.nodetool('disablethrift')
             node1.nodetool('enablethrift')
             debug("Closing connections from the client side..")
-            for pool in pools:
-                pool.dispose()
+            for client in pools:
+                client.transport.close()
 
             with JolokiaAgent(node1) as jmx:
                 num_clients = jmx.read_attribute(connected_thrift_clients, "Value")
