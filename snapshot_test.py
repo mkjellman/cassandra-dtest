@@ -523,7 +523,7 @@ class TestArchiveCommitlog(SnapshotTester):
 
 
 def assert_directory_not_empty(tmp_commitlog, commitlog_dir):
-    tmp_commitlog_dir = set(os.listdir(tmp_commitlog))
-    for commitlog_file in set(os.listdir(commitlog_dir)):
-        tmp_commitlog_dir.discard(commitlog_file)
-    assert len(tmp_commitlog_dir) != 0
+    commitlog_dir_ret = set(commitlog_dir)
+    for tmp_commitlog_file in set(os.listdir(tmp_commitlog)):
+        commitlog_dir_ret.discard(tmp_commitlog_file)
+    assert len(commitlog_dir_ret) != 0
