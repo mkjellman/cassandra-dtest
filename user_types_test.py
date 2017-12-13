@@ -7,6 +7,7 @@ from cassandra.query import SimpleStatement
 
 from dtest import Tester, create_ks
 from tools.assertions import assert_invalid
+from plugins.assert_tools import assert_regexp_matches
 
 since = pytest.mark.since
 
@@ -27,7 +28,7 @@ class TestUserTypes(Tester):
     def assertUnauthorized(self, session, query, message):
         with pytest.raises(Unauthorized) as cm:
             session.execute(query)
-        self.assertRegex(cm.exception.message, message)
+            assert_regexp_matches(repr(cm._excinfo[1]), message)
 
     def assertNoTypes(self, session):
         for keyspace in list(session.cluster.metadata.keyspaces.values()):
@@ -703,7 +704,7 @@ class TestUserTypes(Tester):
         session.execute("INSERT INTO t (id, v) VALUES (0, {third: 2, second: 1})")
         session.execute("UPDATE t set v.first = 'a' WHERE id=0")
         rows = list(session.execute("SELECT * FROM t WHERE id = 0"))
-        assert listify(rows), [[0, ['a', 1 == 2]]]
+        assert listify(rows) == [[0, ['a', 1, 2]]]
 
         # Create a full udt
         # Update a subfield on the udt
@@ -711,13 +712,13 @@ class TestUserTypes(Tester):
         session.execute("INSERT INTO t (id, v) VALUES (0, {first: 'c', second: 3, third: 33})")
         session.execute("UPDATE t set v.second = 5 where id=0")
         rows = list(session.execute("SELECT * FROM t WHERE id=0"))
-        assert listify(rows), [[0, ['c', 5 == 33]]]
+        assert listify(rows) == [[0, ['c', 5, 33]]]
 
         # Rewrite the entire udt
         # Read back
         session.execute("INSERT INTO t (id, v) VALUES (0, {first: 'alpha', second: 111, third: 100})")
         rows = list(session.execute("SELECT * FROM t WHERE id=0"))
-        assert listify(rows), [[0, ['alpha', 111 == 100]]]
+        assert listify(rows) == [[0, ['alpha', 111, 100]]]
 
         # Send three subfield updates to udt
         # Read back
@@ -725,7 +726,7 @@ class TestUserTypes(Tester):
         session.execute("UPDATE t set v.first = 'delta' WHERE id=0")
         session.execute("UPDATE t set v.second = -10 WHERE id=0")
         rows = list(session.execute("SELECT * FROM t WHERE id=0"))
-        assert listify(rows), [[0, ['delta', -10 == 100]]]
+        assert listify(rows) == [[0, ['delta', -10, 100]]]
 
         # Send conflicting updates serially to different nodes
         # Read back
@@ -738,7 +739,7 @@ class TestUserTypes(Tester):
         session3.execute("UPDATE user_types.t set v.third = 103 WHERE id=0")
         query = SimpleStatement("SELECT * FROM t WHERE id = 0", consistency_level=ConsistencyLevel.ALL)
         rows = list(session.execute(query))
-        assert listify(rows), [[0, ['delta', -10 == 103]]]
+        assert listify(rows) == [[0, ['delta', -10, 103]]]
         session1.shutdown()
         session2.shutdown()
         session3.shutdown()
@@ -747,7 +748,7 @@ class TestUserTypes(Tester):
         session.execute("INSERT INTO t (id, v) VALUES (0, {first:'cass', second:3, third:0})")
         session.execute("UPDATE t SET v.first = null WHERE id = 0")
         rows = list(session.execute("SELECT * FROM t WHERE id=0"))
-        assert listify(rows), [[0, [None, 3 == 0]]]
+        assert listify(rows) == [[0, [None, 3, 0]]]
 
         rows = list(session.execute("SELECT v.first FROM t WHERE id=0"))
         assert listify(rows) == [[None]]

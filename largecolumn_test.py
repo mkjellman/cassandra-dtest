@@ -1,6 +1,7 @@
 import pytest
 
 from dtest import Tester, debug
+from plugins.assert_tools import assert_regexp_matches
 
 since = pytest.mark.since
 
@@ -28,7 +29,7 @@ class TestLargeColumn(Tester):
         output, err, _ = node.nodetool("gcstats")
         debug(output)
         output = output.split("\n")
-        self.assertRegex(output[0].strip(), 'Interval')
+        assert_regexp_matches(output[0].strip(), 'Interval')
         fields = output[1].split()
         assert len(fields) == 6, "Expected output from nodetool gcstats has at least six fields. However >= fields is: {}".format(fields)
         for field in fields:

@@ -37,7 +37,7 @@ class TestDiskBalance(Tester):
         if self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 256})
         # apparently we have legitimate errors in the log when bootstrapping (see bootstrap_test.py)
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         cluster.populate(4).start(wait_for_binary_proto=True)
         node1 = cluster.nodes['node1']
 

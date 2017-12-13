@@ -1474,7 +1474,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
 
     def test_failure_threshold_deletions(self):
         """Test that paging throws a failure in case of tombstone threshold """
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         self.cluster.set_configuration_options(
             values={'tombstone_failure_threshold': 500,
                     'read_request_timeout_in_ms': 1000,

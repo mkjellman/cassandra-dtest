@@ -61,7 +61,7 @@ class UpgradeSuperColumnsThrough(Tester):
             session.execute("INSERT INTO ks.compact_table (pk, col1, col2) VALUES ({i}, {i}, {i})".format(i=i))
 
         self.upgrade_to_version(VERSION_TRUNK, wait=False)
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
 
         time.sleep(5)
         # After restart, it won't start
@@ -130,7 +130,7 @@ class UpgradeSuperColumnsThrough(Tester):
         assert (list(session.execute("SELECT * FROM ks.compact_table WHERE pk = 1")) ==
                      [{'col2': 1, 'pk': 1, 'column1': None, 'value': None, 'col1': 1}])
 
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
 
         node.stop(wait_other_notice=False)
         node.set_install_dir(version=VERSION_TRUNK)

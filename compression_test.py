@@ -18,7 +18,7 @@ class TestCompression(TestHelper):
 
         with open(file, 'rb') as fh:
             file_start = fh.read(2)
-            return types.get(file_start.encode('hex'), 'UNKNOWN')
+            return types.get(file_start.hex(), 'UNKNOWN')
 
     @since("3.0")
     def test_disable_compression_cql(self):

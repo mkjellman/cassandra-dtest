@@ -571,7 +571,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE b = 2 ALLOW FILTERING"))
-            assert res == [[1, 2, 6, 3 == 12]]
+            assert res == [[1, 2, 6, 3, 12]]
 
             assert_invalid(session, "SELECT a, b, e, count(b), max(e) FROM test WHERE b = 2", expected=InvalidRequest)
 
@@ -681,7 +681,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                            [1, 4, 12, 2, 24]]
 
             res = rows_to_list(session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1"))
-            assert res == [[1, 2, 6, 4 == 24]]
+            assert res == [[1, 2, 6, 4, 24]]
 
             res = rows_to_list(
                 session.execute("SELECT a, b, e, count(b), max(e) FROM test WHERE a = 1 AND b = 2 GROUP BY a, b, c"))
@@ -1060,7 +1060,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                            [4, None, 3, 0, 1]]
 
             res = rows_to_list(session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4)"))
-            assert res == [[1, None, 1, 0 == 3]]
+            assert res == [[1, None, 1, 0, 3]]
 
             # Multi-partitions query without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a IN (1, 2, 3, 4) GROUP BY a, b"))
@@ -1099,7 +1099,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             res = rows_to_list(
                 session.execute("SELECT DISTINCT a, s, count(s) FROM test WHERE a IN (1, 2, 3, 4) GROUP BY a LIMIT 2"))
             assert res == [[1, 1, 1],
-                                   [2, 2, 1]]
+                           [2, 2, 1]]
 
             res = rows_to_list(
                 session.execute("SELECT DISTINCT a, s, count(s) FROM test WHERE a IN (1, 2, 3, 4) LIMIT 2"))
@@ -1150,7 +1150,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                 session.execute(
                     "SELECT a, b, s, count(b), count(s) FROM test WHERE b = 2 GROUP BY a, b ALLOW FILTERING"))
             assert res == [[1, 2, 1, 2, 2],
-                                   [2, 2, 2, 1, 1]]
+                           [2, 2, 2, 1, 1]]
 
             assert_invalid(session, "SELECT a, b, s, count(b), count(s) FROM test WHERE b = 2 GROUP BY a, b", expected=InvalidRequest)
 
@@ -3420,7 +3420,7 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
         """Test that paging throws a failure in case of tombstone threshold """
         supports_v5_protocol = self.cluster.version() >= LooseVersion('3.10')
 
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         self.cluster.set_configuration_options(
             values={'tombstone_failure_threshold': 500}
         )

@@ -1,6 +1,7 @@
 from cassandra.query import SimpleStatement
 
 from dtest import TRACE, Tester, debug, create_ks
+from plugins.assert_tools import assert_regexp_matches
 
 import pytest
 
@@ -61,7 +62,7 @@ class TestPendingRangeMovements(Tester):
         # Verify other nodes believe this is Down/Moving
         out, _, _ = node2.nodetool('ring')
         debug("Nodetool Ring output: {}".format(out))
-        self.assertRegex(out, '127\.0\.0\.1.*?Down.*?Moving')
+        assert_regexp_matches(out, '127\.0\.0\.1.*?Down.*?Moving')
 
         # Check we can still execute LWT
         for i in range(1000):

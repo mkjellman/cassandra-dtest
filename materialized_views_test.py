@@ -807,7 +807,7 @@ class TestMaterializedViews(Tester):
         )
 
         # Rename a column with an injected byteman rule to kill the node after the first schema update
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         script_version = '4x' if self.cluster.version() >= '4' else '3x'
         node.byteman_submit(['./byteman/merge_schema_failure_{}.btm'.format(script_version)])
         with pytest.raises(NoHostAvailable):

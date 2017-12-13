@@ -33,7 +33,7 @@ class TestNodeToNodeSSLEncryption(Tester):
         credNode2 = sslkeygen.generate_credentials("127.0.0.2", credNode1.cakeystore, credNode1.cacert)
 
         self.setup_nodes(credNode1, credNode2, endpoint_verification=True)
-        self.allow_log_errors = False
+        self.fixture_dtest_setup.allow_log_errors = False
         self.cluster.start()
         time.sleep(2)
         self.cql_connection(self.node1)
@@ -55,7 +55,7 @@ class TestNodeToNodeSSLEncryption(Tester):
 
         self.setup_nodes(credNode1, credNode2, endpoint_verification=True)
 
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         self.cluster.start(no_wait=True)
 
         found = self._grep_msg(self.node1, _LOG_ERR_HANDSHAKE, _LOG_ERR_GENERAL)
@@ -73,7 +73,7 @@ class TestNodeToNodeSSLEncryption(Tester):
 
         self.setup_nodes(credNode1, credNode2, client_auth=True)
 
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         self.cluster.start(no_wait=True)
         time.sleep(2)
 
@@ -105,7 +105,7 @@ class TestNodeToNodeSSLEncryption(Tester):
 
         self.setup_nodes(credNode1, credNode2)
 
-        self.allow_log_errors = True
+        self.fixture_dtest_setup.allow_log_errors = True
         self.cluster.start(no_wait=True)
 
         found = self._grep_msg(self.node1, _LOG_ERR_HANDSHAKE)

@@ -67,7 +67,7 @@ class TestReadFailures(Tester):
                 # On 2.1, we won't return the ReadTimeout from coordinator until actual timeout,
                 # so we need to up the default timeout of the driver session
                 session.execute(statement, timeout=15)
-            return cm.exception
+            return cm._excinfo[1]
 
     def _assert_error_code_map_exists_with_code(self, exception, expected_code):
         """

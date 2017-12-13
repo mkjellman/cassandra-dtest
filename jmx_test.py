@@ -10,7 +10,7 @@ from dtest import Tester, debug
 from tools.jmxutils import (JolokiaAgent, enable_jmx_ssl, make_mbean,
                             remove_perf_disable_shared_mem)
 from tools.misc import generate_ssl_stores
-from plugins.assert_tools import assert_raises_regex
+from plugins.assert_tools import (assert_raises_regex, assert_regexp_matches)
 
 since = pytest.mark.since
 
@@ -49,7 +49,7 @@ class TestJMX(Tester):
                 if not isinstance(e, ToolError):
                     raise
                 else:
-                    self.assertRegex(str(e), "ConnectException: 'Connection refused( \(Connection refused\))?'.")
+                    assert_regexp_matches(str(e), "ConnectException: 'Connection refused( \(Connection refused\))?'.")
 
         assert running, 'node1 never started'
 

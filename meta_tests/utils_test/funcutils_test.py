@@ -108,7 +108,7 @@ class Testget_rate_limited_function(TestCase):
         self.rate_limited_func.limit = 1
         assert self.rate_limited_func.last_called == False
         self.rate_limited_func()
-        self.assertAlmostEqual(self.rate_limited_func.last_called, time(), places=2)
+        assert abs(round(self.rate_limited_func.last_called, 2) - round(time(), 2)) <= 0.0
 
     def test_last_called_not_set_when_called_within_time_limit(self):
         """

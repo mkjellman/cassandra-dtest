@@ -51,4 +51,4 @@ class TestStressSparsenessRatio(Tester):
         num_nones = sum(row.count(None) for row in written)
         num_results = sum(len(row) for row in written)
 
-        self.assertAlmostEqual(float(num_nones) / num_results, expected_ratio, delta=delta)
+        assert abs(float(num_nones) / num_results - expected_ratio) <= delta

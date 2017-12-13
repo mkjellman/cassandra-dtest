@@ -32,8 +32,8 @@ class TestWriteFailures(Tester):
         )
 
     @pytest.fixture(scope="function", autouse=True)
-    def fixture_set_test_defauls(self):
-        self.supports_v5_protocol = self.supports_v5_protocol(self.cluster.version())
+    def fixture_set_test_defauls(self, fixture_dtest_setup):
+        self.supports_v5_protocol = fixture_dtest_setup.supports_v5_protocol(fixture_dtest_setup.cluster.version())
         self.expected_expt = WriteFailure
         self.protocol_version = 5 if self.supports_v5_protocol else 4
         self.replication_factor = 3
@@ -82,7 +82,7 @@ class TestWriteFailures(Tester):
         else:
             with pytest.raises(self.expected_expt) as cm:
                 session.execute(statement)
-            return cm.exception
+            return cm._excinfo[1]
 
     def _assert_error_code_map_exists_with_code(self, exception, expected_code):
         """

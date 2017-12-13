@@ -287,7 +287,8 @@ class TestCompaction(Tester):
         assert float(threshold) + 0.5 >= avgthroughput_mb
 
     def test_compaction_strategy_switching(self):
-        """Ensure that switching strategies does not result in problems.
+        """
+        Ensure that switching strategies does not result in problems.
         Insert data, switch strategies, then check against data loss.
         """
         strategies = ['LeveledCompactionStrategy', 'SizeTieredCompactionStrategy', 'DateTieredCompactionStrategy']
@@ -555,7 +556,7 @@ class TestCompaction(Tester):
 
     def skip_if_no_major_compaction(self):
         if self.cluster.version() < '2.2' and self.strategy == 'LeveledCompactionStrategy':
-            pytest.skip('major compaction not implemented for LCS in this version of Cassandra')
+            pytest.skip(msg='major compaction not implemented for LCS in this version of Cassandra')
 
 
 def grep_sstables_in_each_level(node, table_name):

@@ -1,6 +1,7 @@
 
 import re
 from time import sleep
+from tools.misc import list_to_hashed_dict
 
 from cassandra import (InvalidRequest, ReadFailure, ReadTimeout, Unauthorized,
                        Unavailable, WriteFailure, WriteTimeout)
@@ -164,8 +165,8 @@ def assert_all(session, query, expected, cl=None, ignore_order=False, timeout=No
     res = session.execute(simple_query) if timeout is None else session.execute(simple_query, timeout=timeout)
     list_res = _rows_to_list(res)
     if ignore_order:
-        expected = sorted([(x or "") for x in expected])
-        list_res = sorted(list_res)
+        expected = list_to_hashed_dict(expected)
+        list_res = list_to_hashed_dict(list_res)
     assert list_res == expected, "Expected {} from {}, but got {}".format(expected, query, list_res)
 
 

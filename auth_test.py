@@ -2639,7 +2639,7 @@ class TestAuthRoles(Tester):
         with pytest.raises(NoHostAvailable) as response:
             node = self.cluster.nodelist()[0]
             self.cql_connection(node, user=user, password=password)
-        host, error = response.exception.errors.popitem()
+        host, error = response._excinfo[1].errors.popitem()
 
         message = "Provided username {user} and/or password are incorrect".format(user=user)\
             if node.cluster.version() >= LooseVersion('3.10') \
@@ -2654,7 +2654,7 @@ class TestAuthRoles(Tester):
         with pytest.raises(NoHostAvailable) as response:
             node = self.cluster.nodelist()[0]
             self.cql_connection(node, user=user, password=password)
-        host, error = response.exception.errors.popitem()
+        host, error = response._excinfo[1].errors.popitem()
 
         pattern = 'Failed to authenticate to {host}: Error from server: code=0100 ' \
                   '[Bad credentials] message="{user} is not permitted to log in"'.format(host=host, user=user)

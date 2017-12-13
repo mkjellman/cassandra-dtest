@@ -1,6 +1,7 @@
 import os
 import subprocess
 import time
+import hashlib
 from collections import Mapping
 
 from ccmlib.node import Node
@@ -68,6 +69,14 @@ def generate_ssl_stores(base_dir, passphrase='cassandra'):
     subprocess.check_call(['keytool', '-import', '-file', os.path.join(base_dir, 'ccm_node.cer'),
                            '-alias', 'ccm_node', '-keystore', os.path.join(base_dir, 'truststore.jks'),
                            '-storepass', passphrase, '-noprompt'])
+
+
+def list_to_hashed_dict(list):
+    hashed_dict = dict()
+    for item_lst in list:
+        list_digest = hashlib.sha256(str(item_lst).encode('utf-8', 'ignore')).hexdigest()
+        hashed_dict[list_digest] = item_lst
+    return hashed_dict
 
 
 class ImmutableMapping(Mapping):

@@ -360,7 +360,7 @@ class TestRebuild(Tester):
         session = self.patient_exclusive_cql_connection(node1)
         session.execute("CREATE KEYSPACE ks1 WITH replication = {'class':'SimpleStrategy', 'replication_factor':2};")
 
-        with assert_raises_regex(ToolError, 'Unable to find sufficient sources for streaming range'):
+        with pytest.raises(ToolError, message='Unable to find sufficient sources for streaming range'):
             node1.nodetool('rebuild -ks ks1 -ts (%s,%s] -s %s' % (node3_token, node1_token, node3_address))
 
     @since('3.10')

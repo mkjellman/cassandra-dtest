@@ -1553,9 +1553,9 @@ class TestCQL(UpgradeTester):
 
             upgrade_to_version = self.get_node_version(is_upgraded=True)
             if LooseVersion('3.0.0') <= upgrade_to_version <= LooseVersion('3.0.6'):
-                self.skip('CASSANDRA-11930 was fixed in 3.0.7 and 3.7')
+                pytest.skip(msg='CASSANDRA-11930 was fixed in 3.0.7 and 3.7')
             elif LooseVersion('3.1') <= upgrade_to_version <= LooseVersion('3.6'):
-                self.skip('CASSANDRA-11930 was fixed in 3.0.7 and 3.7')
+                pytest.skip(msg='CASSANDRA-11930 was fixed in 3.0.7 and 3.7')
 
             session.execute("TRUNCATE ks.cf")
 

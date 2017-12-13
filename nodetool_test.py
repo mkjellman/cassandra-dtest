@@ -54,15 +54,16 @@ class TestNodetool(Tester):
         for i, node in enumerate(cluster.nodelist()):
             out, err, _ = node.nodetool('info')
             assert 0 == len(err), err
-            debug(out.decode("utf-8"))
-            for line in out.decide("utf-8").split(os.linesep):
+            out_str = out
+            if isinstance(out, (bytes, bytearray)):
+                out_str = out.decode("utf-8")
+            debug(out_str)
+            for line in out_str.split(os.linesep):
                 if line.startswith('Data Center'):
-                    assert line.endswith(node.data_center,
-                                    "Expected dc {} for {} but got {}".format(node.data_center, node.address(), line.rsplit(None, 1)[-1]))
+                    assert line.endswith(node.data_center), "Expected dc {} for {} but got {}".format(node.data_center, node.address(), line.rsplit(None, 1)[-1])
                 elif line.startswith('Rack'):
                     rack = "rack{}".format(i % 2)
-                    assert line.endswith(rack,
-                                    "Expected rack {} for {} but got {}".format(rack, node.address(), line.rsplit(None, 1)[-1]))
+                    assert line.endswith(rack), "Expected rack {} for {} but got {}".format(rack, node.address(), line.rsplit(None, 1)[-1])
 
     @since('3.4')
     def test_nodetool_timeout_commands(self):

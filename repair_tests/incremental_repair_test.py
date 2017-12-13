@@ -41,7 +41,7 @@ class TestIncRepair(Tester):
         out = node.run_sstablemetadata(keyspace=keyspace).stdout
 
         def matches(pattern):
-            return [_f for _f in [pattern.match(l) for l in out.split('\n')] if _f]
+            return filter(None, [pattern.match(l) for l in out.decode("utf-8").split('\n')])
         names = [m.group(1) for m in matches(_sstable_name)]
         repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
 
@@ -163,7 +163,7 @@ class TestIncRepair(Tester):
         ranges = {'\x00\x00\x00\x08K\xc2\xed\\<\xd3{X\x00\x00\x00\x08r\x04\x89[j\x81\xc4\xe6',
                   '\x00\x00\x00\x08r\x04\x89[j\x81\xc4\xe6\x00\x00\x00\x08\xd8\xcdo\x9e\xcbl\x83\xd4',
                   '\x00\x00\x00\x08\xd8\xcdo\x9e\xcbl\x83\xd4\x00\x00\x00\x08K\xc2\xed\\<\xd3{X'}
-        ranges = {buffer(b) for b in ranges}
+        ranges = {memoryview(b) for b in ranges}
 
         for node in self.cluster.nodelist():
             session = self.patient_exclusive_cql_connection(node)
