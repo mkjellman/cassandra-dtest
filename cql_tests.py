@@ -18,7 +18,6 @@ from thrift_bindings.thrift010.ttypes import (CfDef, Column, ColumnOrSuperColumn
 from thrift_tests import get_thrift_client
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_none, assert_one, assert_unavailable)
-from plugins.assert_tools import assert_raises_regex
 
 from tools.data import rows_to_list
 from tools.metadata_wrapper import (UpdatingClusterMetadataWrapper,
@@ -608,7 +607,7 @@ class MiscellaneousCQLTester(CQLTester):
         # but since the protocol requires strings to be valid UTF-8, the error
         # response to this is a ProtocolException, not an error about the
         # nonexistent column
-        with assert_raises_regex(ProtocolException, 'Cannot decode string as UTF8'):
+        with pytest.raises(ProtocolException, match='Cannot decode string as UTF8'):
             session.execute("insert into invalid_string_literals (k, c) VALUES (0, '\xc2\x01')")
 
     def test_prepared_statement_invalidation(self):

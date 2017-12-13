@@ -13,7 +13,6 @@ from tools.assertions import assert_read_timeout_or_failure
 from tools.data import rows_to_list
 from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.paging import PageAssertionMixin, PageFetcher
-from plugins.assert_tools import assert_raises_regex
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs
 
@@ -238,7 +237,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
             assert pf.all_data() == expected_data
 
             # make sure we don't allow paging over multiple partitions with order because that's weird
-            with assert_raises_regex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
+            with pytest.raises(InvalidRequest, match='Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
                 stmt = SimpleStatement("select * from paging_test where id in (1,2) order by value asc", consistency_level=CL.ALL)
                 cursor.execute(stmt)
 

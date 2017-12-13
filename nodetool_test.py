@@ -5,7 +5,6 @@ from ccmlib.node import ToolError
 from dtest import Tester, debug
 from tools.assertions import assert_all, assert_invalid
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
-from plugins.assert_tools import assert_raises_regex
 
 since = pytest.mark.since
 
@@ -86,7 +85,7 @@ class TestNodetool(Tester):
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             assert 0 == len(err), err
             debug(out)
-            assert_raises_regex(out, r'.* \d+ ms')
+            pytest.raises(out, match=r'.* \d+ ms')
 
         # set all of the timeouts to 123
         for timeout_type in types:
@@ -98,7 +97,7 @@ class TestNodetool(Tester):
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             assert 0 == len(err), err
             debug(out)
-            assert_raises_regex(out, r'.* 123 ms')
+            pytest.raises(out, match=r'.* 123 ms')
 
     def test_meaningless_notice_in_status(self):
         """
@@ -142,7 +141,7 @@ class TestNodetool(Tester):
         # With a keyspace without the same replication factor, we should get the notice
         out, err, _ = node.nodetool('status')
         assert 0 == len(err), err
-        assert_raises_regex(out, notice_message)
+        pytest.raises(out, match=notice_message)
 
     @since('4.0')
     def test_set_get_batchlog_replay_throttle(self):

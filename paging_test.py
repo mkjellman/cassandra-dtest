@@ -15,7 +15,6 @@ from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
 from tools.data import rows_to_list
 from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.paging import PageAssertionMixin, PageFetcher
-from plugins.assert_tools import assert_raises_regex
 
 since = pytest.mark.since
 
@@ -227,7 +226,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         assert pf.all_data() == expected_data
 
         # make sure we don't allow paging over multiple partitions with order because that's weird
-        with assert_raises_regex(InvalidRequest, 'Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
+        with pytest.raises(InvalidRequest, match='Cannot page queries with both ORDER BY and a IN restriction on the partition key'):
             stmt = SimpleStatement("select * from paging_test where id in (1,2) order by value asc", consistency_level=CL.ALL)
             session.execute(stmt)
 
@@ -1348,7 +1347,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
             res = rows_to_list(
                 session.execute("SELECT a, b, s, count(b), count(s) FROM test WHERE a IN (1, 2, 3, 4) AND b = 2"))
-            assert res [[1, 2, 1, 3, 3]]
+            assert res == [[1, 2, 1, 3, 3]]
 
             # Multi-partitions queries without aggregates
             res = rows_to_list(session.execute("SELECT a, b, s FROM test WHERE a IN (1, 2, 3, 4) GROUP BY a"))
@@ -3039,7 +3038,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         # stop a node and make sure we get an error trying to page the rest
         node1.stop()
-        with assert_raises_regex(RuntimeError, 'Requested pages were not delivered before timeout'):
+        with pytest.raises(RuntimeError, match='Requested pages were not delivered before timeout'):
             pf.request_all()
 
         # TODO: can we resume the node and expect to get more results from the result set or is it done?

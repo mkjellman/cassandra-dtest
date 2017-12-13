@@ -4,7 +4,6 @@ from distutils.version import LooseVersion
 from ccmlib.node import ToolError
 from dtest import Tester
 from tools.jmxutils import apply_jmx_authentication
-from plugins.assert_tools import assert_raises_regex
 
 since = pytest.mark.since
 
@@ -31,21 +30,21 @@ class TestJMXAuth(Tester):
         session.execute("GRANT DESCRIBE ON ALL MBEANS TO jmx_user")
         session.execute("CREATE ROLE test WITH LOGIN=true and PASSWORD='abc123'")
 
-        with assert_raises_regex(ToolError, self.authentication_fail_message(node, 'baduser')):
+        with pytest.raises(ToolError, self.authentication_fail_message(node, 'baduser')):
             node.nodetool('-u baduser -pw abc123 gossipinfo')
 
-        with assert_raises_regex(ToolError, self.authentication_fail_message(node, 'test')):
+        with pytest.raises(ToolError, self.authentication_fail_message(node, 'test')):
             node.nodetool('-u test -pw badpassword gossipinfo')
 
-        with assert_raises_regex(ToolError, "Required key 'username' is missing"):
+        with pytest.raises(ToolError, "Required key 'username' is missing"):
             node.nodetool('gossipinfo')
 
         # role must have LOGIN attribute
-        with assert_raises_regex(ToolError, 'jmx_user is not permitted to log in'):
+        with pytest.raises(ToolError, 'jmx_user is not permitted to log in'):
             node.nodetool('-u jmx_user -pw 321cba gossipinfo')
 
         # test doesn't yet have any privileges on the necessary JMX resources
-        with assert_raises_regex(ToolError, 'Access Denied'):
+        with pytest.raises(ToolError, 'Access Denied'):
             node.nodetool('-u test -pw abc123 gossipinfo')
 
         session.execute("GRANT jmx_user TO test")
