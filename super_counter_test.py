@@ -3,7 +3,7 @@ import pytest
 
 from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
                                   ConsistencyLevel, CounterColumn)
-from dtest import Tester, debug, create_ks, CASSANDRA_VERSION_FROM_BUILD
+from dtest import Tester, debug, create_ks
 from thrift_tests import get_thrift_client
 from tools.misc import ImmutableMapping
 
