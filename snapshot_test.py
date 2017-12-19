@@ -13,7 +13,7 @@ from dtest import (Tester, cleanup_cluster, create_ccm_cluster, create_ks,
 from tools.assertions import assert_one
 from tools.files import replace_in_file, safe_mkdtemp
 from tools.hacks import advance_to_next_cl_segment
-from tools.misc import ImmutableMapping
+from tools.misc import (ImmutableMapping, get_current_test_name)
 
 since = pytest.mark.since
 
@@ -365,13 +365,17 @@ class TestArchiveCommitlog(SnapshotTester):
             debug("node1 commitlog dir contents after stopping: " + str(os.listdir(commitlog_dir)))
             debug("tmp_commitlog contents after stopping: " + str(os.listdir(tmp_commitlog)))
 
-            pytest_current_test = os.environ.get('PYTEST_CURRENT_TEST')
-            self.copy_logs(self.cluster, name=pytest_current_test + "_pre-restore")
-            cleanup_cluster(self.cluster, self.fixture_dtest_setup.test_path)
-            self.self.fixture_dtest_setup.test_path = self.fixture_dtest_setup.get_test_path()
-            cluster = self.cluster = create_ccm_cluster(self.fixture_dtest_setup.test_path, name='test', config=self.dtest_config)
+            self.copy_logs(name=get_current_test_name() + "_pre-restore")
+            cleanup_cluster(self.fixture_dtest_setup)
+            old_test_path = self.fixture_dtest_setup.test_path
+            self.fixture_dtest_setup.test_path = self.fixture_dtest_setup.get_test_path()
+            print("replaced old_test_path: %s with %s" % (old_test_path, self.fixture_dtest_setup.test_path))
+            self.fixture_dtest_setup.cluster = create_ccm_cluster(self.fixture_dtest_setup.test_path, name='test', config=self.dtest_config)
+            cluster = self.cluster
             cluster.populate(1)
-            node1, = cluster.nodelist()
+            nodes = cluster.nodelist()
+            assert len(nodes) == 1
+            node1 = nodes[0]
 
             # Restore schema from snapshots:
             for system_ks_snapshot_dir in system_ks_snapshot_dirs:

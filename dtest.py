@@ -273,7 +273,6 @@ class Tester():
             fixture_dtest_setup = object.__getattribute__(self, 'fixture_dtest_setup')
             return object.__getattribute__(fixture_dtest_setup , name)
 
-
     @pytest.fixture(scope='function', autouse=True)
     def set_dtest_setup_on_function(self, fixture_dtest_setup, fixture_dtest_config):
         self.fixture_dtest_setup = fixture_dtest_setup
@@ -321,61 +320,6 @@ class Tester():
         if ENABLE_ACTIVE_LOG_WATCHING:
             if not self.allow_log_errors:
                 self.begin_active_log_watch()
-
-    def begin_active_log_watch(self):
-        """
-        Calls into ccm to start actively watching logs.
-
-        In the event that errors are seen in logs, ccm will call back to _log_error_handler.
-
-        When the cluster is no longer in use, stop_active_log_watch should be called to end log watching.
-        (otherwise a 'daemon' thread will (needlessly) run until the process exits).
-        """
-        # log watching happens in another thread, but we want it to halt the main
-        # thread's execution, which we have to do by registering a signal handler
-        signal.signal(signal.SIGINT, self._catch_interrupt)
-        self._log_watch_thread = self.cluster.actively_watch_logs_for_error(self._log_error_handler, interval=0.25)
-
-    def _log_error_handler(self, errordata):
-        """
-        Callback handler used in conjunction with begin_active_log_watch.
-        When called, prepares exception instance, then will indirectly
-        cause _catch_interrupt to be called, which can raise the exception in the main
-        program thread.
-
-        @param errordata is a dictonary mapping node name to failure list.
-        """
-        # in some cases self.allow_log_errors may get set after proactive log checking has been enabled
-        # so we need to double-check first thing before proceeding
-        if self.allow_log_errors:
-            return
-
-        reportable_errordata = OrderedDict()
-
-        for nodename, errors in list(errordata.items()):
-            filtered_errors = list(self.__filter_errors(['\n'.join(msg) for msg in errors]))
-            if len(filtered_errors) is not 0:
-                reportable_errordata[nodename] = filtered_errors
-
-        # no errors worthy of halting the test
-        if not reportable_errordata:
-            return
-
-        message = "Errors seen in logs for: {nodes}".format(nodes=", ".join(list(reportable_errordata.keys())))
-        for nodename, errors in list(reportable_errordata.items()):
-            for error in errors:
-                message += "\n{nodename}: {error}".format(nodename=nodename, error=error)
-
-        try:
-            debug('Errors were just seen in logs, ending test (if not ending already)!')
-            print("Error details: \n{message}".format(message=message))
-            self.test_is_ending  # will raise AttributeError if not present
-        except AttributeError:
-            self.test_is_ending = True
-            self.exit_with_exception = AssertionError("Log error encountered during active log scanning, see stdout")
-            # thread.interrupt_main will SIGINT in the main thread, which we can
-            # catch to raise an exception with useful information
-            _thread.interrupt_main()
 
     """
     Finds files matching the glob pattern specified as argument on
@@ -604,7 +548,7 @@ def create_ccm_cluster(test_path, name, config):
     return cluster
 
 
-def cleanup_cluster(dtest_setup, dtest_config, log_watch_thread=None):
+def cleanup_cluster(dtest_setup):
     with log_filter('cassandra'):  # quiet noise from driver when nodes start going down
         if KEEP_TEST_DIR:
             dtest_setup.cluster.stop(gently=RECORD_COVERAGE)
@@ -617,8 +561,8 @@ def cleanup_cluster(dtest_setup, dtest_config, log_watch_thread=None):
 
             # Cleanup everything:
             try:
-                if log_watch_thread:
-                    stop_active_log_watch(log_watch_thread)
+                if dtest_setup.log_watch_thread:
+                    stop_active_log_watch(dtest_setup.log_watch_thread)
             finally:
                 debug("removing ccm cluster {name} at: {path}".format(name=dtest_setup.cluster.name, path=dtest_setup.test_path))
                 dtest_setup.cluster.remove()

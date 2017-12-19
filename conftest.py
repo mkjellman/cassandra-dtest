@@ -43,6 +43,7 @@ class DTestConfig:
         self.delete_logs = False
         self.cluster_options = []
         self.execute_upgrade_tests = False
+        self.disable_active_log_watching = False
 
     def setup(self, request):
         self.use_vnodes = request.config.getoption("--use-vnodes")
@@ -55,6 +56,7 @@ class DTestConfig:
         self.cassandra_version = request.config.getoption("--cassandra-version")
         self.delete_logs = request.config.getoption("--delete-logs")
         self.execute_upgrade_tests = request.config.getoption("--execute-upgrade-tests")
+        self.disable_active_log_watching = request.config.getoption("--disable-active-log-watching")
 
 
 def check_required_loopback_interfaces_available():
@@ -94,6 +96,10 @@ def pytest_addoption(parser):
     parser.addoption("--delete-logs", action="store_true", default=False)
     parser.addoption("--execute-upgrade-tests", action="store_true", default=False,
                      help="Execute Cassandra Upgrade Tests (e.g. tests annotated with the upgrade_test mark)")
+    parser.addoption("--disable-active-log-watching", action="store_true", default=False,
+                     help="Disable ccm active log watching, which will cause dtests to check for errors in the "
+                          "logs in a single operation instead of semi-realtime processing by consuming "
+                          "ccm _log_error_handler callbacks")
 
 
 def sufficient_system_resources_for_resource_intensive_tests():
@@ -219,6 +225,9 @@ def fixture_dtest_setup(request, parse_dtest_config):
     dtest_setup = DTestSetup()
     dtest_setup.cluster = initialize_cluster(parse_dtest_config, dtest_setup)
 
+    if not parse_dtest_config.disable_active_log_watching:
+        dtest_setup.log_watch_thread = dtest_setup.begin_active_log_watch()
+
     yield dtest_setup
 
     logger.info("function yield fixture is starting teardown")
@@ -246,7 +255,7 @@ def fixture_dtest_setup(request, parse_dtest_config):
         finally:
             #log_watch_thread = getattr(self, '_log_watch_thread', None)
             #cleanup_cluster(self.cluster, self.test_path, log_watch_thread)
-            cleanup_cluster(dtest_setup, parse_dtest_config, None)
+            cleanup_cluster(dtest_setup)
             #if failed:
             #    cleanup_cluster(request.cls.cluster, request.cls.test_path, None)
             #    initialize_cluster(request, dtest_config)

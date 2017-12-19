@@ -99,6 +99,20 @@ def list_to_hashed_dict(list):
     return hashed_dict
 
 
+def get_current_test_name():
+    """
+    See https://docs.pytest.org/en/latest/example/simple.html#pytest-current-test-environment-variable
+    :return: returns just the name of the current running test name
+    """
+    pytest_current_test = os.environ.get('PYTEST_CURRENT_TEST')
+    test_splits = pytest_current_test.split("::")
+    current_test_name = test_splits[len(test_splits) - 1]
+    current_test_name = current_test_name.replace(" (call)", "")
+    current_test_name = current_test_name.replace(" (setup)", "")
+    current_test_name = current_test_name.replace(" (teardown)", "")
+    return current_test_name
+
+
 class ImmutableMapping(Mapping):
     """
     Convenience class for when you want an immutable-ish map.

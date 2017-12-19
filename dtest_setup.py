@@ -9,6 +9,9 @@ import re
 import tempfile
 import subprocess
 import sys
+import signal
+import _thread
+from collections import OrderedDict
 
 import cassandra
 import ccmlib.repository
@@ -52,11 +55,18 @@ class DTestSetup:
         self.cluster = None
         self.allow_log_errors = False
         self.connections = []
-        self.log_saved_dir = None
-        self.last_log = None
+
+        self.log_saved_dir = "logs"
+        try:
+            os.mkdir(self.log_saved_dir)
+        except OSError:
+            pass
+
+        self.last_log = os.path.join(self.log_saved_dir, "last")
         self.test_path = self.get_test_path()
         self.enable_for_jolokia = False
         self.subprocs = []
+        self.log_watch_thread = None
 
     def get_test_path(self):
         test_path = tempfile.mkdtemp(prefix='dtest-')
@@ -77,6 +87,61 @@ class DTestSetup:
                 ks_dir = os.path.join(data_dir, ks, path)
                 result.extend(glob.glob(ks_dir))
         return result
+
+    def begin_active_log_watch(self):
+        """
+        Calls into ccm to start actively watching logs.
+
+        In the event that errors are seen in logs, ccm will call back to _log_error_handler.
+
+        When the cluster is no longer in use, stop_active_log_watch should be called to end log watching.
+        (otherwise a 'daemon' thread will (needlessly) run until the process exits).
+        """
+        # log watching happens in another thread, but we want it to halt the main
+        # thread's execution, which we have to do by registering a signal handler
+        signal.signal(signal.SIGINT, self._catch_interrupt)
+        self._log_watch_thread = self.cluster.actively_watch_logs_for_error(self._log_error_handler, interval=0.25)
+
+    def _log_error_handler(self, errordata):
+        """
+        Callback handler used in conjunction with begin_active_log_watch.
+        When called, prepares exception instance, then will indirectly
+        cause _catch_interrupt to be called, which can raise the exception in the main
+        program thread.
+
+        @param errordata is a dictonary mapping node name to failure list.
+        """
+        # in some cases self.allow_log_errors may get set after proactive log checking has been enabled
+        # so we need to double-check first thing before proceeding
+        if self.allow_log_errors:
+            return
+
+        reportable_errordata = OrderedDict()
+
+        for nodename, errors in list(errordata.items()):
+            filtered_errors = list(self.__filter_errors(['\n'.join(msg) for msg in errors]))
+            if len(filtered_errors) is not 0:
+                reportable_errordata[nodename] = filtered_errors
+
+        # no errors worthy of halting the test
+        if not reportable_errordata:
+            return
+
+        message = "Errors seen in logs for: {nodes}".format(nodes=", ".join(list(reportable_errordata.keys())))
+        for nodename, errors in list(reportable_errordata.items()):
+            for error in errors:
+                message += "\n{nodename}: {error}".format(nodename=nodename, error=error)
+
+        try:
+            logger.debug('Errors were just seen in logs, ending test (if not ending already)!')
+            print("Error details: \n{message}".format(message=message))
+            self.test_is_ending  # will raise AttributeError if not present
+        except AttributeError:
+            self.test_is_ending = True
+            self.exit_with_exception = AssertionError("Log error encountered during active log scanning, see stdout")
+            # thread.interrupt_main will SIGINT in the main thread, which we can
+            # catch to raise an exception with useful information
+            _thread.interrupt_main()
 
     def _catch_interrupt(self, signal, frame):
         """
@@ -107,7 +172,7 @@ class DTestSetup:
                  node.compactionlogfilename())
                 for node in list(self.cluster.nodes.values())]
         if len(logs) is not 0:
-            basedir = str(int(time.time() * 1000)) + '_' + self.id()
+            basedir = str(int(time.time() * 1000)) + '_' + str(id(self))
             logdir = os.path.join(directory, basedir)
             os.mkdir(logdir)
             for n, log, debuglog, gclog, compactionlog in logs:
