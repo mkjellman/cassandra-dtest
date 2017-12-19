@@ -65,7 +65,7 @@ class TestOfflineTools(Tester):
         cluster.stop(gently=False)
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
-        self._check_stderr_error(error)
+        self._check_stderr_error(error.decode("utf-8"))
         assert re.search("since it is already on level 0", output.decode("utf-8"))
         assert rc == 0, str(rc)
 
@@ -80,7 +80,7 @@ class TestOfflineTools(Tester):
         initial_levels = self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families=["standard1"]))
         _, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         final_levels = self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families=["standard1"]))
-        self._check_stderr_error(error)
+        self._check_stderr_error(error.decode("utf-8"))
         assert rc == 0, str(rc)
 
         debug(initial_levels)
@@ -155,7 +155,7 @@ class TestOfflineTools(Tester):
         cluster.stop()
 
         output, _, rc = node1.run_sstableofflinerelevel("keyspace1", "standard1")
-        assert "L0=1" in output
+        assert re.search("L0=1", output.decode("utf-8"))
         assert rc == 0, str(rc)
 
         cluster.start(wait_for_binary_proto=True)
@@ -290,7 +290,7 @@ class TestOfflineTools(Tester):
             # Process sstableverify output to normalize paths in string to Python casing as above
             error = re.sub("(?<=Corrupted: ).*", lambda match: os.path.normcase(match.group(0)), str(e))
 
-            assert "Corrupted: " + sstable1 in error
+            assert re.search("Corrupted: " + sstable1, error)
             assert e.exit_status == 1, str(e.exit_status)
 
     def test_sstableexpiredblockers(self):
