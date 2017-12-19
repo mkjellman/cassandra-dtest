@@ -401,7 +401,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         assert pf.num_results_all(), [4 == 3]
 
         # make sure the allow filtering query matches the expected results (ignoring order)
-        expected = parse_data_into_dicts(
+        expected_data = parse_data_into_dicts(
             """
             |id|value           |
             +--+----------------+
@@ -414,7 +414,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
             |9 |and more testing|
             """, format_funcs={'id': int, 'value': str}
         )
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
+        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
 
 @since('2.0')
@@ -444,7 +444,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 4
         assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
 
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
+        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
     def test_paging_across_multi_wide_rows(self):
         session = self.prepare()
@@ -471,7 +471,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 4
         assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
 
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
+        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
     def test_paging_using_secondary_indexes(self):
         session = self.prepare()
@@ -2976,7 +2976,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         # no need to request page here, because the first page is automatically retrieved
         page1 = pf.page_data(1)
-        self.assertEqualIgnoreOrder(page1, data[:500])
+        assert_lists_equal_ignoring_order(page1, data[:500], sort_key="mytext")
 
         # set some TTLs for data on page 3
         for row in data[1000:1500]:
@@ -2992,7 +2992,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
         # check page two
         pf.request_one()
         page2 = pf.page_data(2)
-        self.assertEqualIgnoreOrder(page2, data[500:1000])
+        assert_lists_equal_ignoring_order(page2, data[500:1000], sort_key="mytext")
 
         page3expected = []
         for row in data[1000:1500]:
@@ -3005,7 +3005,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         pf.request_one()
         page3 = pf.page_data(3)
-        self.assertEqualIgnoreOrder(page3, page3expected)
+        assert_lists_equal_ignoring_order(page3, page3expected, sort_key="mytext")
 
     def test_node_unavailabe_during_paging(self):
         cluster = self.cluster
