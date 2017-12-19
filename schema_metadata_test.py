@@ -542,7 +542,7 @@ class TestSchemaMetadata(Tester):
         assert 0 == len(meta.triggers)
         assert 0 == len(meta.indexes)
         self.session.execute("drop table born_to_die")
-        assert self._keyspace_meta().tables.get('born_to_die') is not None
+        assert self._keyspace_meta().tables.get('born_to_die') is None
 
     def test_creating_and_dropping_table_with_2ary_indexes(self):
         assert 0 == len(self._keyspace_meta().indexes)
