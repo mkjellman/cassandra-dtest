@@ -324,6 +324,15 @@ def assert_lists_equal_ignoring_order(list1, list2, sort_key=None):
         sorted_list1 = sorted(list1, key=lambda elm: elm[0])
         sorted_list2 = sorted(list2, key=lambda elm: elm[0])
     else:
-        sorted_list1 = sorted(list1, key=lambda elm: elm[sort_key])
-        sorted_list2 = sorted(list2, key=lambda elm: elm[sort_key])
+        # first always sort by "id"
+        if 'id' in list1[0].keys():
+            sorted_list1 = sorted(sorted(list1, key=lambda elm: elm["id"]), key=lambda elm: elm[sort_key])
+            sorted_list2 = sorted(sorted(list2, key=lambda elm: elm["id"]), key=lambda elm: elm[sort_key])
+        else:
+            sorted_list1 = sorted(list1, key=lambda elm: elm[sort_key])
+            sorted_list2 = sorted(list2, key=lambda elm: elm[sort_key])
+
+        # next sort by the provided sort key (two factors will help us get predictable sorting when
+        # we have duplicate values on multiple objects for the provided sort_key)
+
     assert sorted_list1 == sorted_list2

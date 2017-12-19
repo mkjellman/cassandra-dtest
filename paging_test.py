@@ -15,7 +15,6 @@ from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
 from tools.data import rows_to_list
 from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.paging import PageAssertionMixin, PageFetcher
-from tools.misc import list_to_hashed_dict
 
 since = pytest.mark.since
 
@@ -1688,7 +1687,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 2
         assert pf.num_results_all(), [400 == 200]
-        assert list_to_hashed_dict(expected_data) == list_to_hashed_dict(pf.all_data())
+        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data())
 
     def test_static_columns_with_empty_non_static_columns_paging(self):
         """
