@@ -168,7 +168,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
 
         pf = PageFetcher(future).request_all()
 
-        assert pf.num_results_all(), [5000 == 1]
+        assert pf.num_results_all(), [5000, 1]
 
         # make sure expected and actual have same data elements (ignoring order)
         assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
@@ -270,7 +270,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 4
-        assert pf.num_results_all(), [3, 3, 3 == 1]
+        assert pf.num_results_all(), [3, 3, 3, 1]
 
         # these should be equal (in the same order)
         assert pf.all_data() == expected_data
@@ -283,7 +283,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 4
-        assert pf.num_results_all(), [3, 3, 3 == 1]
+        assert pf.num_results_all(), [3, 3, 3, 1]
 
         # these should be equal (in the same order)
         assert pf.all_data() == list(reversed(expected_data))
@@ -442,7 +442,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 4
-        assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
+        assert pf.num_results_all(), [3000, 3000, 3000, 1000]
 
         assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
@@ -469,7 +469,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 4
-        assert pf.num_results_all(), [3000, 3000, 3000 == 1000]
+        assert pf.num_results_all(), [3000, 3000, 3000, 1000]
 
         assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
@@ -2859,7 +2859,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         pf.request_all()
         assert pf.pagecount() == 2
-        assert pf.num_results_all(), [501 == 499]
+        assert pf.num_results_all(), [501, 499]
 
         self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
 

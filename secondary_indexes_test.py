@@ -13,7 +13,7 @@ from cassandra.query import BatchStatement, SimpleStatement
 
 from dtest import (Tester, debug, CASSANDRA_VERSION_FROM_BUILD, create_ks, create_cf)
 from tools.assertions import assert_bootstrap_state, assert_invalid, assert_none, assert_one, assert_row_count
-from tools.data import block_until_index_is_built, index_is_built, rows_to_list
+from tools.data import block_until_index_is_built, rows_to_list
 from tools.misc import new_node
 
 since = pytest.mark.since
