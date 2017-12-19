@@ -137,7 +137,7 @@ class TestOfflineTools(Tester):
         try:
             output, error, _ = node1.run_sstableofflinerelevel("keyspace1", "standard1")
         except ToolError as e:
-            assert re.search("No sstables to relevel for keyspace1.standard1", e.stdout)
+            assert re.search("No sstables to relevel for keyspace1.standard1", e.stdout.decode("utf-8"))
             assert e.exit_status == 1, str(e.exit_status)
 
         # test by flushing (sstable should be level 0)
