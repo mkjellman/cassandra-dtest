@@ -399,10 +399,8 @@ class DTestSetup:
                         try:
                             os.remove(os.path.join(self.test_path, filename))
                         except OSError as e:
-                            # once we port to py3, which has better reporting for exceptions raised while
-                            # handling other excpetions, we should just assert e.errno == errno.ENOENT
-                            if e.errno != errno.ENOENT:  # ENOENT = no such file or directory
-                                raise
+                            # ENOENT = no such file or directory
+                            assert e.errno == errno.ENOENT
 
                     os.rmdir(self.test_path)
                     self.cleanup_last_test_dir()
