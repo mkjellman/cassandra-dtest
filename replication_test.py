@@ -300,9 +300,13 @@ class SnitchConfigurationUpdateTest(Tester):
     which nodes should be shutdown in order to have the rack changed.
     """
 
-    ignore_log_patterns = ["Fatal exception during initialization",
-                           "Cannot start node if snitch's rack(.*) differs from previous rack(.*)",
-                           "Cannot update data center or rack"]
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            "Fatal exception during initialization",
+            "Cannot start node if snitch's rack(.*) differs from previous rack(.*)",
+            "Cannot update data center or rack"
+        )
 
     def check_endpoint_count(self, ks, table, nodes, rf):
         """

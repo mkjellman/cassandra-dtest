@@ -20,18 +20,19 @@ class NodeUnavailable(Exception):
 
 
 class BaseReplaceAddressTest(Tester):
-    __test__ = False
-    replacement_node = None
-    ignore_log_patterns = (
-        # This one occurs when trying to send the migration to a
-        # node that hasn't started yet, and when it does, it gets
-        # replayed and everything is fine.
-        r'Can\'t send migration request: node.*is down',
-        r'Migration task failed to complete',  # 10978
-        # ignore streaming error during bootstrap
-        r'Streaming error occurred',
-        r'failed stream session'
-    )
+
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            # This one occurs when trying to send the migration to a
+            # node that hasn't started yet, and when it does, it gets
+            # replayed and everything is fine.
+            r'Can\'t send migration request: node.*is down',
+            r'Migration task failed to complete',  # 10978
+            # ignore streaming error during bootstrap
+            r'Streaming error occurred',
+            r'failed stream session'
+        )
 
     def _setup(self, n=3, opts=None, enable_byteman=False, mixed_versions=False):
         debug("Starting cluster with {} nodes.".format(n))

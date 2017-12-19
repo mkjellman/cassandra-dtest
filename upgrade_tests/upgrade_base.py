@@ -41,18 +41,18 @@ class UpgradeTester(Tester, metaclass=ABCMeta):
     """
     NODES, RF, __test__, CL, UPGRADE_PATH = 2, 1, False, None, None
 
-    # known non-critical bug during teardown:
-    # https://issues.apache.org/jira/browse/CASSANDRA-12340
-    if CASSANDRA_VERSION_FROM_BUILD < '2.2':
-        _known_teardown_race_error = (
-            'ScheduledThreadPoolExecutor$ScheduledFutureTask@[0-9a-f]+ '
-            'rejected from org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor'
-        )
-        # don't alter ignore_log_patterns on the class, just the obj for this test
-        ignore_log_patterns = [_known_teardown_race_error]
-
     @pytest.fixture(autouse=True)
     def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        # known non-critical bug during teardown:
+        # https://issues.apache.org/jira/browse/CASSANDRA-12340
+        if CASSANDRA_VERSION_FROM_BUILD < '2.2':
+            _known_teardown_race_error = (
+                'ScheduledThreadPoolExecutor$ScheduledFutureTask@[0-9a-f]+ '
+                'rejected from org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor'
+            )
+            fixture_dtest_setup.ignore_log_patterns = fixture_dtest_setup.ignore_log_patterns \
+                                                      + [_known_teardown_race_error]
+
         fixture_dtest_setup.ignore_log_patterns = fixture_dtest_setup.ignore_log_patterns + [
             r'RejectedExecutionException.*ThreadPoolExecutor has shut down',  # see  CASSANDRA-12364
         ]

@@ -85,7 +85,7 @@ def get_sha(repo_dir):
             # local: slugs take the form 'local:/some/path/to/cassandra/:branch_name_or_sha'
         return "{}{}".format(prefix, output)
     except CalledProcessError as e:
-        if re.search('Not a git repository', e.message) is not None:
+        if re.search(str(e), 'Not a git repository') is not None:
             # we tried to get a sha, but repo_dir isn't a git repo. No big deal, must just be
             # working from a non-git install.
             return None
@@ -830,12 +830,12 @@ def run_scenarios(scenarios, handler, deferred_exceptions=tuple()):
             handler(scenario)
         except deferred_exceptions as e:
             tracebacks.append(traceback.format_exc(sys.exc_info()))
-            errors.append(type(e)('encountered {} {} running scenario:\n  {}\n'.format(e.__class__.__name__, e.message, scenario)))
+            errors.append(type(e)('encountered {} {} running scenario:\n  {}\n'.format(e.__class__.__name__, str(e), scenario)))
             debug("scenario {}/{} encountered a deferrable exception, continuing".format(i, len(scenarios)))
         except Exception as e:
             # catch-all for any exceptions not intended to be deferred
             tracebacks.append(traceback.format_exc(sys.exc_info()))
-            errors.append(type(e)('encountered {} {} running scenario:\n  {}\n'.format(e.__class__.__name__, e.message, scenario)))
+            errors.append(type(e)('encountered {} {} running scenario:\n  {}\n'.format(e.__class__.__name__, str(e), scenario)))
             debug("scenario {}/{} encountered a non-deferrable exception, aborting".format(i, len(scenarios)))
             raise MultiError(errors, tracebacks)
 

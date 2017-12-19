@@ -56,6 +56,7 @@ class DTestSetup:
         self.dtest_config = dtest_config
         self.ignore_log_patterns = []
         self.cluster = None
+        self.replacement_node = None
         self.allow_log_errors = False
         self.connections = []
 

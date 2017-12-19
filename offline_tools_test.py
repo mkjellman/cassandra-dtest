@@ -15,9 +15,13 @@ since = pytest.mark.since
 
 class TestOfflineTools(Tester):
 
-    # In 2.0, we will get this error log message due to jamm not being
-    # in the classpath
-    ignore_log_patterns = ["Unable to initialize MemoryMeter"]
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            # In 2.0, we will get this error log message due to jamm not being
+            # in the classpath
+            "Unable to initialize MemoryMeter"
+        )
 
     def test_sstablelevelreset(self):
         """
@@ -284,7 +288,7 @@ class TestOfflineTools(Tester):
             (out, error, rc) = node1.run_sstableverify("keyspace1", "standard1", options=['-v'])
         except ToolError as e:
             # Process sstableverify output to normalize paths in string to Python casing as above
-            error = re.sub("(?<=Corrupted: ).*", lambda match: os.path.normcase(match.group(0)), e.message)
+            error = re.sub("(?<=Corrupted: ).*", lambda match: os.path.normcase(match.group(0)), str(e))
 
             assert "Corrupted: " + sstable1 in error
             assert e.exit_status == 1, str(e.exit_status)
@@ -431,15 +435,15 @@ class TestOfflineTools(Tester):
         debug(s)
         assert len(s) == 2
         dumped_keys = set(row[0] for row in s)
-        assert set(['1', '2']) == dumped_keys
+        assert {['1', '2']} == dumped_keys
 
     def _check_stderr_error(self, error):
         acceptable = ["Max sstable size of", "Consider adding more capacity", "JNA link failure", "Class JavaLaunchHelper is implemented in both"]
 
         if len(error) > 0:
             for line in error.splitlines():
-                assert any([msg in line for msg in acceptable],
-                                'Found line \n\n"{line}"\n\n in error\n\n{error}'.format(line=line, error=error))
+                assert any([msg in line for msg in acceptable]), \
+                    'Found line \n\n"{line}"\n\n in error\n\n{error}'.format(line=line, error=error)
 
     def _get_final_sstables(self, node, ks, table):
         """

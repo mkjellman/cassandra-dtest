@@ -29,7 +29,12 @@ class ConsistentState(object):
 
 
 class TestIncRepair(Tester):
-    ignore_log_patterns = (r'Can\'t send migration request: node.*is down',)
+
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            r'Can\'t send migration request: node.*is down'
+        )
 
     @classmethod
     def _get_repaired_data(cls, node, keyspace):

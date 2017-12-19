@@ -229,18 +229,20 @@ class UpgradeTester(Tester):
     test_version_metas = None  # set on init to know which versions to use
     subprocs = None  # holds any subprocesses, for status checking and cleanup
     extra_config = None  # holds a non-mutable structure that can be cast as dict()
-    __test__ = False  # this is a base class only
-    ignore_log_patterns = (
-        # This one occurs if we do a non-rolling upgrade, the node
-        # it's trying to send the migration to hasn't started yet,
-        # and when it does, it gets replayed and everything is fine.
-        r'Can\'t send migration request: node.*is down',
-        r'RejectedExecutionException.*ThreadPoolExecutor has shut down',
-        # Occurs due to test/ccm writing topo on down nodes
-        r'Cannot update data center or rack from.*for live host',
-        # Normal occurance. See CASSANDRA-12026. Likely won't be needed after C* 4.0.
-        r'Unknown column cdc during deserialization',
-    )
+
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            # This one occurs if we do a non-rolling upgrade, the node
+            # it's trying to send the migration to hasn't started yet,
+            # and when it does, it gets replayed and everything is fine.
+            r'Can\'t send migration request: node.*is down',
+            r'RejectedExecutionException.*ThreadPoolExecutor has shut down',
+            # Occurs due to test/ccm writing topo on down nodes
+            r'Cannot update data center or rack from.*for live host',
+            # Normal occurance. See CASSANDRA-12026. Likely won't be needed after C* 4.0.
+            r'Unknown column cdc during deserialization',
+        )
 
     def setUp(self):
         debug("Upgrade test beginning, setting CASSANDRA_VERSION to {}, and jdk to {}. (Prior values will be restored after test)."
