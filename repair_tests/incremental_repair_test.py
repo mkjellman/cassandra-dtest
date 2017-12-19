@@ -484,7 +484,11 @@ class TestIncRepair(Tester):
                 node.nodetool('compact keyspace1 standard1')
 
         finalOut1 = node1.run_sstablemetadata(keyspace='keyspace1').stdout
+        if not isinstance(finalOut1, str):
+            finalOut1 = finalOut1.decode("utf-8")
         finalOut2 = node2.run_sstablemetadata(keyspace='keyspace1').stdout
+        if not isinstance(finalOut2, str):
+            finalOut2 = finalOut2.decode("utf-8")
 
         matches = findall('(?<=Repaired at:).*', '\n'.join([finalOut1, finalOut2]))
 
