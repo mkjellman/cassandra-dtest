@@ -116,7 +116,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
             pf = PageFetcher(future).request_all()
 
             assert pf.pagecount() == 2
-            assert pf.num_results_all(), [5 == 4]
+            assert pf.num_results_all() == [5, 4]
 
             # make sure expected and actual have same data elements (ignoring order)
             self.assertEqualIgnoreOrder(pf.all_data(), expected_data)
@@ -231,7 +231,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
             pf = PageFetcher(future).request_all()
 
             assert pf.pagecount() == 2
-            assert pf.num_results_all(), [5 == 5]
+            assert pf.num_results_all() == [5, 5]
 
             # these should be equal (in the same order)
             assert pf.all_data() == expected_data
@@ -417,7 +417,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
             pf = PageFetcher(future).request_all()
 
             assert pf.pagecount() == 2
-            assert pf.num_results_all(), [4 == 3]
+            assert pf.num_results_all() == [4, 3]
 
             # make sure the allow filtering query matches the expected results (ignoring order)
             self.assertEqualIgnoreOrder(
@@ -632,7 +632,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             expected_data = [x for x in all_data if x.get('mybool') is True]
 
             assert pf.pagecount() == 2
-            assert pf.num_results_all(), [400 == 200]
+            assert pf.num_results_all() == [400, 200]
             self.assertEqualIgnoreOrder(expected_data, pf.all_data())
 
     @since('2.0.6')
@@ -899,7 +899,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             expected_data = [x for x in all_data if x.get('mybool') is True]
 
             assert pf.pagecount() == 2
-            assert pf.num_results_all(), [400 == 200]
+            assert pf.num_results_all() == [400, 200]
             self.assertEqualIgnoreOrder(expected_data, pf.all_data())
 
 
@@ -1024,7 +1024,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
             pf.request_all()
             assert pf.pagecount() == 3
-            assert pf.num_results_all(), [300, 300 == 200]
+            assert pf.num_results_all() == [300, 300, 200]
 
     def test_cell_TTL_expiry_during_paging(self):
         cursor = self.prepare()

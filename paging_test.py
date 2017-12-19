@@ -111,7 +111,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 2
-        assert pf.num_results_all(), [5 == 4]
+        assert pf.num_results_all() == [5, 4]
 
         # make sure expected and actual have same data elements (ignoring order)
         assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
@@ -220,7 +220,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 2
-        assert pf.num_results_all(), [5 == 5]
+        assert pf.num_results_all() == [5, 5]
 
         # these should be equal (in the same order)
         assert pf.all_data() == expected_data
@@ -398,7 +398,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
         pf = PageFetcher(future).request_all()
 
         assert pf.pagecount() == 2
-        assert pf.num_results_all(), [4 == 3]
+        assert pf.num_results_all() == [4, 3]
 
         # make sure the allow filtering query matches the expected results (ignoring order)
         expected_data = parse_data_into_dicts(
@@ -508,7 +508,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         expected_data = [x for x in all_data if x.get('mybool') is True]
 
         assert pf.pagecount() == 2
-        assert pf.num_results_all(), [400 == 200]
+        assert pf.num_results_all() == [400, 200]
         assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
 
     def test_paging_with_in_orderby_and_two_partition_keys(self):
@@ -1686,8 +1686,8 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         expected_data = [x for x in all_data if x.get('mybool') is True]
 
         assert pf.pagecount() == 2
-        assert pf.num_results_all(), [400 == 200]
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data())
+        assert pf.num_results_all() == [400, 200]
+        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
 
     def test_static_columns_with_empty_non_static_columns_paging(self):
         """
@@ -2940,7 +2940,7 @@ class TestPagingDatasetChanges(BasePagingTester, PageAssertionMixin):
 
         pf.request_all()
         assert pf.pagecount() == 3
-        assert pf.num_results_all(), [300, 300 == 200]
+        assert pf.num_results_all() == [300, 300, 200]
 
     def test_cell_TTL_expiry_during_paging(self):
         session = self.prepare()

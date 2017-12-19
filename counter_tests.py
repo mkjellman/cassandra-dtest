@@ -374,7 +374,7 @@ class TestCounters(Tester):
         session.execute("UPDATE counter_bug SET c = c + 1 where t = 1")
         row = list(session.execute("SELECT * from counter_bug"))
 
-        assert rows_to_list(row)[0], [1 == 1]
+        assert rows_to_list(row)[0] == [1, 1]
         assert len(row) == 1
 
         session.execute("ALTER TABLE counter_bug drop c")

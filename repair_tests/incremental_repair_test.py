@@ -1,5 +1,6 @@
 import time
 import pytest
+import re
 from datetime import datetime
 from collections import Counter, namedtuple
 from re import findall, compile
@@ -463,9 +464,9 @@ class TestIncRepair(Tester):
 
         assert len(uniquematches) >= 2, uniquematches
 
-        assert int(max(matchcount)) >= 1, matchcount
+        assert len(max(matchcount)) >= 1, matchcount
 
-        assert 'Repaired at: 0' in '\n'.join([initialOut1, initialOut2])
+        assert re.search('Repaired at: 0', '\n'.join([initialOut1, initialOut2]))
 
         node1.stop()
         node2.stress(['write', 'n=15K', 'no-warmup', '-schema', 'replication(factor=2)'])
@@ -494,9 +495,9 @@ class TestIncRepair(Tester):
 
         assert len(uniquematches) >= 2
 
-        assert int(max(matchcount)) >= 2
+        assert len(max(matchcount)) >= 2
 
-        assert 'Repaired at: 0' not in '\n'.join([finalOut1, finalOut2])
+        assert not re.search('Repaired at: 0', '\n'.join([finalOut1, finalOut2]))
 
     def test_compaction(self):
         """

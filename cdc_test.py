@@ -299,7 +299,7 @@ class TestCDC(Tester):
 
         for enable in alter_path:
             set_cdc(enable)
-            assert session.execute('SELECT * FROM ' + table_name) == data
+            assert rows_to_list(session.execute('SELECT * FROM ' + table_name)) == data
 
     def test_cdc_enabled_data_readable_on_round_trip(self):
         """

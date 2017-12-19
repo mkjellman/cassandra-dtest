@@ -320,17 +320,25 @@ def assert_lists_equal_ignoring_order(list1, list2, sort_key=None):
     :param sort_key: if the contents of the list are of type dict, the
     key to use of each object to sort the overall object with
     """
+    normalized_list1 = []
+    for obj in list1:
+        normalized_list1.append(obj)
+
+    normalized_list2 = []
+    for obj in list2:
+        normalized_list2.append(obj)
+
     if not sort_key:
-        sorted_list1 = sorted(list1, key=lambda elm: elm[0])
-        sorted_list2 = sorted(list2, key=lambda elm: elm[0])
+        sorted_list1 = sorted(normalized_list1, key=lambda elm: elm[0])
+        sorted_list2 = sorted(normalized_list2, key=lambda elm: elm[0])
     else:
         # first always sort by "id"
-        if 'id' in list1[0].keys():
-            sorted_list1 = sorted(sorted(list1, key=lambda elm: elm["id"]), key=lambda elm: elm[sort_key])
-            sorted_list2 = sorted(sorted(list2, key=lambda elm: elm["id"]), key=lambda elm: elm[sort_key])
+        if not sort_key == 'id' and 'id' in list1[0].keys():
+            sorted_list1 = sorted(sorted(normalized_list1, key=lambda elm: elm["id"]), key=lambda elm: elm[sort_key])
+            sorted_list2 = sorted(sorted(normalized_list2, key=lambda elm: elm["id"]), key=lambda elm: elm[sort_key])
         else:
-            sorted_list1 = sorted(list1, key=lambda elm: elm[sort_key])
-            sorted_list2 = sorted(list2, key=lambda elm: elm[sort_key])
+            sorted_list1 = sorted(normalized_list1, key=lambda elm: elm[sort_key])
+            sorted_list2 = sorted(normalized_list2, key=lambda elm: elm[sort_key])
 
         # next sort by the provided sort key (two factors will help us get predictable sorting when
         # we have duplicate values on multiple objects for the provided sort_key)

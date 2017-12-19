@@ -40,7 +40,7 @@ class TestOfflineTools(Tester):
         try:
             node1.run_sstablelevelreset("keyspace1", "standard1")
         except ToolError as e:
-            assert re.search(repr(e), "ColumnFamily not found: keyspace1/standard1")
+            assert re.search("ColumnFamily not found: keyspace1/standard1", str(e))
             # this should return exit code 1
             assert e.exit_status == 1, "Expected sstablelevelreset to have a return code of 1 == but instead return code was {}".format(e.exit_status)
 
@@ -52,7 +52,7 @@ class TestOfflineTools(Tester):
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         self._check_stderr_error(error)
-        assert re.search(output, "Found no sstables, did you give the correct keyspace")
+        assert re.search("Found no sstables, did you give the correct keyspace", output)
         assert rc == 0, str(rc)
 
         # test by writing small amount of data and flushing (all sstables should be level 0)
@@ -66,7 +66,7 @@ class TestOfflineTools(Tester):
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         self._check_stderr_error(error)
-        assert re.search(output, "since it is already on level 0")
+        assert re.search("since it is already on level 0", output)
         assert rc == 0, str(rc)
 
         # test by loading large amount data so we have multiple levels and checking all levels are 0 at end
@@ -137,7 +137,7 @@ class TestOfflineTools(Tester):
         try:
             output, error, _ = node1.run_sstableofflinerelevel("keyspace1", "standard1")
         except ToolError as e:
-            assert re.search(e.stdout, "No sstables to relevel for keyspace1.standard1")
+            assert re.search("No sstables to relevel for keyspace1.standard1", e.stdout)
             assert e.exit_status == 1, str(e.exit_status)
 
         # test by flushing (sstable should be level 0)
@@ -435,7 +435,7 @@ class TestOfflineTools(Tester):
         debug(s)
         assert len(s) == 2
         dumped_keys = set(row[0] for row in s)
-        assert {['1', '2']} == dumped_keys
+        assert {'1', '2'} == dumped_keys
 
     def _check_stderr_error(self, error):
         acceptable = ["Max sstable size of", "Consider adding more capacity", "JNA link failure", "Class JavaLaunchHelper is implemented in both"]
