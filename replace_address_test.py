@@ -31,7 +31,8 @@ class BaseReplaceAddressTest(Tester):
             r'Migration task failed to complete',  # 10978
             # ignore streaming error during bootstrap
             r'Streaming error occurred',
-            r'failed stream session'
+            r'failed stream session',
+            r'Failed to properly handshake with peer'
         )
 
     def _setup(self, n=3, opts=None, enable_byteman=False, mixed_versions=False):
