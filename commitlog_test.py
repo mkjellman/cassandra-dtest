@@ -14,9 +14,8 @@ from ccmlib.node import Node, TimeoutError
 from parse import parse
 
 from dtest import Tester, debug, create_ks
-from tools.assertions import assert_almost_equal, assert_none, assert_one
+from tools.assertions import (assert_almost_equal, assert_none, assert_one, assert_lists_equal_ignoring_order)
 from tools.data import rows_to_list
-from tools.misc import list_to_hashed_dict
 
 since = pytest.mark.since
 
@@ -284,7 +283,7 @@ class TestCommitLog(Tester):
         debug("Make query and ensure data is present")
         session = self.patient_cql_connection(node1)
         res = session.execute("SELECT * FROM Test. users")
-        assert list_to_hashed_dict(rows_to_list(res)) == list_to_hashed_dict([['gandalf', 1955, 'male', 'p@$$', 'WA']])
+        assert_lists_equal_ignoring_order(rows_to_list(res), [['gandalf', 1955, 'male', 'p@$$', 'WA']])
 
     def test_default_segment_size(self):
         """
@@ -549,14 +548,20 @@ class TestCommitLog(Tester):
             When calculating the header crc, C* splits up the 8b id, first adding the 4 least significant
             bytes to the crc, then the 5 most significant bytes, so this splits them and calculates the same way
             """
-            new_header = header[:4]
+            new_header = bytearray(header[:4])
             # C* evaluates most and least significant 4 bytes out of order
-            new_header += header[8:12]
-            new_header += header[4:8]
+            new_header.extend(header[8:12])
+            new_header.extend(header[4:8])
             # C* evaluates the short parameter length as an int
-            new_header += '\x00\x00' + header[12:14]  # the
-            new_header += header[14:]
-            return binascii.crc32(new_header)
+            new_header.extend(b'\x00\x00')
+            new_header.extend(header[12:14])  # the
+            new_header.extend(header[14:])
+
+            # https://docs.python.org/2/library/binascii.html
+            # "Changed in version 2.6: The return value is in the range [-2**31, 2**31-1] regardless
+            # of platform. In the past the value would be signed on some platforms and unsigned on
+            # others. Use & 0xffffffff on the value if you want it to match Python 3 behavior."
+            return binascii.crc32(new_header) & 0xffffffff
 
         # modify the compression parameters to look for a compressor that isn't there
         # while this scenario is pretty unlikely, if a jar or lib got moved or something,
@@ -580,18 +585,23 @@ class TestCommitLog(Tester):
                 # check that we're going this right
                 f.seek(0)
                 header_bytes = f.read(header_length)
-                assert get_header_crc(header_bytes) == crc
+
+                # https://docs.python.org/2/library/binascii.html
+                # "Changed in version 2.6: The return value is in the range [-2**31, 2**31-1] regardless
+                # of platform. In the past the value would be signed on some platforms and unsigned on
+                # others. Use & 0xffffffff on the value if you want it to match Python 3 behavior."
+                assert get_header_crc(header_bytes) == (crc & 0xffffffff)
 
             # rewrite it with imaginary compressor
-            assert 'LZ4Compressor' in header_bytes
-            header_bytes = header_bytes.replace('LZ4Compressor'.encode("utf-8"), 'LZ5Compressor'.encode("utf-8"))
-            assert 'LZ4Compressor' not in header_bytes
-            assert 'LZ5Compressor' in header_bytes
+            assert 'LZ4Compressor'.encode("ascii") in header_bytes
+            header_bytes = header_bytes.replace('LZ4Compressor'.encode("ascii"), 'LZ5Compressor'.encode("ascii"))
+            assert 'LZ4Compressor'.encode("ascii") not in header_bytes
+            assert 'LZ5Compressor'.encode("ascii") in header_bytes
             with open(os.path.join(cl_dir, cl), 'wb') as f:
                 f.seek(0)
                 f.write(header_bytes)
                 f.seek(crc_pos)
-                f.write(struct.pack('>i', get_header_crc(header_bytes)))
+                f.write(struct.pack('>I', get_header_crc(header_bytes)))
 
             # verify we wrote everything correctly
             with open(os.path.join(cl_dir, cl), 'rb') as f:
@@ -599,7 +609,12 @@ class TestCommitLog(Tester):
                 assert f.read(header_length) == header_bytes
                 f.seek(crc_pos)
                 crc = struct.unpack('>i', f.read(4))[0]
-                assert crc == get_header_crc(header_bytes)
+
+                # https://docs.python.org/2/library/binascii.html
+                # "Changed in version 2.6: The return value is in the range [-2**31, 2**31-1] regardless
+                # of platform. In the past the value would be signed on some platforms and unsigned on
+                # others. Use & 0xffffffff on the value if you want it to match Python 3 behavior."
+                assert (crc & 0xffffffff)  == get_header_crc(header_bytes)
 
         mark = node.mark_log()
         node.start()

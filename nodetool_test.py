@@ -100,7 +100,7 @@ class TestNodetool(Tester):
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             assert 0 == len(err), err
             debug(out)
-            pytest.raises(out, match=r'.* 123 ms')
+            assert re.search(r'.* 123 ms', out)
 
     def test_meaningless_notice_in_status(self):
         """

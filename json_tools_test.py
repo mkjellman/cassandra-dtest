@@ -4,7 +4,7 @@ import pytest
 
 from dtest import Tester, debug, create_ks
 from tools.data import rows_to_list
-from tools.misc import list_to_hashed_dict
+from tools.assertions import assert_lists_equal_ignoring_order
 
 since = pytest.mark.since
 
@@ -45,7 +45,7 @@ class TestJson(Tester):
 
         res = session.execute("SELECT * FROM Test. users")
 
-        assert list_to_hashed_dict(rows_to_list(res)) == list_to_hashed_dict([['frodo', 1985, 'male', 'pass@', 'CA'],
+        assert assert_lists_equal_ignoring_order(rows_to_list(res), [['frodo', 1985, 'male', 'pass@', 'CA'],
                                ['sam', 1980, 'male', '@pass', 'NY']])
 
         debug("Flushing and stopping cluster...")

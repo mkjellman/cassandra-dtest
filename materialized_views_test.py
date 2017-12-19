@@ -2180,7 +2180,7 @@ SimpleRow = collections.namedtuple('SimpleRow', 'a b c d')
 
 
 def row_generate(i, num_partitions):
-    return SimpleRow(a=i % num_partitions, b=(i % 400) / num_partitions, c=i, d=i)
+    return SimpleRow(a=i % num_partitions, b=(i % 400) // num_partitions, c=i, d=i)
 
 
 # Create a threaded session and execute queries from a Queue
@@ -2328,7 +2328,7 @@ class TestMaterializedViewsConsistency(Tester):
         upper = 100000
         processes = 4
         queues = [None] * processes
-        eachProcess = (upper - lower) / processes
+        eachProcess = (upper - lower) // processes
 
         debug("Creating schema")
         session.execute(

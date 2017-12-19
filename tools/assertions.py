@@ -309,3 +309,21 @@ def assert_bootstrap_state(tester, node, expected_bootstrap_state):
     session = tester.patient_exclusive_cql_connection(node)
     assert_one(session, "SELECT bootstrapped FROM system.local WHERE key='local'", [expected_bootstrap_state])
     session.shutdown()
+
+
+def assert_lists_equal_ignoring_order(list1, list2, sort_key=None):
+    """
+    asserts that the contents of the two provided lists are equal
+    but ignoring the order that the items of the lists are actually in
+    :param list1: list to check if it's contents are equal to list2
+    :param list2: list to check if it's contents are equal to list1
+    :param sort_key: if the contents of the list are of type dict, the
+    key to use of each object to sort the overall object with
+    """
+    if not sort_key:
+        sorted_list1 = sorted(list1, key=lambda elm: elm[0])
+        sorted_list2 = sorted(list2, key=lambda elm: elm[0])
+    else:
+        sorted_list1 = sorted(list1, key=lambda elm: elm[sort_key])
+        sorted_list2 = sorted(list2, key=lambda elm: elm[sort_key])
+    assert sorted_list1 == sorted_list2
