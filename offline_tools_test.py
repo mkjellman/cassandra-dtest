@@ -36,7 +36,7 @@ class TestOfflineTools(Tester):
         try:
             node1.run_sstablelevelreset("keyspace1", "standard1")
         except ToolError as e:
-            assert "ColumnFamily not found: keyspace1/standard1" in e.message
+            assert re.search(repr(e), "ColumnFamily not found: keyspace1/standard1")
             # this should return exit code 1
             assert e.exit_status == 1, "Expected sstablelevelreset to have a return code of 1 == but instead return code was {}".format(e.exit_status)
 
@@ -48,7 +48,7 @@ class TestOfflineTools(Tester):
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         self._check_stderr_error(error)
-        assert "Found no sstables, did you give the correct keyspace" in output
+        assert re.search(output, "Found no sstables, did you give the correct keyspace")
         assert rc == 0, str(rc)
 
         # test by writing small amount of data and flushing (all sstables should be level 0)
@@ -62,7 +62,7 @@ class TestOfflineTools(Tester):
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         self._check_stderr_error(error)
-        assert "since it is already on level 0" in output
+        assert re.search(output, "since it is already on level 0")
         assert rc == 0, str(rc)
 
         # test by loading large amount data so we have multiple levels and checking all levels are 0 at end
@@ -133,7 +133,7 @@ class TestOfflineTools(Tester):
         try:
             output, error, _ = node1.run_sstableofflinerelevel("keyspace1", "standard1")
         except ToolError as e:
-            assert "No sstables to relevel for keyspace1.standard1" in e.stdout
+            assert re.search(e.stdout, "No sstables to relevel for keyspace1.standard1")
             assert e.exit_status == 1, str(e.exit_status)
 
         # test by flushing (sstable should be level 0)
@@ -272,9 +272,9 @@ class TestOfflineTools(Tester):
 
         # now try intentionally corrupting an sstable to see if hash computed is different and error recognized
         sstable1 = sstables[1]
-        with open(sstable1, 'r') as f:
+        with open(sstable1, 'rb') as f:
             sstabledata = bytearray(f.read())
-        with open(sstable1, 'w') as out:
+        with open(sstable1, 'wb') as out:
             position = random.randrange(0, len(sstabledata))
             sstabledata[position] = (sstabledata[position] + 1) % 256
             out.write(sstabledata)
