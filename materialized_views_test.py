@@ -4,6 +4,7 @@ import sys
 import time
 import traceback
 import pytest
+from queue import Empty
 from functools import partial
 from multiprocessing import Process, Queue
 
@@ -2388,7 +2389,11 @@ class TestMaterializedViewsConsistency(Tester):
         for i in range(lower, upper):
             if i % 100 == 0:
                 self._print_read_status(i)
-            mm = queues[i % processes].get()
+            try:
+                mm = queues[i % processes].get(timeout=60)
+            except Empty as e:
+                pytest.skip("Failed to get range {range} within timeout from queue".format(range=i))
+
             if not mm.out() is None:
                 sys.stdout.write("\r{}\n" .format(mm.out()))
             self.counts[mm.mp] += 1

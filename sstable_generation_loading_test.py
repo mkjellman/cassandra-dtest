@@ -19,11 +19,13 @@ since = pytest.mark.since
 # Also used by upgrade_tests/storage_engine_upgrade_test
 # to test loading legacy sstables
 class BaseSStableLoaderTest(Tester):
-    __test__ = False
+
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.allow_log_errors = True
+
     upgrade_from = None
     compact = False
-    jvm_args = ()
-    allow_log_errors = True
 
     def create_schema(self, session, ks, compression):
         create_ks(session, ks, rf=2)
