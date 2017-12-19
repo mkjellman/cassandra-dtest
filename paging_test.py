@@ -114,7 +114,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.num_results_all() == [5, 4]
 
         # make sure expected and actual have same data elements (ignoring order)
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
 
     def test_with_equal_results_to_page_size(self):
         session = self.prepare()
@@ -142,7 +142,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 1
 
         # make sure expected and actual have same data elements (ignoring order)
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
 
     def test_undefined_page_size_default(self):
         """
@@ -171,7 +171,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.num_results_all(), [5000, 1]
 
         # make sure expected and actual have same data elements (ignoring order)
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="id")
 
 
 @since('2.0')
@@ -414,7 +414,7 @@ class TestPagingWithModifiers(BasePagingTester, PageAssertionMixin):
             |9 |and more testing|
             """, format_funcs={'id': int, 'value': str}
         )
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
 
 @since('2.0')
@@ -443,8 +443,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 4
         assert pf.num_results_all(), [3000, 3000, 3000, 1000]
-
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
     def test_paging_across_multi_wide_rows(self):
         session = self.prepare()
@@ -470,8 +469,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 4
         assert pf.num_results_all(), [3000, 3000, 3000, 1000]
-
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
     def test_paging_using_secondary_indexes(self):
         session = self.prepare()
@@ -1687,7 +1685,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         assert pf.pagecount() == 2
         assert pf.num_results_all() == [400, 200]
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
+        assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
 
     def test_static_columns_with_empty_non_static_columns_paging(self):
         """
