@@ -388,7 +388,8 @@ class TestTopology(Tester):
             # let that pass and move on to string assertion below
             pass
 
-        assert re.search(rejoin_err, '\n'.join(['\n'.join(err_list) for err_list in node3.grep_log_for_errors()]))
+        assert re.search(rejoin_err,
+                         '\n'.join(['\n'.join(err_list) for err_list in node3.grep_log_for_errors()]), re.MULTILINE)
 
         # Give the node some time to shut down once it has detected
         # its invalid state. If it doesn't shut down in the 30 seconds,
