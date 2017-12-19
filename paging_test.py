@@ -142,7 +142,7 @@ class TestPagingSize(BasePagingTester, PageAssertionMixin):
         assert pf.pagecount() == 1
 
         # make sure expected and actual have same data elements (ignoring order)
-        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="sometext")
+        assert assert_lists_equal_ignoring_order(expected_data, pf.all_data(), sort_key="value")
 
     def test_undefined_page_size_default(self):
         """
