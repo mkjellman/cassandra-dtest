@@ -94,7 +94,7 @@ class TestOfflineTools(Tester):
 
     def get_levels(self, data):
         (out, err, rc) = data
-        return list(map(int, re.findall("SSTable Level: ([0-9])", out)))
+        return list(map(int, re.findall("SSTable Level: ([0-9])", out.decode("utf-8"))))
 
     def wait_for_compactions(self, node):
         pattern = re.compile("pending tasks: 0")
