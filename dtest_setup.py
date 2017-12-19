@@ -3,27 +3,18 @@ import glob
 import os
 import shutil
 import time
-import subprocess
 import logging
 import re
 import tempfile
 import subprocess
 import sys
-import signal
-import _thread
 import errno
 from collections import OrderedDict
 
-import cassandra
-import ccmlib.repository
-from cassandra import ConsistencyLevel
-from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster as PyCluster
 from cassandra.cluster import NoHostAvailable
 from cassandra.cluster import ExecutionProfile, EXEC_PROFILE_DEFAULT
 from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy, RoundRobinPolicy
-from ccmlib.cluster import Cluster
-from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
 
 from dtest import (get_ip_from_node, make_execution_profile, get_auth_provider, get_port_from_node,
@@ -102,17 +93,13 @@ class DTestSetup:
         When the cluster is no longer in use, stop_active_log_watch should be called to end log watching.
         (otherwise a 'daemon' thread will (needlessly) run until the process exits).
         """
-        # log watching happens in another thread, but we want it to halt the main
-        # thread's execution, which we have to do by registering a signal handler
-        signal.signal(signal.SIGINT, self._catch_interrupt)
         self._log_watch_thread = self.cluster.actively_watch_logs_for_error(self._log_error_handler, interval=0.25)
 
     def _log_error_handler(self, errordata):
         """
         Callback handler used in conjunction with begin_active_log_watch.
-        When called, prepares exception instance, then will indirectly
-        cause _catch_interrupt to be called, which can raise the exception in the main
-        program thread.
+        When called, prepares exception instance, we will use pytest.fail
+        to kill the current test being executed and mark it as failed
 
         @param errordata is a dictonary mapping node name to failure list.
         """
@@ -137,31 +124,8 @@ class DTestSetup:
             for error in errors:
                 message += "\n{nodename}: {error}".format(nodename=nodename, error=error)
 
-        try:
-            logger.debug('Errors were just seen in logs, ending test (if not ending already)!')
-            print("Error details: \n{message}".format(message=message))
-            self.test_is_ending  # will raise AttributeError if not present
-        except AttributeError:
-            self.test_is_ending = True
-            self.exit_with_exception = AssertionError("Log error encountered during active log scanning, see stdout")
-            # thread.interrupt_main will SIGINT in the main thread, which we can
-            # catch to raise an exception with useful information
-            _thread.interrupt_main()
-
-    def _catch_interrupt(self, signal, frame):
-        """
-        Signal handler for registering on SIGINT.
-
-        If called will look for a stored exception and raise it to abort test.
-        If a stored exception is not present, this handler has likely caught a
-        user interrupt via CTRL-C, and will raise a KeyboardInterrupt.
-        """
-        try:
-            # check if we have a persisted exception to fail with
-            raise self.exit_with_exception
-        except AttributeError:
-            # looks like this was just a plain CTRL-C event
-            raise KeyboardInterrupt()
+        logger.debug('Errors were just seen in logs, ending test (if not ending already)!')
+        pytest.fail("Error details: \n{message}".format(message=message))
 
     def copy_logs(self, directory=None, name=None):
         """Copy the current cluster's log files somewhere, by default to LOG_SAVED_DIR with a name of 'last'"""
