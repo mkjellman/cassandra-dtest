@@ -44,6 +44,8 @@ class DTestConfig:
         self.cluster_options = []
         self.execute_upgrade_tests = False
         self.disable_active_log_watching = False
+        self.keep_test_dir = False
+        self.enable_jacoco_code_coverage = False
 
     def setup(self, request):
         self.use_vnodes = request.config.getoption("--use-vnodes")
@@ -57,6 +59,8 @@ class DTestConfig:
         self.delete_logs = request.config.getoption("--delete-logs")
         self.execute_upgrade_tests = request.config.getoption("--execute-upgrade-tests")
         self.disable_active_log_watching = request.config.getoption("--disable-active-log-watching")
+        self.keep_test_dir = request.config.getoption("--keep-test-dir")
+        self.enable_jacoco_code_coverage = request.config.getoption("--enable-jacoco-code-coverage")
 
 
 def check_required_loopback_interfaces_available():
@@ -100,6 +104,11 @@ def pytest_addoption(parser):
                      help="Disable ccm active log watching, which will cause dtests to check for errors in the "
                           "logs in a single operation instead of semi-realtime processing by consuming "
                           "ccm _log_error_handler callbacks")
+    parser.addoption("--keep-test-dir", action="store_true", default=False,
+                     help="Do not remove/cleanup the test ccm cluster directory and it's artifacts "
+                          "after the test completes")
+    parser.addoption("--enable-jacoco-code-coverage", action="store_true", default=False,
+                     help="Enable JaCoCo Code Coverage Support")
 
 
 def sufficient_system_resources_for_resource_intensive_tests():
@@ -222,7 +231,7 @@ def fixture_dtest_setup(request, parse_dtest_config):
     logger.info("function yield fixture is doing setup")
 
     initial_environment = copy.deepcopy(os.environ)
-    dtest_setup = DTestSetup()
+    dtest_setup = DTestSetup(dtest_config=parse_dtest_config)
     dtest_setup.cluster = initialize_cluster(parse_dtest_config, dtest_setup)
 
     if not parse_dtest_config.disable_active_log_watching:

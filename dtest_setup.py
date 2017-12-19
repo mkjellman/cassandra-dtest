@@ -11,6 +11,7 @@ import subprocess
 import sys
 import signal
 import _thread
+import errno
 from collections import OrderedDict
 
 import cassandra
@@ -25,7 +26,8 @@ from ccmlib.cluster import Cluster
 from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
 
-from dtest import (get_ip_from_node, make_execution_profile, get_auth_provider, get_port_from_node, get_eager_protocol_version)
+from dtest import (get_ip_from_node, make_execution_profile, get_auth_provider, get_port_from_node,
+                   get_eager_protocol_version, create_ccm_cluster)
 from distutils.version import LooseVersion
 
 from tools.context import log_filter
@@ -50,7 +52,8 @@ def retry_till_success(fun, *args, **kwargs):
 
 
 class DTestSetup:
-    def __init__(self):
+    def __init__(self, dtest_config=None):
+        self.dtest_config = dtest_config
         self.ignore_log_patterns = []
         self.cluster = None
         self.allow_log_errors = False
@@ -67,6 +70,7 @@ class DTestSetup:
         self.enable_for_jolokia = False
         self.subprocs = []
         self.log_watch_thread = None
+        self.last_test_dir = "last_test_dir"
 
     def get_test_path(self):
         test_path = tempfile.mkdtemp(prefix='dtest-')
@@ -355,3 +359,55 @@ class DTestSetup:
 
     def supports_v5_protocol(self, cluster_version):
         return cluster_version >= LooseVersion('4.0')
+
+    def cleanup_last_test_dir(self):
+        if os.path.exists(self.last_test_dir):
+            os.remove(self.last_test_dir)
+
+    def stop_active_log_watch(self):
+        """
+        Joins the log watching thread, which will then exit.
+        Should be called after each test, ideally after nodes are stopped but before cluster files are removed.
+
+        Can be called multiple times without error.
+        If not called, log watching thread will remain running until the parent process exits.
+        """
+        self.log_watch_thread.join(timeout=60)
+
+    def cleanup_cluster(self):
+        with log_filter('cassandra'):  # quiet noise from driver when nodes start going down
+            if self.dtest_config.keep_test_dir:
+                self.cluster.stop(gently=self.dtest_config.enable_jacoco_code_coverage)
+            else:
+                # when recording coverage the jvm has to exit normally
+                # or the coverage information is not written by the jacoco agent
+                # otherwise we can just kill the process
+                if self.dtest_config.enable_jacoco_code_coverage:
+                    self.cluster.stop(gently=True)
+
+                # Cleanup everything:
+                try:
+                    if self.log_watch_thread:
+                        self.stop_active_log_watch()
+                finally:
+                    logger.debug("removing ccm cluster {name} at: {path}".format(name=self.cluster.name,
+                                                                          path=self.test_path))
+                    self.cluster.remove()
+
+                    logger.debug("clearing ssl stores from [{0}] directory".format(self.test_path))
+                    for filename in ('keystore.jks', 'truststore.jks', 'ccm_node.cer'):
+                        try:
+                            os.remove(os.path.join(self.test_path, filename))
+                        except OSError as e:
+                            # once we port to py3, which has better reporting for exceptions raised while
+                            # handling other excpetions, we should just assert e.errno == errno.ENOENT
+                            if e.errno != errno.ENOENT:  # ENOENT = no such file or directory
+                                raise
+
+                    os.rmdir(self.test_path)
+                    self.cleanup_last_test_dir()
+
+    def cleanup_and_replace_cluster(self):
+        self.cleanup_cluster()
+        self.test_path = self.get_test_path()
+        self.cluster = create_ccm_cluster(self.test_path, name='test', config=self.dtest_config)

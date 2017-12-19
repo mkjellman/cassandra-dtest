@@ -366,11 +366,7 @@ class TestArchiveCommitlog(SnapshotTester):
             debug("tmp_commitlog contents after stopping: " + str(os.listdir(tmp_commitlog)))
 
             self.copy_logs(name=get_current_test_name() + "_pre-restore")
-            cleanup_cluster(self.fixture_dtest_setup)
-            old_test_path = self.fixture_dtest_setup.test_path
-            self.fixture_dtest_setup.test_path = self.fixture_dtest_setup.get_test_path()
-            print("replaced old_test_path: %s with %s" % (old_test_path, self.fixture_dtest_setup.test_path))
-            self.fixture_dtest_setup.cluster = create_ccm_cluster(self.fixture_dtest_setup.test_path, name='test', config=self.dtest_config)
+            self.fixture_dtest_setup.cleanup_and_replace_cluster()
             cluster = self.cluster
             cluster.populate(1)
             nodes = cluster.nodelist()
