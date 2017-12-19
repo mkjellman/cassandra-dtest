@@ -52,7 +52,7 @@ class TestOfflineTools(Tester):
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         self._check_stderr_error(error)
-        assert re.search("Found no sstables, did you give the correct keyspace", output)
+        assert re.search("Found no sstables, did you give the correct keyspace", output.decode("utf-8"))
         assert rc == 0, str(rc)
 
         # test by writing small amount of data and flushing (all sstables should be level 0)
@@ -66,7 +66,7 @@ class TestOfflineTools(Tester):
 
         output, error, rc = node1.run_sstablelevelreset("keyspace1", "standard1")
         self._check_stderr_error(error)
-        assert re.search("since it is already on level 0", output)
+        assert re.search("since it is already on level 0", output.decode("utf-8"))
         assert rc == 0, str(rc)
 
         # test by loading large amount data so we have multiple levels and checking all levels are 0 at end
