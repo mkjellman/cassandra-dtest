@@ -330,7 +330,6 @@ def collect_test_modules(stdout):
 
     # find all Modules (followed by classes in those modules, and then finally functions)
     for pytest_module in test_collect_xml.findAll("Module"):
-        #pytest.set_trace()
         for test_class_name in pytest_module.findAll("Class"):
             for function_name in test_class_name.findAll("Function"):
                 # adds to test list in format like test_file.py::TestClass::test_function for every test function found

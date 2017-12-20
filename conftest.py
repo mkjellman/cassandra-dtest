@@ -9,7 +9,6 @@ import re
 import platform
 import copy
 import inspect
-import sys
 import subprocess
 
 from netifaces import AF_INET
@@ -262,9 +261,8 @@ def reset_environment_vars(initial_environment):
 
 @pytest.fixture(scope='function', autouse=False)
 def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrides):
-    logger.info("function yield fixture is doing setup")
-
-    pytest.set_trace()
+    # do all of our setup operations to get the enviornment ready for the actual test
+    # to run (e.g. bring up a cluster with the necessary config, populate variables, etc)
     initial_environment = copy.deepcopy(os.environ)
     dtest_setup = DTestSetup(dtest_config=parse_dtest_config, setup_overrides=fixture_dtest_setup_overrides)
     dtest_setup.initialize_cluster()
@@ -272,12 +270,12 @@ def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrid
     if not parse_dtest_config.disable_active_log_watching:
         dtest_setup.log_watch_thread = dtest_setup.begin_active_log_watch()
 
+    # at this point we're done with our setup operations in this fixture
+    # yield to allow the actual test to run
     yield dtest_setup
 
-    logger.info("function yield fixture is starting teardown")
-    # test_is_ending prevents active log watching from being able to interrupt the test
-    # which we don't want to happen once tearDown begins
-    #self.test_is_ending = True
+    # phew! we're back after executing the test, now we need to do
+    # all of our teardown and cleanup operations
 
     reset_environment_vars(initial_environment)
     dtest_setup.jvm_args = []
@@ -304,22 +302,6 @@ def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrid
             #if failed:
             #    cleanup_cluster(request.cls.cluster, request.cls.test_path, None)
             #    initialize_cluster(request, dtest_config)
-
-
-@pytest.fixture(scope='function', autouse=False)
-def set_cluster_log_levels(request, fixture_dtest_setup, caplog):
-    logger.debug("test logger at debug")
-    logger.info("test logger at info")
-    logger.warning("test logger at warning")
-    for record in caplog.records:
-        print("record.levelname: %s" % record.levelname)
-
-    pytest.set_trace()
-    # caplog
-    # if DEBUG:
-    #    cluster.set_log_level("DEBUG")
-    # if TRACE:
-    #    cluster.set_log_level("TRACE")
 
 
 def _skip_msg(current_running_version, since_version, max_version):
