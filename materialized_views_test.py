@@ -2309,7 +2309,7 @@ class TestMaterializedViewsConsistency(Tester):
 
         @jira_ticket CASSANDRA-10981
         """
-        self._consistent_reads_after_write_test(int(1))
+        self._consistent_reads_after_write_test(1)
 
     def test_multi_partition_consistent_reads_after_write(self):
         """
@@ -2317,7 +2317,7 @@ class TestMaterializedViewsConsistency(Tester):
 
         @jira_ticket CASSANDRA-10981
         """
-        self._consistent_reads_after_write_test(int(20))
+        self._consistent_reads_after_write_test(5)
 
     def _consistent_reads_after_write_test(self, num_partitions):
 
