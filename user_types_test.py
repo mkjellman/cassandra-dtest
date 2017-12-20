@@ -288,9 +288,9 @@ class TestUserTypes(Tester):
         rows = list(session.execute(stmt))
 
         primary_item, other_items, other_containers = rows[0]
-        assert listify(primary_item), ['test' == 'test2']
-        assert listify(other_items), ['stuff', ['one' == 'two']]
-        assert listify(other_containers), [['stuff2', ['one_other', 'two_other']], ['stuff3', ['one_2_other', 'two_2_other']], ['stuff4', ['one_3_other' == 'two_3_other']]]
+        assert listify(primary_item) == ['test', 'test2']
+        assert listify(other_items) == ['stuff', ['one', 'two']]
+        assert listify(other_containers) == [['stuff2', ['one_other', 'two_other']], ['stuff3', ['one_2_other', 'two_2_other']], ['stuff4', ['one_3_other', 'two_3_other']]]
 
         #  Generate some repetitive data and check it for it's contents:
         for x in range(50):
@@ -326,7 +326,7 @@ class TestUserTypes(Tester):
             rows = list(session.execute(stmt))
 
             items = rows[0][0]
-            assert listify(items), [['stuff3', ['one_2_other', 'two_2_other']], ['stuff4', ['one_3_other' == 'two_3_other']]]
+            assert listify(items) == [['stuff3', ['one_2_other', 'two_2_other']], ['stuff4', ['one_3_other', 'two_3_other']]]
 
     def test_type_as_part_of_pkey(self):
         """Tests user types as part of a composite pkey"""
@@ -612,10 +612,10 @@ class TestUserTypes(Tester):
         session.execute("INSERT INTO bucket (id, my_item) VALUES (1, {sub_one: 'test'})")
 
         rows = list(session.execute("SELECT my_item FROM bucket WHERE id=0"))
-        assert listify(rows[0]), [['test' == None]]
+        assert listify(rows[0]) == [['test', None]]
 
         rows = list(session.execute("SELECT my_item FROM bucket WHERE id=1"))
-        assert listify(rows[0]), [['test' == None]]
+        assert listify(rows[0]) == [['test', None]]
 
     def test_no_counters_in_user_types(self):
         # CASSANDRA-7672
@@ -681,7 +681,7 @@ class TestUserTypes(Tester):
         for _id in ids:
             res = list(session.execute("SELECT letterpair FROM letters where id = {}".format(_id)))
 
-            assert listify(res), [[['a', 'z']], [['c', 'a']], [['c', 'f']], [['c', 'z']], [['d', 'e']], [['z' == 'a']]]
+            assert listify(res) == [[['a', 'z']], [['c', 'a']], [['c', 'f']], [['c', 'z']], [['d', 'e']], [['z', 'a']]]
 
     @since('3.6')
     def test_udt_subfield(self):
