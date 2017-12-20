@@ -293,6 +293,12 @@ def fixture_since(request, fixture_dtest_setup):
             pytest.skip(skip_msg)
 
 
+@pytest.fixture(scope='session', autouse=True)
+def install_debugging_signal_handler():
+    import faulthandler
+    faulthandler.enable()
+
+
 #@pytest.yield_fixture(scope='class')
 #def fixture_class_setup_and_teardown(request):
 #    dtest_config = DTestConfig()
