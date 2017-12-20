@@ -18,6 +18,7 @@ from tools.data import rows_to_list
 from tools.files import size_of_files_in_dir
 from tools.funcutils import get_rate_limited_function
 from tools.hacks import advance_to_next_cl_segment
+from tools.assertions import assert_lists_equal_ignoring_order
 
 since = pytest.mark.since
 
@@ -109,8 +110,8 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
         rows_loaded += len([br for br in batch_results if br[0]])
         # then, we make sure that the only failures are the expected
         # WriteFailures.
-        assert ([] == [result for (success, result) in batch_results
-                       if not success and not isinstance(result, WriteFailure)])
+        assert [] == [result for (success, result) in batch_results
+                       if not success and not isinstance(result, WriteFailure)]
         # Finally, if we find a WriteFailure, that means we've inserted all
         # the CDC data we can and so we flip error_found to exit the loop.
         if any(isinstance(result, WriteFailure) for (_, result) in batch_results):
@@ -299,7 +300,7 @@ class TestCDC(Tester):
 
         for enable in alter_path:
             set_cdc(enable)
-            assert rows_to_list(session.execute('SELECT * FROM ' + table_name)) == data
+            assert_lists_equal_ignoring_order(session.execute('SELECT * FROM ' + table_name), data)
 
     def test_cdc_enabled_data_readable_on_round_trip(self):
         """
