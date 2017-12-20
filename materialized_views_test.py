@@ -2318,7 +2318,7 @@ class TestMaterializedViewsConsistency(Tester):
 
         @jira_ticket CASSANDRA-10981
         """
-        self._consistent_reads_after_write_test(20)
+        self._consistent_reads_after_write_test(5)
 
     def _consistent_reads_after_write_test(self, num_partitions):
 
@@ -2375,6 +2375,8 @@ class TestMaterializedViewsConsistency(Tester):
         debug("Finished writes, now verifying reads")
         self._populate_rows()
 
+        threads = []
+
         for i in range(processes):
             start = lower + (eachProcess * i)
             if i == processes - 1:
@@ -2384,6 +2386,7 @@ class TestMaterializedViewsConsistency(Tester):
             q = Queue()
             node_ip = get_ip_from_node(node2)
             t = threading.Thread(target=thread_session, args=(node_ip, q, start, end, self.rows, num_partitions))
+            threads.append(t)
             t.daemon = True
             t.start()
             queues[i] = q
@@ -2403,6 +2406,9 @@ class TestMaterializedViewsConsistency(Tester):
         self._print_read_status(upper)
         sys.stdout.write("\n")
         sys.stdout.flush()
+
+        for thread in threads:
+            thread.join(timeout=300)
 
 
 @since('3.0')
