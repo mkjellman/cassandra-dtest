@@ -245,6 +245,7 @@ def fixture_dtest_setup(request, parse_dtest_config):
     #self.test_is_ending = True
 
     reset_environment_vars(initial_environment)
+    dtest_setup.jvm_args = []
 
     for con in dtest_setup.connections:
         con.cluster.shutdown()

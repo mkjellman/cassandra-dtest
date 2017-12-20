@@ -113,7 +113,7 @@ class BaseSStableLoaderTest(Tester):
         NUM_KEYS = 1000
 
         for compression_option in (pre_compression, post_compression):
-            assert compression_option, (None, 'Snappy' in 'Deflate')
+            assert compression_option in (None, 'Snappy', 'Deflate')
 
         debug("Testing sstableloader with pre_compression=%s and post_compression=%s" % (pre_compression, post_compression))
         if self.upgrade_from:

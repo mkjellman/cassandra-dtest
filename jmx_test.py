@@ -134,14 +134,14 @@ class TestJMX(Tester):
                                  "but wasn't!"
 
         with JolokiaAgent(node) as jmx:
-            assert jmx.read_attribute(table_memtable_size is not None, "Value",
-                                 missing_metric_message.format("AllMemtablesHeapSize", "testtable"))
-            assert jmx.read_attribute(table_view_read_time is not None, "Count",
-                                 missing_metric_message.format("ViewReadTime", "testtable"))
-            assert jmx.read_attribute(table_view_lock_time is not None, "Count",
-                                 missing_metric_message.format("ViewLockAcquireTime", "testtable"))
-            assert jmx.read_attribute(mv_memtable_size is not None, "Value",
-                                 missing_metric_message.format("AllMemtablesHeapSize", "testmv"))
+            assert jmx.read_attribute(table_memtable_size, "Value") is not None, \
+                missing_metric_message.format("AllMemtablesHeapSize", "testtable")
+            assert jmx.read_attribute(table_view_read_time, "Count") is not None, \
+                missing_metric_message.format("ViewReadTime", "testtable")
+            assert jmx.read_attribute(table_view_lock_time, "Count") is not None, \
+                missing_metric_message.format("ViewLockAcquireTime", "testtable")
+            assert jmx.read_attribute(mv_memtable_size, "Value") is not None, \
+                missing_metric_message.format("AllMemtablesHeapSize", "testmv")
             with pytest.raises(Exception, match=".*InstanceNotFoundException.*"):
                 jmx.read_attribute(mbean=mv_view_read_time, attribute="Count", verbose=False)
             with pytest.raises(Exception, match=".*InstanceNotFoundException.*"):

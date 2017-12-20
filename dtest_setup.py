@@ -63,6 +63,7 @@ class DTestSetup:
         self.subprocs = []
         self.log_watch_thread = None
         self.last_test_dir = "last_test_dir"
+        self.jvm_args = []
 
     def get_test_path(self):
         test_path = tempfile.mkdtemp(prefix='dtest-')
