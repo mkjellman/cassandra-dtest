@@ -5,6 +5,8 @@ from cassandra import ConsistencyLevel
 from thrift.protocol import TBinaryProtocol
 from thrift.transport import TSocket, TTransport
 
+from dtest_setup_overrides import DTestSetupOverrides
+
 from dtest import Tester, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns, putget,
                         query_c1c2, query_columns, range_putget)
@@ -16,9 +18,10 @@ since = pytest.mark.since
 class TestPutGet(Tester):
 
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
-        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
-        return parse_dtest_config
+    def fixture_dtest_setup_overrides(self):
+        dtest_setup_overrides = DTestSetupOverrides()
+        dtest_setup_overrides.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return dtest_setup_overrides
 
     def test_putget(self):
         """ Simple put/get on a single row, hitting multiple sstables """

@@ -8,8 +8,8 @@ import pytest
 
 from cassandra.concurrent import execute_concurrent_with_args
 
-from dtest import (Tester, cleanup_cluster, create_ccm_cluster, create_ks,
-                   debug, get_test_path)
+from dtest_setup_overrides import DTestSetupOverrides
+from dtest import (Tester, create_ks, debug)
 from tools.assertions import assert_one
 from tools.files import replace_in_file, safe_mkdtemp
 from tools.hacks import advance_to_next_cl_segment
@@ -189,10 +189,12 @@ class TestSnapshot(SnapshotTester):
 
 
 class TestArchiveCommitlog(SnapshotTester):
+
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
-        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
-        return parse_dtest_config
+    def fixture_dtest_setup_overrides(self):
+        dtest_setup_overrides = DTestSetupOverrides()
+        dtest_setup_overrides.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return dtest_setup_overrides
 
     def make_snapshot(self, node, ks, cf, name):
         debug("Making snapshot....")

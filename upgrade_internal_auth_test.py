@@ -5,6 +5,8 @@ from cassandra import Unauthorized
 from ccmlib.common import is_win
 from ccmlib.node import Node
 
+from dtest_setup_overrides import DTestSetupOverrides
+
 from dtest import Tester, debug
 from tools.assertions import assert_all, assert_invalid
 from tools.misc import ImmutableMapping
@@ -17,10 +19,11 @@ since = pytest.mark.since
 class TestAuthUpgrade(Tester):
 
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
-        parse_dtest_config.cluster_options = ImmutableMapping({'authenticator': 'PasswordAuthenticator',
-                                        'authorizer': 'CassandraAuthorizer'})
-        return parse_dtest_config
+    def fixture_dtest_setup_overrides(self):
+        dtest_setup_overrides = DTestSetupOverrides()
+        dtest_setup_overrides.cluster_options = ImmutableMapping({'authenticator': 'PasswordAuthenticator',
+                                                               'authorizer': 'CassandraAuthorizer'})
+        return dtest_setup_overrides
 
     @pytest.fixture(autouse=True)
     def fixture_add_additional_log_patterns(self, fixture_dtest_setup):

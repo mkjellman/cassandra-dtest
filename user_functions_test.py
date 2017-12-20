@@ -5,6 +5,8 @@ from distutils.version import LooseVersion
 
 from cassandra import FunctionFailure
 
+from dtest_setup_overrides import DTestSetupOverrides
+
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug, create_ks
 from tools.assertions import assert_invalid, assert_none, assert_one
 from tools.misc import ImmutableMapping
@@ -16,12 +18,18 @@ since = pytest.mark.since
 class TestUserFunctions(Tester):
 
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
+    def fixture_dtest_setup_overrides(self):
+        dtest_setup_overrides = DTestSetupOverrides()
         if CASSANDRA_VERSION_FROM_BUILD >= '3.0':
-            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
+            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
                                                 'enable_scripted_user_defined_functions': 'true'})
         else:
-            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+        return dtest_setup_overrides
+
+    @pytest.fixture(scope='function', autouse=True)
+    def parse_dtest_config(self, parse_dtest_config):
+
         return parse_dtest_config
 
     def prepare(self, create_keyspace=True, nodes=1, rf=1):

@@ -4,7 +4,7 @@ import pytest
 from cassandra import ConsistencyLevel, WriteFailure, WriteTimeout
 
 from dtest import Tester
-from thrift_bindings.v22 import ttypes as thrift_types
+from thrift_bindings.thrift010 import ttypes as thrift_types
 from thrift_tests import get_thrift_client
 
 since = pytest.mark.since

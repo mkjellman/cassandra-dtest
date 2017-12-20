@@ -1,6 +1,8 @@
 import time
 import pytest
 
+from dtest_setup_overrides import DTestSetupOverrides
+
 from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
                                   ConsistencyLevel, CounterColumn)
 from dtest import Tester, debug, create_ks
@@ -17,12 +19,10 @@ class TestSuperCounterClusterRestart(Tester):
     https://issues.apache.org/jira/browse/CASSANDRA-3821
     """
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
-        """
-        @jira_ticket CASSANDRA-7653
-        """
-        parse_dtest_config.cluster_options = ImmutableMapping({'start_rpc': 'true'})
-        return parse_dtest_config
+    def fixture_dtest_setup_overrides(self):
+        dtest_setup_overrides = DTestSetupOverrides()
+        dtest_setup_overrides.cluster_options = ImmutableMapping({'start_rpc': 'true'})
+        return dtest_setup_overrides
 
     def test_functional(self):
         NUM_SUBCOLS = 100

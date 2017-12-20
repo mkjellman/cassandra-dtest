@@ -771,7 +771,7 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
 
     upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or version_metas[-1].matches_current_env_version_family
     if not upgrade_applies_to_env:
-        pytest.skip(msg='test not applicable to env.')
+        pytest.mark.skip(reason='test not applicable to env.')
     newcls = type(
             clsname,
             parent_classes,

@@ -3288,12 +3288,12 @@ class TestPagingWithDeletions(BasePagingTester, PageAssertionMixin):
         self.check_all_paging_results(expected_data, 7,
                                       [25, 25, 25, 25, 25, 25, 25])
 
+    @pytest.mark.skip(reason="Feature In Development")
     def test_multiple_row_deletions(self):
         """
         Test multiple row deletions.
         This test should be finished when CASSANDRA-6237 is done.
         """
-        pytest.skip("Feature In Development")
         self.session = self.prepare()
         expected_data = self.setup_data()
 

@@ -9,6 +9,7 @@ import tempfile
 import subprocess
 import sys
 import errno
+import pprint
 from collections import OrderedDict
 
 from cassandra.cluster import Cluster as PyCluster
@@ -16,15 +17,16 @@ from cassandra.cluster import NoHostAvailable
 from cassandra.cluster import ExecutionProfile, EXEC_PROFILE_DEFAULT
 from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy, RoundRobinPolicy
 from ccmlib.common import get_version_from_build, is_win
+from ccmlib.cluster import Cluster
 
 from dtest import (get_ip_from_node, make_execution_profile, get_auth_provider, get_port_from_node,
-                   get_eager_protocol_version, create_ccm_cluster)
+                   get_eager_protocol_version)
 from distutils.version import LooseVersion
 
 from tools.context import log_filter
+from tools.funcutils import merge_dicts
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 def retry_till_success(fun, *args, **kwargs):
@@ -44,10 +46,12 @@ def retry_till_success(fun, *args, **kwargs):
 
 
 class DTestSetup:
-    def __init__(self, dtest_config=None):
+    def __init__(self, dtest_config=None, setup_overrides=None):
         self.dtest_config = dtest_config
+        self.setup_overrides = setup_overrides
         self.ignore_log_patterns = []
         self.cluster = None
+        self.cluster_options = []
         self.replacement_node = None
         self.allow_log_errors = False
         self.connections = []
@@ -273,7 +277,6 @@ class DTestSetup:
         )
 
     def check_logs_for_errors(self):
-        pytest.set_trace()
         for node in self.cluster.nodelist():
             errors = list(self.__filter_errors(
                 ['\n'.join(msg) for msg in node.grep_log_for_errors()]))
@@ -375,4 +378,106 @@ class DTestSetup:
     def cleanup_and_replace_cluster(self):
         self.cleanup_cluster()
         self.test_path = self.get_test_path()
-        self.cluster = create_ccm_cluster(self.test_path, name='test', config=self.dtest_config)
+        self.cluster = self.create_ccm_cluster(name='test')
+
+    def init_default_config(self):
+        # the failure detector can be quite slow in such tests with quick start/stop
+        phi_values = {'phi_convict_threshold': 5}
+
+        timeout = 10000
+        if self.cluster_options is not None and len(self.cluster_options) > 0:
+            values = merge_dicts(self.cluster_options, phi_values)
+        else:
+            values = merge_dicts(phi_values, {
+                'read_request_timeout_in_ms': timeout,
+                'range_request_timeout_in_ms': timeout,
+                'write_request_timeout_in_ms': timeout,
+                'truncate_request_timeout_in_ms': timeout,
+                'request_timeout_in_ms': timeout
+            })
+
+        if self.setup_overrides is not None and len(self.setup_overrides.cluster_options) > 0:
+            values = merge_dicts(values, self.setup_overrides.cluster_options)
+
+        # No more thrift in 4.0, and start_rpc doesn't exists anymore
+        if self.cluster.version() >= '4' and 'start_rpc' in values:
+            del values['start_rpc']
+
+        self.cluster.set_configuration_options(values)
+        logger.debug("Done setting configuration options:\n" + pprint.pformat(self.cluster._config_options, indent=4))
+
+    def maybe_setup_jacoco(self, cluster_name='test'):
+        """Setup JaCoCo code coverage support"""
+
+        if not self.dtest_config.enable_jacoco_code_coverage:
+            return
+
+        # use explicit agent and execfile locations
+        # or look for a cassandra build if they are not specified
+        agent_location = os.environ.get('JACOCO_AGENT_JAR',
+                                        os.path.join(self.dtest_config.cassandra_dir, 'build/lib/jars/jacocoagent.jar'))
+        jacoco_execfile = os.environ.get('JACOCO_EXECFILE',
+                                         os.path.join(self.dtest_config.cassandra_dir, 'build/jacoco/jacoco.exec'))
+
+        if os.path.isfile(agent_location):
+            logger.debug("Jacoco agent found at {}".format(agent_location))
+            with open(os.path.join(
+                    self.test_path, cluster_name, 'cassandra.in.sh'), 'w') as f:
+
+                f.write('JVM_OPTS="$JVM_OPTS -javaagent:{jar_path}=destfile={exec_file}"'
+                        .format(jar_path=agent_location, exec_file=jacoco_execfile))
+
+                if os.path.isfile(jacoco_execfile):
+                    logger.debug("Jacoco execfile found at {}, execution data will be appended".format(jacoco_execfile))
+                else:
+                    logger.debug("Jacoco execfile will be created at {}".format(jacoco_execfile))
+        else:
+            logger.debug("Jacoco agent not found or is not file. Execution will not be recorded.")
+
+    def create_ccm_cluster(self, name):
+        logger.debug("cluster ccm directory: " + self.test_path)
+        version = os.environ.get('CASSANDRA_VERSION')
+
+        if version:
+            cluster = Cluster(self.test_path, name, cassandra_version=version)
+        else:
+            cluster = Cluster(self.test_path, name, cassandra_dir=self.dtest_config.cassandra_dir)
+
+        if self.dtest_config.use_vnodes:
+            cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': self.dtest_config.num_tokens})
+        else:
+            cluster.set_configuration_options(values={'num_tokens': None})
+
+        if self.dtest_config.use_off_heap_memtables:
+            cluster.set_configuration_options(values={'memtable_allocation_type': 'offheap_objects'})
+
+        cluster.set_datadir_count(self.dtest_config.data_dir_count)
+        cluster.set_environment_variable('CASSANDRA_LIBJEMALLOC', self.dtest_config.jemalloc_path)
+
+        return cluster
+
+    def set_cluster_log_levels(self):
+        self.cluster.set_log_level(logging.getLevelName(logging.root.level))
+
+    def initialize_cluster(self):
+        """
+        This method is responsible for initializing and configuring a ccm
+        cluster for the next set of tests.  This can be called for two
+        different reasons:
+         * A class of tests is starting
+         * A test method failed/errored, so the cluster has been wiped
+
+        Subclasses that require custom initialization should generally
+        do so by overriding post_initialize_cluster().
+        """
+        # connections = []
+        # cluster_options = []
+        self.cluster = self.create_ccm_cluster(name='test')
+        self.init_default_config()
+        self.maybe_setup_jacoco()
+        self.set_cluster_log_levels()
+
+        # cls.init_config()
+        # write_last_test_file(cls.test_path, cls.cluster)
+
+        # cls.post_initialize_cluster()

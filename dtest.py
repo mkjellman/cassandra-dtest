@@ -65,14 +65,14 @@ RUN_STATIC_UPGRADE_MATRIX = os.environ.get('RUN_STATIC_UPGRADE_MATRIX', '').lowe
 
 CURRENT_TEST = ""
 
+"""
 logging.basicConfig(stream=sys.stdout,
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
+"""
 
-logger = logging.getLogger()
-# set python-driver log level to INFO by default for dtest
-logging.getLogger('cassandra').setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_sha(repo_dir):
@@ -115,29 +115,7 @@ else:
     #CASSANDRA_GITREF = get_sha(dtest_config.cassandra_dir)
 
 
-# Determine the location of the libjemalloc jar so that we can specify it
-# through environment variables when start Cassandra.  This reduces startup
-# time, making the dtests run faster.
-def find_libjemalloc():
-    if is_win():
-        # let the normal bat script handle finding libjemalloc
-        return ""
-
-    this_dir = os.path.dirname(os.path.realpath(__file__))
-    script = os.path.join(this_dir, "findlibjemalloc.sh")
-    try:
-        p = subprocess.Popen([script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        if stderr or not stdout:
-            return "-"  # tells C* not to look for libjemalloc
-        else:
-            return stdout
-    except Exception as exc:
-        print("Failed to run script to prelocate libjemalloc ({}): {}".format(script, exc))
-        return ""
-
-
-CASSANDRA_LIBJEMALLOC = find_libjemalloc()
+#CASSANDRA_LIBJEMALLOC = find_libjemalloc()
 # copy the initial environment variables so we can reset them later:
 initial_environment = copy.deepcopy(os.environ)
 
@@ -263,7 +241,6 @@ def make_execution_profile(retry_policy=FlakyRetryPolicy(), consistency_level=Co
 class Tester():
 
     maxDiff = None
-    cluster_options = None
     connections = []
 
     def __getattribute__(self, name):
@@ -525,29 +502,6 @@ def get_test_path():
 get_test_path.__test__ = False
 
 
-def create_ccm_cluster(test_path, name, config):
-    debug("cluster ccm directory: " + test_path)
-    version = os.environ.get('CASSANDRA_VERSION')
-
-    if version:
-        cluster = Cluster(test_path, name, cassandra_version=version)
-    else:
-        cluster = Cluster(test_path, name, cassandra_dir=config.cassandra_dir)
-
-    if config.use_vnodes:
-        cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': config.num_tokens})
-    else:
-        cluster.set_configuration_options(values={'num_tokens': None})
-
-    if config.use_off_heap_memtables:
-        cluster.set_configuration_options(values={'memtable_allocation_type': 'offheap_objects'})
-
-    cluster.set_datadir_count(config.data_dir_count)
-    cluster.set_environment_variable('CASSANDRA_LIBJEMALLOC', CASSANDRA_LIBJEMALLOC)
-
-    return cluster
-
-
 def cleanup_cluster(dtest_setup):
     with log_filter('cassandra'):  # quiet noise from driver when nodes start going down
         if KEEP_TEST_DIR:
@@ -611,30 +565,6 @@ def maybe_cleanup_cluster_from_last_test_file():
         except IOError:
             # after a restart, /tmp will be emptied so we'll get an IOError when loading the old cluster here
             pass
-
-
-def init_default_config(cluster, cluster_options):
-    # the failure detector can be quite slow in such tests with quick start/stop
-    phi_values = {'phi_convict_threshold': 5}
-
-    timeout = 10000
-    if cluster_options is not None:
-        values = merge_dicts(cluster_options, phi_values)
-    else:
-        values = merge_dicts(phi_values, {
-            'read_request_timeout_in_ms': timeout,
-            'range_request_timeout_in_ms': timeout,
-            'write_request_timeout_in_ms': timeout,
-            'truncate_request_timeout_in_ms': timeout,
-            'request_timeout_in_ms': timeout
-        })
-
-    # No more thrift in 4.0, and start_rpc doesn't exists anymore
-    if cluster.version() >= '4' and 'start_rpc' in values:
-        del values['start_rpc']
-
-    cluster.set_configuration_options(values)
-    debug("Done setting configuration options:\n" + pprint.pformat(cluster._config_options, indent=4))
 
 
 def write_last_test_file(test_path, cluster):

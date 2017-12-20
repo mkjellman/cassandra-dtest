@@ -18,7 +18,7 @@ from tools.data import (create_c1c2_table, insert_c1c2, insert_columns,
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 since = pytest.mark.since
-logger = logging.getLogger('consistency_test')
+logger = logging.getLogger(__name__)
 
 ExpectedConsistency = namedtuple('ExpectedConsistency', ('num_write_nodes', 'num_read_nodes', 'is_strong'))
 

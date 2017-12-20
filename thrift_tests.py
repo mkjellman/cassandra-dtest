@@ -10,7 +10,10 @@ from thrift.transport import TSocket, TTransport
 
 from tools.assertions import assert_length_equal
 from tools.misc import ImmutableMapping
-from dtest import (CASSANDRA_VERSION_FROM_BUILD, Tester, debug, init_default_config)
+
+from dtest_setup_overrides import DTestSetupOverrides
+from dtest import (CASSANDRA_VERSION_FROM_BUILD, Tester, debug)
+
 from thrift_bindings.thrift010 import Cassandra
 from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
                                            ColumnOrSuperColumn, ColumnParent,
@@ -48,19 +51,20 @@ def pid():
 
 @since('2.0', max_version='4')
 class ThriftTester(Tester):
+
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
+    def fixture_dtest_setup_overrides(self):
+        dtest_setup_overrides = DTestSetupOverrides()
         """
         @jira_ticket CASSANDRA-7653
         """
-        parse_dtest_config.cluster_options = ImmutableMapping({'partitioner': 'org.apache.cassandra.dht.ByteOrderedPartitioner',
-                   'start_rpc': 'true'})
-        return parse_dtest_config
+        dtest_setup_overrides.cluster_options = ImmutableMapping(
+            {'partitioner': 'org.apache.cassandra.dht.ByteOrderedPartitioner',
+             'start_rpc': 'true'})
+        return dtest_setup_overrides
 
     @pytest.fixture(scope='function', autouse=True)
     def fixture_set_cluster_settings(self, fixture_dtest_setup):
-        init_default_config(fixture_dtest_setup.cluster, ThriftTester.cluster_options)
-
         fixture_dtest_setup.cluster.populate(1)
         node1, = fixture_dtest_setup.cluster.nodelist()
 

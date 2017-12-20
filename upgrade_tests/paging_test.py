@@ -1529,5 +1529,5 @@ for klaus in BasePagingTester.__subclasses__():
 
         upgrade_applies_to_env = RUN_STATIC_UPGRADE_MATRIX or spec['UPGRADE_PATH'].upgrade_meta.matches_current_env_version_family
         if not upgrade_applies_to_env:
-            pytest.skip(msg='test not applicable to env.')
+            pytest.mark.skip(reason='test not applicable to env.')
         globals()[gen_class_name] = type(gen_class_name, (klaus,), spec)

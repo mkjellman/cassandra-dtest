@@ -10,6 +10,7 @@ from cassandra import AuthenticationFailed, InvalidRequest, Unauthorized
 from cassandra.cluster import NoHostAvailable
 from cassandra.protocol import ServerError, SyntaxException
 
+from dtest_setup_overrides import DTestSetupOverrides
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
 from tools.assertions import (assert_all, assert_exception, assert_invalid,
                               assert_length_equal, assert_one,
@@ -20,7 +21,7 @@ from tools.metadata_wrapper import UpdatingKeyspaceMetadataWrapper
 from tools.misc import ImmutableMapping
 
 since = pytest.mark.since
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 class TestAuth(Tester):
 
@@ -70,7 +71,7 @@ class TestAuth(Tester):
         session.shutdown()
 
         # make sure schema change is persistent
-        logger.logger.debug("Stopping cluster..")
+        logger.debug("Stopping cluster..")
         self.cluster.stop()
         logger.debug("Restarting cluster..")
         self.cluster.start(wait_other_notice=True)
@@ -1139,16 +1140,17 @@ cassandra_role = Role('cassandra', True, True, {})
 class TestAuthRoles(Tester):
 
     @pytest.fixture(scope='function', autouse=True)
-    def parse_dtest_config(self, parse_dtest_config):
+    def fixture_dtest_setup_overrides(self):
         """
         @jira_ticket CASSANDRA-7653
         """
+        dtest_setup_overrides = DTestSetupOverrides()
         if CASSANDRA_VERSION_FROM_BUILD >= '3.0':
-            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
+            dtest_setup_overrides.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true',
                                                 'enable_scripted_user_defined_functions': 'true'})
         else:
-            parse_dtest_config.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
-        return parse_dtest_config
+            dtest_setup_overrides.cluster_options.cluster_options = ImmutableMapping({'enable_user_defined_functions': 'true'})
+        return dtest_setup_overrides
 
     def test_create_drop_role(self):
         """

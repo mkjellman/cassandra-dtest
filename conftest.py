@@ -10,24 +10,27 @@ import platform
 import copy
 import inspect
 import sys
+import subprocess
 
 from netifaces import AF_INET
 import netifaces as ni
 
 from psutil import virtual_memory
 
-from ccmlib.cluster import Cluster
 from ccmlib.common import get_version_from_build, is_win
 
-from dtest import find_libjemalloc, init_default_config, cleanup_cluster, maybe_setup_jacoco, set_log_levels
+from dtest import cleanup_cluster
 from dtest_setup import DTestSetup
+from dtest_setup_overrides import DTestSetupOverrides
 
+"""
 logging.basicConfig(stream=sys.stdout,
                     format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
                     datefmt='%H:%M:%S',
                     level=logging.DEBUG)
+"""
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class DTestConfig:
@@ -41,11 +44,11 @@ class DTestConfig:
         self.cassandra_dir = None
         self.cassandra_version = None
         self.delete_logs = False
-        self.cluster_options = []
         self.execute_upgrade_tests = False
         self.disable_active_log_watching = False
         self.keep_test_dir = False
         self.enable_jacoco_code_coverage = False
+        self.jemalloc_path = find_libjemalloc()
 
     def setup(self, request):
         self.use_vnodes = request.config.getoption("--use-vnodes")
@@ -119,13 +122,45 @@ def sufficient_system_resources_for_resource_intensive_tests():
     return total_mem_gb >= 9*3
 
 
-@pytest.fixture
-def fixture_cmdopt(request):
-    return request.config.getoption("--kj-is-cool")
+@pytest.fixture(scope='function', autouse=True)
+def fixture_dtest_setup_overrides():
+    """
+    no-op default implementation of fixture_dtest_setup_overrides.
+    we run this when a test class hasn't implemented their own
+    fixture_dtest_setup_overrides
+    """
+    return DTestSetupOverrides()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def fixture_logging_setup(request):
+    # set the root logger level to whatever the user asked for
+    # all new loggers created will use the root logger as a template
+    # essentially making this the "default" active log level
+    log_level = logging.INFO
+    try:
+        # first see if logging level overridden by user as command line argument
+        log_level_from_option = pytest.config.getoption("--log-level")
+        if log_level_from_option is not None:
+            log_level = log_level_from_option
+        else:
+            raise ValueError
+    except ValueError:
+        # nope, user didn't specify it as a command line argument to pytest, check if
+        # we have a default in the loaded pytest.ini
+        if pytest.config.inicfg is not None \
+                and pytest.config.inicfg.config is not None \
+                and 'pytest' in pytest.config.inicfg.config.sections.keys():
+            if 'log-level' in pytest.config.inicfg.config.sections['pytest'].keys():
+                log_level = pytest.config.inicfg.config.sections['pytest']['log-level']
+
+    logging.root.setLevel(log_level)
+
 @pytest.fixture
-def fixture_dtest_config(request):
+def fixture_dtest_config(request, fixture_logging_setup):
+    # although we don't use fixture_logging_setup here, we do want to
+    # have that fixture run as a prerequisite to this one.. and right now
+    # this is the only way that can be done with pytests
     dtest_config = DTestConfig()
     dtest_config.setup(request)
     return dtest_config
@@ -225,14 +260,14 @@ def reset_environment_vars(initial_environment):
     os.environ['PYTEST_CURRENT_TEST'] = pytest_current_test
 
 
-#@pytest.fixture(scope='function', autouse=True)
 @pytest.fixture(scope='function', autouse=False)
-def fixture_dtest_setup(request, parse_dtest_config):
+def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrides):
     logger.info("function yield fixture is doing setup")
 
+    pytest.set_trace()
     initial_environment = copy.deepcopy(os.environ)
-    dtest_setup = DTestSetup(dtest_config=parse_dtest_config)
-    dtest_setup.cluster = initialize_cluster(parse_dtest_config, dtest_setup)
+    dtest_setup = DTestSetup(dtest_config=parse_dtest_config, setup_overrides=fixture_dtest_setup_overrides)
+    dtest_setup.initialize_cluster()
 
     if not parse_dtest_config.disable_active_log_watching:
         dtest_setup.log_watch_thread = dtest_setup.begin_active_log_watch()
@@ -269,6 +304,22 @@ def fixture_dtest_setup(request, parse_dtest_config):
             #if failed:
             #    cleanup_cluster(request.cls.cluster, request.cls.test_path, None)
             #    initialize_cluster(request, dtest_config)
+
+
+@pytest.fixture(scope='function', autouse=False)
+def set_cluster_log_levels(request, fixture_dtest_setup, caplog):
+    logger.debug("test logger at debug")
+    logger.info("test logger at info")
+    logger.warning("test logger at warning")
+    for record in caplog.records:
+        print("record.levelname: %s" % record.levelname)
+
+    pytest.set_trace()
+    # caplog
+    # if DEBUG:
+    #    cluster.set_log_level("DEBUG")
+    # if TRACE:
+    #    cluster.set_log_level("TRACE")
 
 
 def _skip_msg(current_running_version, since_version, max_version):
@@ -311,62 +362,12 @@ def install_debugging_signal_handler():
 #    ##cleanup_cluster(request.cls.cluster, request.cls.test_path)
 
 
-def create_ccm_cluster(test_path, name, config):
-    log = logging.getLogger('create_ccm_cluster')
-    log.debug("cluster ccm directory: %s", test_path)
-
-    if config.cassandra_version:
-        cluster = Cluster(test_path, name, cassandra_version=config.cassandra_version)
-    else:
-        cluster = Cluster(test_path, name, cassandra_dir=config.cassandra_dir)
-
-    if config.use_vnodes:
-        cluster.set_configuration_options(values={'initial_token': None, 'num_tokens': config.num_tokens})
-    else:
-        cluster.set_configuration_options(values={'num_tokens': None})
-
-    if config.use_off_heap_memtables:
-        cluster.set_configuration_options(values={'memtable_allocation_type': 'offheap_objects'})
-
-    cluster.set_datadir_count(config.data_dir_count)
-    cluster.set_environment_variable('CASSANDRA_LIBJEMALLOC', find_libjemalloc())
-
-    return cluster
-
-
 @pytest.fixture(scope='function')
 def parse_dtest_config(request):
     dtest_config = DTestConfig()
     dtest_config.setup(request)
 
     yield dtest_config
-
-
-def initialize_cluster(parse_dtest_config, dtest_setup):
-    """
-    This method is responsible for initializing and configuring a ccm
-    cluster for the next set of tests.  This can be called for two
-    different reasons:
-     * A class of tests is starting
-     * A test method failed/errored, so the cluster has been wiped
-
-    Subclasses that require custom initialization should generally
-    do so by overriding post_initialize_cluster().
-    """
-    #connections = []
-    #cluster_options = []
-    cluster = create_ccm_cluster(dtest_setup.test_path, name='test', config=parse_dtest_config)
-    init_default_config(cluster, parse_dtest_config.cluster_options)
-
-    maybe_setup_jacoco(parse_dtest_config, dtest_setup)
-    set_log_levels(cluster)
-
-    return cluster
-
-    #cls.init_config()
-    #write_last_test_file(cls.test_path, cls.cluster)
-
-    #cls.post_initialize_cluster()
 
 
 def pytest_collection_modifyitems(items, config):
@@ -431,3 +432,25 @@ def pytest_collection_modifyitems(items, config):
 
     config.hook.pytest_deselected(items=deselected_items)
     items[:] = selected_items
+
+
+# Determine the location of the libjemalloc jar so that we can specify it
+# through environment variables when start Cassandra.  This reduces startup
+# time, making the dtests run faster.
+def find_libjemalloc():
+    if is_win():
+        # let the normal bat script handle finding libjemalloc
+        return ""
+
+    this_dir = os.path.dirname(os.path.realpath(__file__))
+    script = os.path.join(this_dir, "findlibjemalloc.sh")
+    try:
+        p = subprocess.Popen([script], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if stderr or not stdout:
+            return "-"  # tells C* not to look for libjemalloc
+        else:
+            return stdout
+    except Exception as exc:
+        print("Failed to run script to prelocate libjemalloc ({}): {}".format(script, exc))
+        return ""
