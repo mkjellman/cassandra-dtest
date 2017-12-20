@@ -23,7 +23,8 @@ from distutils.version import LooseVersion
 
 from tools.context import log_filter
 
-logger = logging.getLogger("DTestSetup")
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 
 def retry_till_success(fun, *args, **kwargs):

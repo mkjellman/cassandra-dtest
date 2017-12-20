@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from distutils.version import LooseVersion
 import re
 import pytest
+import logging
 
 from cassandra import AuthenticationFailed, InvalidRequest, Unauthorized
 from cassandra.cluster import NoHostAvailable
@@ -19,6 +20,7 @@ from tools.metadata_wrapper import UpdatingKeyspaceMetadataWrapper
 from tools.misc import ImmutableMapping
 
 since = pytest.mark.since
+logger = logging.getLogger()
 
 class TestAuth(Tester):
 
@@ -43,7 +45,7 @@ class TestAuth(Tester):
         @jira_ticket CASSANDRA-10655
         """
         self.prepare(nodes=3)
-        debug("nodes started")
+        logger.debug("nodes started")
 
         session = self.get_session(user='cassandra', password='cassandra')
         auth_metadata = UpdatingKeyspaceMetadataWrapper(
@@ -61,21 +63,21 @@ class TestAuth(Tester):
         assert 3 == auth_metadata.replication_strategy.replication_factor
 
         # Run repair to workaround read repair issues caused by CASSANDRA-10655
-        debug("Repairing before altering RF")
+        logger.debug("Repairing before altering RF")
         self.cluster.repair()
 
-        debug("Shutting down client session")
+        logger.debug("Shutting down client session")
         session.shutdown()
 
         # make sure schema change is persistent
-        debug("Stopping cluster..")
+        logger.logger.debug("Stopping cluster..")
         self.cluster.stop()
-        debug("Restarting cluster..")
+        logger.debug("Restarting cluster..")
         self.cluster.start(wait_other_notice=True)
 
         # check each node directly
         for i in range(3):
-            debug('Checking node: {i}'.format(i=i))
+            logger.debug('Checking node: {i}'.format(i=i))
             node = self.cluster.nodelist()[i]
             exclusive_auth_metadata = UpdatingKeyspaceMetadataWrapper(
                 cluster=self.patient_exclusive_cql_connection(node, user='cassandra', password='cassandra').cluster,
@@ -830,7 +832,7 @@ class TestAuth(Tester):
             if attempt > 3:
                 self.fail("Unable to verify cache expiry in 3 attempts, failing")
 
-            debug("Attempting to verify cache expiry, attempt #{i}".format(i=attempt))
+            logger.debug("Attempting to verify cache expiry, attempt #{i}".format(i=attempt))
             # grant SELECT to cathy
             cassandra.execute("GRANT SELECT ON ks.cf TO cathy")
             grant_time = datetime.now()
@@ -1074,7 +1076,7 @@ class TestAuth(Tester):
         self.cluster.populate(nodes).start()
 
         n = self.cluster.wait_for_any_log('Created default superuser', 25)
-        debug("Default role created by " + n.name)
+        logger.debug("Default role created by " + n.name)
 
     def get_session(self, node_idx=0, user=None, password=None):
         """
