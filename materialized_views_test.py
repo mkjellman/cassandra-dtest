@@ -4,6 +4,7 @@ import sys
 import time
 import traceback
 import pytest
+import threading
 from queue import Empty
 from functools import partial
 from multiprocessing import Process, Queue
@@ -2317,7 +2318,7 @@ class TestMaterializedViewsConsistency(Tester):
 
         @jira_ticket CASSANDRA-10981
         """
-        self._consistent_reads_after_write_test(5)
+        self._consistent_reads_after_write_test(20)
 
     def _consistent_reads_after_write_test(self, num_partitions):
 
@@ -2382,8 +2383,9 @@ class TestMaterializedViewsConsistency(Tester):
                 end = lower + (eachProcess * (i + 1))
             q = Queue()
             node_ip = get_ip_from_node(node2)
-            p = Process(target=thread_session, args=(node_ip, q, start, end, self.rows, num_partitions))
-            p.start()
+            t = threading.Thread(target=thread_session, args=(node_ip, q, start, end, self.rows, num_partitions))
+            t.daemon = True
+            t.start()
             queues[i] = q
 
         for i in range(lower, upper):
@@ -2392,7 +2394,7 @@ class TestMaterializedViewsConsistency(Tester):
             try:
                 mm = queues[i % processes].get(timeout=60)
             except Empty as e:
-                pytest.skip("Failed to get range {range} within timeout from queue".format(range=i))
+                pytest.skip("Failed to get range {range} within timeout from queue. {error}".format(range=i, error=str(e)))
 
             if not mm.out() is None:
                 sys.stdout.write("\r{}\n" .format(mm.out()))
