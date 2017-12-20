@@ -146,14 +146,28 @@ def fixture_logging_setup(request):
             raise ValueError
     except ValueError:
         # nope, user didn't specify it as a command line argument to pytest, check if
-        # we have a default in the loaded pytest.ini
-        if pytest.config.inicfg is not None \
-                and pytest.config.inicfg.config is not None \
-                and 'pytest' in pytest.config.inicfg.config.sections.keys():
-            if 'log-level' in pytest.config.inicfg.config.sections['pytest'].keys():
-                log_level = pytest.config.inicfg.config.sections['pytest']['log-level']
+        # we have a default in the loaded pytest.ini. Note: words are seperated in variables
+        # in .ini land with a "_" while the command line arguments use "-"
+        if pytest.config.inicfg.get("log_level") is not None:
+            log_level = pytest.config.inicfg.get("log_level")
 
     logging.root.setLevel(log_level)
+
+    logging_format = None
+    try:
+        # first see if logging level overridden by user as command line argument
+        log_format_from_option = pytest.config.getoption("--log-format")
+        if log_format_from_option is not None:
+            logging_format = log_format_from_option
+        else:
+            raise ValueError
+    except ValueError:
+        if pytest.config.inicfg.get("log_format") is not None:
+            logging_format = pytest.config.inicfg.get("log_format")
+
+    logging.basicConfig(level=log_level,
+                        format=logging_format)
+
 
 @pytest.fixture
 def fixture_dtest_config(request, fixture_logging_setup):
