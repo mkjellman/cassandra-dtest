@@ -8,6 +8,7 @@ import platform
 import copy
 import inspect
 import subprocess
+import sys
 
 from datetime import datetime
 from distutils.version import LooseVersion
@@ -143,7 +144,7 @@ def fixture_logging_setup(request):
         # first see if logging level overridden by user as command line argument
         log_level_from_option = pytest.config.getoption("--log-level")
         if log_level_from_option is not None:
-            log_level = log_level_from_option
+            log_level = logging.getLevelName(log_level_from_option)
         else:
             raise ValueError
     except ValueError:
@@ -151,7 +152,7 @@ def fixture_logging_setup(request):
         # we have a default in the loaded pytest.ini. Note: words are seperated in variables
         # in .ini land with a "_" while the command line arguments use "-"
         if pytest.config.inicfg.get("log_level") is not None:
-            log_level = pytest.config.inicfg.get("log_level")
+            log_level = logging.getLevelName(pytest.config.inicfg.get("log_level"))
 
     logging.root.setLevel(log_level)
 
@@ -175,8 +176,21 @@ def fixture_logging_setup(request):
     # logging level that the "cassandra.*" imports should use; DEBUG is just
     # insanely noisy and verbose, with the extra logging of very limited help
     # in the context of dtest execution
-    cassandra_module_log_level = logging.INFO if log_level == logging.DEBUG else log_level
+    if log_level == logging.DEBUG:
+        cassandra_module_log_level = logging.INFO
+    else:
+        cassandra_module_log_level = log_level
     logging.getLogger("cassandra").setLevel(cassandra_module_log_level)
+
+    #for module_name in dir(sys.modules["cassandra"]):
+        # basically dir will return us all modules, including
+        # exception classes and python internal ones prefixed
+        # and suffixed with a "__"; we want to ignore all those
+        # so just look for a module name that starts with a lower
+        # case letter and then set the logger level for that
+        #if re.match('^[a-z].*', module_name):
+        #    print("overriding logger for module name cassandra.%s to %s" % (module_name, cassandra_module_log_level))
+        #    logging.getLogger("cassandra.{module_name}".format(module_name=module_name)).setLevel(cassandra_module_log_level)
 
 
 @pytest.fixture(scope="session")
