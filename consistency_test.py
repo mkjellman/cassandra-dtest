@@ -45,12 +45,12 @@ class TestHelper(Tester):
             ConsistencyLevel.ONE: 1,
             ConsistencyLevel.TWO: 2,
             ConsistencyLevel.THREE: 3,
-            ConsistencyLevel.QUORUM: sum(rf_factors) / 2 + 1,
+            ConsistencyLevel.QUORUM: sum(rf_factors) // 2 + 1,
             ConsistencyLevel.ALL: sum(rf_factors),
-            ConsistencyLevel.LOCAL_QUORUM: rf_factors[dc] / 2 + 1,
-            ConsistencyLevel.EACH_QUORUM: rf_factors[dc] / 2 + 1,
-            ConsistencyLevel.SERIAL: sum(rf_factors) / 2 + 1,
-            ConsistencyLevel.LOCAL_SERIAL: rf_factors[dc] / 2 + 1,
+            ConsistencyLevel.LOCAL_QUORUM: rf_factors[dc] // 2 + 1,
+            ConsistencyLevel.EACH_QUORUM: rf_factors[dc] // 2 + 1,
+            ConsistencyLevel.SERIAL: sum(rf_factors) // 2 + 1,
+            ConsistencyLevel.LOCAL_SERIAL: rf_factors[dc] // 2 + 1,
             ConsistencyLevel.LOCAL_ONE: 1,
         }[cl]
 
