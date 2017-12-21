@@ -26,6 +26,8 @@ import subprocess
 import sys
 import os
 import re
+import logging
+
 from collections import namedtuple
 from os import getcwd, environ
 from tempfile import NamedTemporaryFile
@@ -36,6 +38,8 @@ from _pytest.config import Parser
 import argparse
 
 from conftest import pytest_addoption
+
+logger = logging.getLogger(__name__)
 
 
 class ValidationResult(namedtuple('_ValidationResult', ['serialized', 'error_messages'])):
@@ -96,16 +100,6 @@ def _validate_and_serialize_vnodes(vnodes_value):
 
 
 class RunDTests():
-    def log_logger.debug(self, msg):
-        if self.verbosity_level < 2:
-            return
-        print(msg)
-
-    def log_info(self, msg):
-        if self.verbosity_level < 1:
-            return
-        print (msg)
-
     def run(self, argv):
         parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(prog,
                                                                                                              max_help_position=100,
@@ -131,8 +125,9 @@ class RunDTests():
                                 default=opt._attrs.get('default', None),
                                 help=opt._attrs.get('help', None))
 
-        parser.add_argument("--dtest-runner-debug", action="store_true", default=False)
-        parser.add_argument("--dtest-runner-quiet", action="store_true", default=False)
+        parser.add_argument("--dtest-enable-debug-logging", action="store_true", default=False,
+                            help="Enable debug logging (for this script, pytest, and during execution "
+                                 "of test functions)")
         parser.add_argument("--dtest-print-tests-only", action="store_true", default=False,
                             help="Print list of all tests found eligible for execution given the provided options.")
         parser.add_argument("--dtest-print-tests-output", action="store", default=False,
@@ -149,20 +144,13 @@ class RunDTests():
                 raise Exception("Required dtest arguments were missing! You must provide either --cassandra-dir "
                                 "or --cassandra-version. Refer to the documentation or invoke the help with --help.")
 
-        #nose_options = args['--nose-options'] or ''
-        #nose_option_list = nose_options.split()
-        #test_list = args['TESTS']
-        #nose_argv = nose_option_list + test_list
-
-        self.verbosity_level = 1  # default verbosity level
-        if args.dtest_runner_debug:
-            self.verbosity_level = 2
-        if args.dtest_runner_quiet:  # --debug and --quiet are mutually exclusive, enforced by docopt
-            self.verbosity_level = 0
+        if args.dtest_enable_debug_logging:
+            logging.root.setLevel(logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
 
         # Get dictionaries corresponding to each point in the configuration matrix
         # we want to run, then generate a config object for each of them.
-        self.log_logger.debug('Generating configurations from the following matrix:\n\t{}'.format(args))
+        logger.debug('Generating configurations from the following matrix:\n\t{}'.format(args))
 
         args_to_invoke_pytest = []
         if args.pytest_options:
@@ -183,7 +171,7 @@ class RunDTests():
 
         original_raw_cmd_args = ", ".join(args_to_invoke_pytest)
 
-        self.log_logger.debug("args to call with: [%s]" % original_raw_cmd_args)
+        logger.debug("args to call with: [%s]" % original_raw_cmd_args)
 
         to_execute = (
                 "import pytest\n" +
@@ -194,9 +182,9 @@ class RunDTests():
                 #"nose.main(addplugins=[DtestConfigPlugin({config}), DTestXunit(), DTestCollect(), DTestTag()])\n" if "TEST_TAG" in environ else "nose.main(addplugins=[DtestConfigPlugin({config}), DTestCollect(), DTestXunit()])\n")
         )
         temp = NamedTemporaryFile(dir=getcwd())
-        self.log_logger.debug('Writing the following to {}:'.format(temp.name))
+        logger.debug('Writing the following to {}:'.format(temp.name))
 
-        self.log_logger.debug('```\n{to_execute}```\n'.format(to_execute=to_execute))
+        logger.debug('```\n{to_execute}```\n'.format(to_execute=to_execute))
         temp.write(to_execute.encode("utf-8"))
         temp.flush()
 
@@ -206,7 +194,7 @@ class RunDTests():
         # nose.main(argv=...) are treated another. Compare with the options
         # -xsv for an example.
         cmd_list = [sys.executable, temp.name]
-        self.log_logger.debug('subprocess.call-ing {cmd_list}'.format(cmd_list=cmd_list))
+        logger.debug('subprocess.call-ing {cmd_list}'.format(cmd_list=cmd_list))
 
         sp = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ.copy())
 
