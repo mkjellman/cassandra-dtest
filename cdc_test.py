@@ -346,9 +346,10 @@ class TestCDC(Tester):
             'cdc_total_space_in_mb': 4,
         }
 
-        self.fixture_dtest_setup.ignore_log_patterns.append(r'org.apache.cassandra.exceptions.CDCWriteException: '
-                                                            r'Rejecting mutation to keyspace ks. Free up space in '
-                                                            r'.* by processing CDC logs')
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) \
+            .append(r'org.apache.cassandra.exceptions.CDCWriteException: '
+                    r'Rejecting mutation to keyspace ks. Free up space in '
+                    r'.* by processing CDC logs')
 
         node, session = self.prepare(
             ks_name=ks_name,

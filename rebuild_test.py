@@ -146,9 +146,11 @@ class TestRebuild(Tester):
 
         Test rebuild operation is resumable
         """
-        self.fixture_dtest_setup.ignore_log_patterns.append(r'Error while rebuilding node')
-        self.fixture_dtest_setup.ignore_log_patterns.append(r'Streaming error occurred on session with peer 127.0.0.3')
-        self.fixture_dtest_setup.ignore_log_patterns.append(r'Remote peer 127.0.0.3 failed stream session')
+        additional_ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)
+        additional_ignore_log_patterns.append(r'Error while rebuilding node')
+        additional_ignore_log_patterns.append(r'Streaming error occurred on session with peer 127.0.0.3')
+        additional_ignore_log_patterns.append(r'Remote peer 127.0.0.3 failed stream session')
+        self.fixture_dtest_setup.ignore_log_patterns = additional_ignore_log_patterns
 
         cluster = self.cluster
         cluster.set_configuration_options(values={'endpoint_snitch': 'org.apache.cassandra.locator.PropertyFileSnitch'})
