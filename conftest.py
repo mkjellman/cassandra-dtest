@@ -8,7 +8,6 @@ import platform
 import copy
 import inspect
 import subprocess
-import sys
 
 from datetime import datetime
 from distutils.version import LooseVersion
@@ -181,16 +180,6 @@ def fixture_logging_setup(request):
     else:
         cassandra_module_log_level = log_level
     logging.getLogger("cassandra").setLevel(cassandra_module_log_level)
-
-    #for module_name in dir(sys.modules["cassandra"]):
-        # basically dir will return us all modules, including
-        # exception classes and python internal ones prefixed
-        # and suffixed with a "__"; we want to ignore all those
-        # so just look for a module name that starts with a lower
-        # case letter and then set the logger level for that
-        #if re.match('^[a-z].*', module_name):
-        #    print("overriding logger for module name cassandra.%s to %s" % (module_name, cassandra_module_log_level))
-        #    logging.getLogger("cassandra.{module_name}".format(module_name=module_name)).setLevel(cassandra_module_log_level)
 
 
 @pytest.fixture(scope="session")
