@@ -274,7 +274,7 @@ def reset_environment_vars(initial_environment):
 
 
 @pytest.fixture(scope='function', autouse=False)
-def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrides):
+def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrides, fixture_logging_setup):
     # do all of our setup operations to get the enviornment ready for the actual test
     # to run (e.g. bring up a cluster with the necessary config, populate variables, etc)
     initial_environment = copy.deepcopy(os.environ)
