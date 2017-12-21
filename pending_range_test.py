@@ -1,9 +1,13 @@
+import logging
+import pytest
+
 from cassandra.query import SimpleStatement
 
-from dtest import TRACE, Tester, debug, create_ks
+from dtest import Tester, create_ks
 from plugins.assert_tools import assert_regexp_matches
 
-import pytest
+logger = logging.getLogger(__name__)
+
 
 @pytest.mark.no_vnodes
 class TestPendingRangeMovements(Tester):
@@ -15,7 +19,7 @@ class TestPendingRangeMovements(Tester):
         """
         cluster = self.cluster
         # If we are on 2.1, we need to set the log level to debug or higher, as debug.log does not exist.
-        if cluster.version() < '2.2' and not TRACE:
+        if cluster.version() < '2.2':
             cluster.set_log_level('DEBUG')
 
         # Create 5 node cluster
@@ -61,7 +65,7 @@ class TestPendingRangeMovements(Tester):
 
         # Verify other nodes believe this is Down/Moving
         out, _, _ = node2.nodetool('ring')
-        debug("Nodetool Ring output: {}".format(out))
+        logger.debug("Nodetool Ring output: {}".format(out))
         assert_regexp_matches(out, '127\.0\.0\.1.*?Down.*?Moving')
 
         # Check we can still execute LWT

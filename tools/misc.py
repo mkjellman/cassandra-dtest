@@ -2,11 +2,14 @@ import os
 import subprocess
 import time
 import hashlib
+import logging
+
 from collections import Mapping
 
 from ccmlib.node import Node
 
-from dtest import debug
+
+logger = logging.getLogger(__name__)
 
 
 # work for cluster started by populate
@@ -54,18 +57,18 @@ def generate_ssl_stores(base_dir, passphrase='cassandra'):
     """
 
     if os.path.exists(os.path.join(base_dir, 'keystore.jks')):
-        debug("keystores already exists - skipping generation of ssl keystores")
+        logger.debug("keystores already exists - skipping generation of ssl keystores")
         return
 
-    debug("generating keystore.jks in [{0}]".format(base_dir))
+    logger.debug("generating keystore.jks in [{0}]".format(base_dir))
     subprocess.check_call(['keytool', '-genkeypair', '-alias', 'ccm_node', '-keyalg', 'RSA', '-validity', '365',
                            '-keystore', os.path.join(base_dir, 'keystore.jks'), '-storepass', passphrase,
                            '-dname', 'cn=Cassandra Node,ou=CCMnode,o=DataStax,c=US', '-keypass', passphrase])
-    debug("exporting cert from keystore.jks in [{0}]".format(base_dir))
+    logger.debug("exporting cert from keystore.jks in [{0}]".format(base_dir))
     subprocess.check_call(['keytool', '-export', '-rfc', '-alias', 'ccm_node',
                            '-keystore', os.path.join(base_dir, 'keystore.jks'),
                            '-file', os.path.join(base_dir, 'ccm_node.cer'), '-storepass', passphrase])
-    debug("importing cert into truststore.jks in [{0}]".format(base_dir))
+    logger.debug("importing cert into truststore.jks in [{0}]".format(base_dir))
     subprocess.check_call(['keytool', '-import', '-file', os.path.join(base_dir, 'ccm_node.cer'),
                            '-alias', 'ccm_node', '-keystore', os.path.join(base_dir, 'truststore.jks'),
                            '-storepass', passphrase, '-noprompt'])

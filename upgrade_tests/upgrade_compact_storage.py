@@ -1,13 +1,15 @@
 import time
 import pytest
+import logging
 
 from cassandra.query import dict_factory
 from ccmlib.node import NodeError
 
-from dtest import Tester, debug
+from dtest import Tester
 from cassandra.protocol import ConfigurationException
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 VERSION_311 = 'github:apache/cassandra-3.11'
 VERSION_TRUNK = 'github:apache/trunk'
@@ -17,12 +19,12 @@ VERSION_TRUNK = 'github:apache/trunk'
 @since('4.0')
 class UpgradeSuperColumnsThrough(Tester):
     def upgrade_to_version(self, tag, start_rpc=True, wait=True, nodes=None):
-        debug('Upgrading to ' + tag)
+        logger.debug('Upgrading to ' + tag)
         if nodes is None:
             nodes = self.cluster.nodelist()
 
         for node in nodes:
-            debug('Shutting down node: ' + node.name)
+            logger.debug('Shutting down node: ' + node.name)
             node.drain()
             node.watch_log_for("DRAINED")
             node.stop(wait_other_notice=False)
@@ -30,12 +32,12 @@ class UpgradeSuperColumnsThrough(Tester):
         # Update Cassandra Directory
         for node in nodes:
             node.set_install_dir(version=tag)
-            debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
+            logger.debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
         self.cluster.set_install_dir(version=tag)
 
         # Restart nodes on new version
         for node in nodes:
-            debug('Starting %s on new version (%s)' % (node.name, tag))
+            logger.debug('Starting %s on new version (%s)' % (node.name, tag))
             node.start(wait_other_notice=wait, wait_for_binary_proto=wait)
 
     def prepare(self, num_nodes=1, cassandra_version="github:apache/cassandra-2.2"):

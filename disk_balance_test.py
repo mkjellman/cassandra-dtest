@@ -1,6 +1,7 @@
 import os
 import os.path
 import pytest
+import logging
 
 from dtest import Tester, create_ks
 from tools.assertions import assert_almost_equal
@@ -10,6 +11,7 @@ from tools.jmxutils import (JolokiaAgent, make_mbean,
 from tools.misc import new_node
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('3.2')

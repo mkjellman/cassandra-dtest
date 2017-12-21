@@ -1,9 +1,11 @@
 import pytest
 import re
+import logging
 
-from dtest import Tester, debug
+from dtest import Tester
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.2')
@@ -27,7 +29,7 @@ class TestLargeColumn(Tester):
                 return False
 
         output, err, _ = node.nodetool("gcstats")
-        debug(output)
+        logger.debug(output)
         output = output.split("\n")
         assert re.search('Interval', output[0].strip())
         fields = output[1].split()
@@ -49,12 +51,12 @@ class TestLargeColumn(Tester):
         node1, node2 = cluster.nodelist()
 
         session = self.patient_cql_connection(node1)
-        debug("Before stress {0}".format(self.directbytes(node1)))
-        debug("Running stress")
+        logger.debug("Before stress {0}".format(self.directbytes(node1)))
+        logger.debug("Running stress")
         # Run the full stack to see how much memory is utilized for "small" columns
         self.stress_with_col_size(cluster, node1, 1)
         beforeStress = self.directbytes(node1)
-        debug("Ran stress once {0}".format(beforeStress))
+        logger.debug("Ran stress once {0}".format(beforeStress))
 
         # Now run the full stack to see how much memory is utilized for "large" columns
         LARGE_COLUMN_SIZE = 1024 * 1024 * 63
@@ -62,7 +64,7 @@ class TestLargeColumn(Tester):
 
         output, err, _ = node1.nodetool("gcstats")
         afterStress = self.directbytes(node1)
-        debug("After stress {0}".format(afterStress))
+        logger.debug("After stress {0}".format(afterStress))
 
         # Any growth in memory usage should not be proportional column size. Really almost no memory should be used
         # since Netty was instructed to use a heap allocator

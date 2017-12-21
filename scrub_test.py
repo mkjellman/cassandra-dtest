@@ -6,13 +6,15 @@ import time
 import uuid
 import pytest
 import parse
+import logging
 
 from ccmlib import common
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import assert_length_equal, assert_stderr_clean
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 KEYSPACE = 'ks'
 
@@ -59,13 +61,13 @@ class TestHelper(Tester):
         Return the sstable files at a specific location
         """
         ret = []
-        debug('Checking sstables in {}'.format(paths))
+        logger.debug('Checking sstables in {}'.format(paths))
 
         for ext in ('*.db', '*.txt', '*.adler32', '*.sha1'):
             for path in paths:
                 for fname in glob.glob(os.path.join(path, ext)):
                     bname = os.path.basename(fname)
-                    debug('Found sstable file {}'.format(bname))
+                    logger.debug('Found sstable file {}'.format(bname))
                     ret.append(bname)
         return ret
 
@@ -80,7 +82,7 @@ class TestHelper(Tester):
                 for path in paths:
                     fullname = os.path.join(path, fname)
                     if (os.path.exists(fullname)):
-                        debug('Deleting {}'.format(fullname))
+                        logger.debug('Deleting {}'.format(fullname))
                         os.remove(fullname)
 
     def get_sstables(self, table, indexes):
@@ -115,15 +117,15 @@ class TestHelper(Tester):
         node1 = self.cluster.nodelist()[0]
         env = common.make_cassandra_env(node1.get_install_cassandra_root(), node1.get_node_cassandra_root())
         scrub_bin = node1.get_tool('sstablescrub')
-        debug(scrub_bin)
+        logger.debug(scrub_bin)
 
         args = [scrub_bin, ks, cf]
         p = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
-        debug(out)
+        logger.debug(out)
         # if we have less than 64G free space, we get this warning - ignore it
         if err and "Consider adding more capacity" not in err:
-            debug(err)
+            logger.debug(err)
             assert_stderr_clean(err)
 
     def perform_node_tool_cmd(self, cmd, table, indexes):
@@ -176,7 +178,7 @@ class TestHelper(Tester):
             increment_by = len(set(parse.search('{}-{increment_by}-{suffix}.{file_extention}', s).named['increment_by'] for s in table_sstables))
             sstables[table_or_index] = [self.increment_generation_by(s, increment_by) for s in table_sstables]
 
-        debug('sstables after increment {}'.format(str(sstables)))
+        logger.debug('sstables after increment {}'.format(str(sstables)))
 
 
 @since('2.2')

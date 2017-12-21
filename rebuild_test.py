@@ -1,14 +1,17 @@
 import pytest
 import time
+import logging
+
 from threading import Thread
 
 from cassandra import ConsistencyLevel
 from ccmlib.node import ToolError
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestRebuild(Tester):
@@ -208,28 +211,28 @@ class TestRebuild(Tester):
 
         # First rebuild must fail and data must be incomplete
         with pytest.raises(ToolError, msg='Unexpected: SUCCEED'):
-            debug('Executing first rebuild -> '),
+            logger.debug('Executing first rebuild -> '),
             node3.nodetool('rebuild dc1')
-        debug('Expected: FAILED')
+        logger.debug('Expected: FAILED')
 
         session.execute('USE ks')
         with pytest.raises(AssertionError, msg='Unexpected: COMPLETE'):
-            debug('Checking data is complete -> '),
+            logger.debug('Checking data is complete -> '),
             for i in range(0, 20000):
                 query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
-        debug('Expected: INCOMPLETE')
+        logger.debug('Expected: INCOMPLETE')
 
-        debug('Executing second rebuild -> '),
+        logger.debug('Executing second rebuild -> '),
         node3.nodetool('rebuild dc1')
-        debug('Expected: SUCCEED')
+        logger.debug('Expected: SUCCEED')
 
         # Check all streaming sessions completed, streamed ranges are skipped and verify streamed data
         node3.watch_log_for('All sessions completed')
         node3.watch_log_for('Skipping streaming those ranges.')
-        debug('Checking data is complete -> '),
+        logger.debug('Checking data is complete -> '),
         for i in range(0, 20000):
             query_c1c2(session, i, ConsistencyLevel.LOCAL_ONE)
-        debug('Expected: COMPLETE')
+        logger.debug('Expected: COMPLETE')
 
     @since('3.6')
     def test_rebuild_ranges(self):

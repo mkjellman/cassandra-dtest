@@ -1,5 +1,6 @@
 import os
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel
 from cassandra.cluster import NoHostAvailable
@@ -9,6 +10,7 @@ from tools.data import putget
 from tools.misc import generate_ssl_stores
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class NativeTransportSSL(Tester):

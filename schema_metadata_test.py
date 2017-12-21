@@ -1,11 +1,13 @@
 import pytest
+import logging
 
 from collections import defaultdict
 from uuid import uuid4
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def establish_durable_writes_keyspace(version, session, table_name_prefix=""):
@@ -53,14 +55,14 @@ def establish_indexes_table(version, session, table_name_prefix=""):
 
     session.execute(cql.format(table_name))
     index_name = _cql_name_builder("idx_" + table_name_prefix, table_name)
-    debug("table name: [{}], index name: [{}], prefix: [{}]".format(table_name, index_name, table_name_prefix))
+    logger.debug("table name: [{}], index name: [{}], prefix: [{}]".format(table_name, index_name, table_name_prefix))
     session.execute("CREATE INDEX {0} ON {1}( d )".format(index_name, table_name))
 
 
 def verify_indexes_table(created_on_version, current_version, keyspace, session, table_name_prefix=""):
     table_name = _cql_name_builder(table_name_prefix, "test_indexes")
     index_name = _cql_name_builder("idx_" + table_name_prefix, table_name)
-    debug("table name: [{}], index name: [{}], prefix: [{}]".format(table_name, index_name, table_name_prefix))
+    logger.debug("table name: [{}], index name: [{}], prefix: [{}]".format(table_name, index_name, table_name_prefix))
     meta = session.cluster.metadata.keyspaces[keyspace].indexes[index_name]
 
     assert 'd' == meta.index_options['target']

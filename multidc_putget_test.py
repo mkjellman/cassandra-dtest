@@ -1,5 +1,9 @@
+import logging
+
 from dtest import Tester, create_ks, create_cf
 from tools.data import putget
+
+logger = logging.getLogger(__name__)
 
 
 class TestMultiDCPutGet(Tester):

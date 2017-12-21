@@ -1,12 +1,15 @@
 import time
+import logging
 
 from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
 from cassandra.query import SimpleStatement
 
 from . import assertions
-from dtest import debug, create_cf, DtestTimeoutError
+from dtest import create_cf, DtestTimeoutError
 from tools.funcutils import get_rate_limited_function
+
+logger = logging.getLogger(__name__)
 
 
 def create_c1c2_table(tester, session, read_repair=None):
@@ -158,7 +161,7 @@ def block_until_index_is_built(node, session, keyspace, table_name, idx_name):
     start = time.time()
     rate_limited_debug = get_rate_limited_function(debug, 5)
     while time.time() < start + 30:
-        rate_limited_debug("waiting for index to build")
+        rate_limited_logger.debug("waiting for index to build")
         time.sleep(1)
         if index_is_built(node, session, keyspace, table_name, idx_name):
             break

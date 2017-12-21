@@ -96,7 +96,7 @@ def _validate_and_serialize_vnodes(vnodes_value):
 
 
 class RunDTests():
-    def log_debug(self, msg):
+    def log_logger.debug(self, msg):
         if self.verbosity_level < 2:
             return
         print(msg)
@@ -162,7 +162,7 @@ class RunDTests():
 
         # Get dictionaries corresponding to each point in the configuration matrix
         # we want to run, then generate a config object for each of them.
-        self.log_debug('Generating configurations from the following matrix:\n\t{}'.format(args))
+        self.log_logger.debug('Generating configurations from the following matrix:\n\t{}'.format(args))
 
         args_to_invoke_pytest = []
         if args.pytest_options:
@@ -183,7 +183,7 @@ class RunDTests():
 
         original_raw_cmd_args = ", ".join(args_to_invoke_pytest)
 
-        self.log_debug("args to call with: [%s]" % original_raw_cmd_args)
+        self.log_logger.debug("args to call with: [%s]" % original_raw_cmd_args)
 
         to_execute = (
                 "import pytest\n" +
@@ -194,9 +194,9 @@ class RunDTests():
                 #"nose.main(addplugins=[DtestConfigPlugin({config}), DTestXunit(), DTestCollect(), DTestTag()])\n" if "TEST_TAG" in environ else "nose.main(addplugins=[DtestConfigPlugin({config}), DTestCollect(), DTestXunit()])\n")
         )
         temp = NamedTemporaryFile(dir=getcwd())
-        self.log_debug('Writing the following to {}:'.format(temp.name))
+        self.log_logger.debug('Writing the following to {}:'.format(temp.name))
 
-        self.log_debug('```\n{to_execute}```\n'.format(to_execute=to_execute))
+        self.log_logger.debug('```\n{to_execute}```\n'.format(to_execute=to_execute))
         temp.write(to_execute.encode("utf-8"))
         temp.flush()
 
@@ -206,7 +206,7 @@ class RunDTests():
         # nose.main(argv=...) are treated another. Compare with the options
         # -xsv for an example.
         cmd_list = [sys.executable, temp.name]
-        self.log_debug('subprocess.call-ing {cmd_list}'.format(cmd_list=cmd_list))
+        self.log_logger.debug('subprocess.call-ing {cmd_list}'.format(cmd_list=cmd_list))
 
         sp = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=os.environ.copy())
 

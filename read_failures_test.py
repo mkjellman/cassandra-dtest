@@ -1,11 +1,14 @@
+import logging
+import pytest
+
 from cassandra import ConsistencyLevel, ReadFailure, ReadTimeout
 from cassandra.policies import FallthroughRetryPolicy
 from cassandra.query import SimpleStatement
 
 from dtest import Tester
 
-import pytest
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 KEYSPACE = "readfailures"
 

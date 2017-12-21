@@ -1,9 +1,12 @@
 import time
+import logging
 
 from dtest import Tester, create_ks, create_cf
 from tools.data import rows_to_list
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
+
+logger = logging.getLogger(__name__)
 
 
 class TestDeletion(Tester):

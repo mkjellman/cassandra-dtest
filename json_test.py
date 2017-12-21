@@ -5,6 +5,8 @@ import re
 import subprocess
 import sys
 import pytest
+import logging
+
 from distutils.version import LooseVersion
 
 from ccmlib import common
@@ -13,6 +15,7 @@ from ccmlib.common import is_win
 from dtest import Tester
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=None):

@@ -1,11 +1,13 @@
-
 import pytest
+import logging
+
 from distutils.version import LooseVersion
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.jmxutils import make_mbean, JolokiaAgent, remove_perf_disable_shared_mem
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestCqlTracing(Tester):
@@ -77,7 +79,7 @@ class TestCqlTracing(Tester):
             "CONSISTENCY ALL; TRACING ON; "
             "INSERT INTO ks.users (userid, firstname, lastname, age) "
             "VALUES (550e8400-e29b-41d4-a716-446655440000, 'Frodo', 'Baggins', 32)")
-        debug(out)
+        logger.debug(out)
         assert 'Tracing session: ' in out
 
         assert '/127.0.0.1' in out
@@ -91,7 +93,7 @@ class TestCqlTracing(Tester):
         out, err, _ = node1.run_cqlsh('CONSISTENCY ALL; TRACING ON; '
                                       'SELECT firstname, lastname '
                                       'FROM ks.users WHERE userid = 550e8400-e29b-41d4-a716-446655440000')
-        debug(out)
+        logger.debug(out)
         assert 'Tracing session: ' in out
 
         assert ' 127.0.0.1 ' in out
@@ -132,7 +134,7 @@ class TestCqlTracing(Tester):
         self.trace(session)
 
         errs = self.cluster.nodelist()[0].grep_log_for_errors()
-        debug('Errors after attempted trace with unknown tracing class: {errs}'.format(errs=errs))
+        logger.debug('Errors after attempted trace with unknown tracing class: {errs}'.format(errs=errs))
         assert len(errs) == 1
         if self.cluster.version() >= LooseVersion('3.10'):
             # See CASSANDRA-11706 and PR #1281
@@ -165,7 +167,7 @@ class TestCqlTracing(Tester):
         self.trace(session)
 
         errs = self.cluster.nodelist()[0].grep_log_for_errors()
-        debug('Errors after attempted trace with default tracing class: {errs}'.format(errs=errs))
+        logger.debug('Errors after attempted trace with default tracing class: {errs}'.format(errs=errs))
         assert len(errs) == 1
         if self.cluster.version() >= LooseVersion('3.10'):
             # See CASSANDRA-11706 and PR #1281

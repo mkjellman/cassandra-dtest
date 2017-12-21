@@ -6,15 +6,17 @@ import os
 import re
 import time
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel as CL
 
-from dtest import RUN_STATIC_UPGRADE_MATRIX, debug
+from dtest import RUN_STATIC_UPGRADE_MATRIX
 from tools.jmxutils import (JolokiaAgent, make_mbean)
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.upgrade_test
@@ -137,10 +139,10 @@ class TestForRegressions(UpgradeTester):
         session.cluster.control_connection.wait_for_schema_agreement(wait_time=30)
 
         def validate_schema_agreement(n, is_upgr):
-            debug("querying node {} for schema information, upgraded: {}".format(n.name, is_upgr))
+            logger.debug("querying node {} for schema information, upgraded: {}".format(n.name, is_upgr))
 
             response = n.nodetool('describecluster').stdout
-            debug(response)
+            logger.debug(response)
             schemas = response.split('Schema versions:')[1].strip()
             num_schemas = len(re.findall('\[.*?\]', schemas))
             self.assertEqual(num_schemas, 1, "There were multiple schema versions during an upgrade: {}"

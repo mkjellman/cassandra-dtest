@@ -1,6 +1,10 @@
+import logging
+
 from cassandra import InvalidRequest
 
 from dtest import Tester
+
+logger = logging.getLogger(__name__)
 
 KEYSPACE = "foo"
 

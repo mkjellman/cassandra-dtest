@@ -3,11 +3,13 @@ import os.path
 import shutil
 import time
 import pytest
+import logging
 
 from dtest import Tester
 from tools import sslkeygen
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 # as the error message logged will be different per netty ssl implementation (jdk vs openssl (libre vs boring vs ...)),
 # the best we can do is just look for a SSLHandshakeException

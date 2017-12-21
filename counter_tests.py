@@ -2,6 +2,7 @@ import random
 import time
 import uuid
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
@@ -11,6 +12,7 @@ from dtest import Tester, create_ks, create_cf
 from tools.data import rows_to_list
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestCounters(Tester):

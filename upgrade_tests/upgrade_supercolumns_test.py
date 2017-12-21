@@ -1,8 +1,8 @@
 import os
-
 import pytest
+import logging
 
-from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
+from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester
 from thrift_tests import get_thrift_client
 from tools.assertions import assert_all
 
@@ -18,12 +18,14 @@ from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
                                            SlicePredicate, SliceRange,
                                            SuperColumn)
 
+logger = logging.getLogger(__name__)
 
 # Use static supercolumn data to reduce total test time and avoid driver issues connecting to C* 1.2.
 # The data contained in the SSTables is (name, {'attr': {'name': name}}) for the name in NAMES.
 SCHEMA_PATH = os.path.join("./", "upgrade_tests", "supercolumn-data", "cassandra-2.0", "schema-2.0.cql")
 TABLES_PATH = os.path.join("./", "upgrade_tests", "supercolumn-data", "cassandra-2.0", "supcols", "cols")
 NAMES = ["Alice", "Bob", "Claire", "Dave", "Ed", "Frank", "Grace"]
+
 
 @pytest.mark.upgrade_test
 class TestSCUpgrade(Tester):
@@ -72,7 +74,7 @@ class TestSCUpgrade(Tester):
         p = SlicePredicate(slice_range=SliceRange('', '', False, 1000))
         for name in NAMES:
             super_col_value = client.get_slice(name, ColumnParent("cols"), p, ConsistencyLevel.ONE)
-            debug("get_slice(%s) returned %s" % (name, super_col_value))
+            logger.debug("get_slice(%s) returned %s" % (name, super_col_value))
             assert name == super_col_value[0].column.value
 
     def verify_with_cql(self, session):
@@ -141,12 +143,12 @@ class TestSCUpgrade(Tester):
         self._upgrade_super_columns_through_versions_test(upgrade_path=['git:cassandra-3.0', 'git:trunk'])
 
     def upgrade_to_version(self, tag, nodes=None):
-        debug('Upgrading to ' + tag)
+        logger.debug('Upgrading to ' + tag)
         if nodes is None:
             nodes = self.cluster.nodelist()
 
         for node in nodes:
-            debug('Shutting down node: ' + node.name)
+            logger.debug('Shutting down node: ' + node.name)
             node.drain()
             node.watch_log_for("DRAINED")
             node.stop(wait_other_notice=False)
@@ -157,12 +159,12 @@ class TestSCUpgrade(Tester):
             if tag < "2.1":
                 if "memtable_allocation_type" in node.config_options:
                     node.config_options.__delitem__("memtable_allocation_type")
-            debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
+            logger.debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
         self.cluster.set_install_dir(version=tag)
 
         # Restart nodes on new version
         for node in nodes:
-            debug('Starting %s on new version (%s)' % (node.name, tag))
+            logger.debug('Starting %s on new version (%s)' % (node.name, tag))
             # Setup log4j / logback again (necessary moving from 2.0 -> 2.1):
             node.set_log_level("INFO")
             node.start(wait_other_notice=True, wait_for_binary_proto=True)

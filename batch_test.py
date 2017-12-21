@@ -1,17 +1,19 @@
 import sys
 import time
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel, Timeout, Unavailable
 from cassandra.query import SimpleStatement
 
-from dtest import Tester, create_ks, debug
+from dtest import Tester, create_ks
 from tools.assertions import (assert_all, assert_invalid, assert_one,
                               assert_unavailable)
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestBatch(Tester):
@@ -84,7 +86,7 @@ class TestBatch(Tester):
                                  "batchlog entries, so setting gc_grace_seconds too low on tables "
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
-        debug(warning)
+        logger.debug(warning)
         assert 1 == len(warning), "Cannot find the gc_grace_seconds warning message."
 
     @since('3.0')
@@ -111,7 +113,7 @@ class TestBatch(Tester):
                                  "batchlog entries, so setting gc_grace_seconds too low on tables "
                                  "involved in an atomic batch might cause batchlog entries to expire "
                                  "before being replayed.")
-        debug(warning)
+        logger.debug(warning)
         assert 1 == len(warning), "Cannot find the gc_grace_seconds warning message."
 
     @since('3.0')
@@ -127,7 +129,7 @@ class TestBatch(Tester):
         """)
         node1 = self.cluster.nodelist()[0]
         warning = node1.grep_log("setting a too low gc_grace_seconds on tables involved in an atomic batch")
-        debug(warning)
+        logger.debug(warning)
         assert 0 == len(warning), "Cannot find the gc_grace_seconds warning message."
 
     def test_logged_batch_rejects_counter_mutations(self):
@@ -372,7 +374,7 @@ class TestBatch(Tester):
 
         coordinator = self.cluster.nodelist()[coordinator_idx]
         coordinator.byteman_submit(['./byteman/fail_after_batchlog_write.btm'])
-        debug("Injected byteman scripts to enable batchlog replay {}".format(coordinator.name))
+        logger.debug("Injected byteman scripts to enable batchlog replay {}".format(coordinator.name))
 
         query = """
             BEGIN BATCH
@@ -386,7 +388,7 @@ class TestBatch(Tester):
         # 2 * write_request_timeout_in_ms ms: 1x timeout for all mutations to be written,
         # and another 1x timeout for batch remove mutation to be received.
         delay = 2 * coordinator.get_conf_option('write_request_timeout_in_ms') / 1000.0 + 1
-        debug('Sleeping for {}s for the batches to not be skipped'.format(delay))
+        logger.debug('Sleeping for {}s for the batches to not be skipped'.format(delay))
         time.sleep(delay)
 
         total_batches_replayed = 0
@@ -397,10 +399,10 @@ class TestBatch(Tester):
                 continue
 
             with JolokiaAgent(n) as jmx:
-                debug('Forcing batchlog replay for {}'.format(n.name))
+                logger.debug('Forcing batchlog replay for {}'.format(n.name))
                 jmx.execute_method(blm, 'forceBatchlogReplay')
                 batches_replayed = jmx.read_attribute(blm, 'TotalBatchesReplayed')
-                debug('{} batches replayed on node {}'.format(batches_replayed, n.name))
+                logger.debug('{} batches replayed on node {}'.format(batches_replayed, n.name))
                 total_batches_replayed += batches_replayed
 
         assert total_batches_replayed >= 2
@@ -433,7 +435,7 @@ class TestBatch(Tester):
     def prepare(self, nodes=1, compression=True, version=None, protocol_version=None, install_byteman=False):
         if version:
             self.cluster.set_install_dir(version=version)
-            debug("Set cassandra dir to {}".format(self.cluster.get_install_dir()))
+            logger.debug("Set cassandra dir to {}".format(self.cluster.get_install_dir()))
 
         self.cluster.populate(nodes, install_byteman=install_byteman)
 
@@ -448,7 +450,7 @@ class TestBatch(Tester):
         return session
 
     def create_schema(self, session, rf):
-        debug('Creating schema...')
+        logger.debug('Creating schema...')
         create_ks(session, 'ks', rf)
 
         session.execute("""
@@ -473,7 +475,7 @@ class TestBatch(Tester):
 
     def prepare_mixed(self, coordinator_idx, current_nodes, previous_version, previous_nodes, compression=True,
                       protocol_version=None, install_byteman=False):
-        debug("Testing with {} node(s) at version '{}', {} node(s) at current version"
+        logger.debug("Testing with {} node(s) at version '{}', {} node(s) at current version"
               .format(previous_nodes, previous_version, current_nodes))
 
         # start a cluster using the previous version
@@ -494,13 +496,13 @@ class TestBatch(Tester):
         """
         Upgrade a node to the current version
         """
-        debug('Upgrading {} to the current version'.format(node.name))
-        debug('Shutting down {}'.format(node.name))
+        logger.debug('Upgrading {} to the current version'.format(node.name))
+        logger.debug('Shutting down {}'.format(node.name))
         node.stop(wait_other_notice=False)
         self.set_node_to_current_version(node)
-        debug("Set cassandra dir for {} to {}".format(node.name, node.get_install_dir()))
+        logger.debug("Set cassandra dir for {} to {}".format(node.name, node.get_install_dir()))
         # needed for jmx
         remove_perf_disable_shared_mem(node)
         # Restart nodes on new version
-        debug('Starting {} on new version ({})'.format(node.name, node.get_cassandra_version()))
+        logger.debug('Starting {} on new version ({})'.format(node.name, node.get_cassandra_version()))
         node.start(wait_other_notice=True, wait_for_binary_proto=True)

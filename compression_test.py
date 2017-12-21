@@ -1,11 +1,13 @@
 import os
 import pytest
+import logging
 
 from dtest import create_ks
 from scrub_test import TestHelper
 from tools.assertions import assert_crc_check_chance_equal
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestCompression(TestHelper):

@@ -2,13 +2,15 @@ import os
 import socket
 import time
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel
-from dtest import Tester, debug
+from dtest import Tester
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.2.5')
@@ -88,7 +90,7 @@ class TestGossipingPropertyFileSnitch(Tester):
 
         out, err, _ = node1.nodetool('gossipinfo')
         assert 0 == len(err), err
-        debug(out)
+        logger.debug(out)
 
         assert "/{}".format(NODE1_BROADCAST_ADDRESS) in out
         assert "INTERNAL_IP:6:{}".format(NODE1_LISTEN_ADDRESS) in out

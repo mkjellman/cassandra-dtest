@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import binascii
 import csv
 import datetime
@@ -6,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import logging
 
 import pytest
 from decimal import Decimal
@@ -19,11 +19,12 @@ from cassandra.query import BatchStatement, BatchType
 from ccmlib import common
 
 from .cqlsh_tools import monkeypatch_driver, unmonkeypatch_driver
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import assert_all, assert_none
 from tools.data import create_c1c2_table, insert_c1c2, rows_to_list
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestCqlsh(Tester):
@@ -62,7 +63,7 @@ class TestCqlsh(Tester):
 
         cmds = ['pep8', '--ignore', 'E501,E402,E731', cqlsh_path] + cqlshlib_paths
 
-        debug(cmds)
+        logger.debug(cmds)
 
         p = subprocess.Popen(cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
@@ -171,14 +172,14 @@ class TestCqlsh(Tester):
         output, err, _ = node1.run_cqlsh(cmds="use simple; SELECT * FROM testsubsecond "
                                          "WHERE id = 1 AND subid = '1943-06-19 11:21:01.123+0000'")
 
-        debug(output)
+        logger.debug(output)
         assert "1943-06-19 11:21:01.123000+0000" in output
         assert "1943-06-19 11:21:01.000000+0000" not in output
 
         output, err, _ = node1.run_cqlsh(cmds="use simple; SELECT * FROM testsubsecond "
                                          "WHERE id = 2 AND subid = '1943-06-19 11:21:01+0000'")
 
-        debug(output)
+        logger.debug(output)
         assert "1943-06-19 11:21:01.000000+0000" in output
         assert "1943-06-19 11:21:01.123000+0000" not in output
 
@@ -613,7 +614,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
         assert len(err), 0 == "Failed to execute cqlsh: {}".format(err)
 
-        debug(output)
+        logger.debug(output)
         assert expected in output, "Output \n {%s} \n doesn't contain expected\n {%s}" % (output, expected)
 
     def test_list_queries(self):
@@ -1047,7 +1048,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
                """
 
     def execute(self, cql, expected_output=None, expected_err=None, env_vars=None):
-        debug(cql)
+        logger.debug(cql)
         node1, = self.cluster.nodelist()
         output, err = self.run_cqlsh(node1, cql, env_vars=env_vars)
 
@@ -1091,7 +1092,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
         results = list(session.execute("SELECT * FROM testcopyto"))
 
         self.tempfile = NamedTemporaryFile(delete=False)
-        debug('Exporting to csv file: %s' % (self.tempfile.name,))
+        logger.debug('Exporting to csv file: %s' % (self.tempfile.name,))
         node1.run_cqlsh(cmds="COPY ks.testcopyto TO '%s'" % (self.tempfile.name,))
 
         # session
@@ -1446,7 +1447,7 @@ Tracing session:""")
 
         fut = session.execute_async(batch_with_warning)
         fut.result()  # wait for batch to complete before checking warnings
-        debug(fut.warnings)
+        logger.debug(fut.warnings)
         assert fut.warnings is not None
         assert 1 == len(fut.warnings)
         assert "Unlogged batch covering {} partitions detected against table [client_warnings.test]. "\
@@ -1559,7 +1560,7 @@ Tracing session:""")
         select_out, err = self.run_cqlsh(node1, "SELECT * FROM test.users_by_state")
         err_str = err.decode("utf-8")
         assert 0 == len(err_str), err_str
-        debug(select_out)
+        logger.debug(select_out)
 
         out, err = self.run_cqlsh(node1, "DROP MATERIALIZED VIEW test.users_by_state; DESCRIBE KEYSPACE test; DESCRIBE table test.users")
         err_str = err.decode("utf-8")

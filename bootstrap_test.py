@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import threading
 import time
+import logging
 
 from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
@@ -12,7 +13,7 @@ from ccmlib.node import NodeError
 
 import pytest
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import (assert_almost_equal, assert_bootstrap_state, assert_not_running,
                               assert_one, assert_stderr_clean)
 from tools.data import query_c1c2
@@ -21,6 +22,7 @@ from tools.misc import new_node
 from tools.misc import generate_ssl_stores
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 class TestBootstrap(Tester):
 
@@ -51,14 +53,14 @@ class TestBootstrap(Tester):
         cluster = self.cluster
 
         if enable_ssl:
-            debug("***using internode ssl***")
+            logger.debug("***using internode ssl***")
             generate_ssl_stores(self.fixture_dtest_setup.test_path)
             cluster.enable_internode_ssl(self.fixture_dtest_setup.test_path)
 
         tokens = cluster.balanced_tokens(2)
         cluster.set_configuration_options(values={'num_tokens': 1})
 
-        debug("[node1, node2] tokens: %r" % (tokens,))
+        logger.debug("[node1, node2] tokens: %r" % (tokens,))
 
         keys = 10000
 
@@ -66,7 +68,7 @@ class TestBootstrap(Tester):
         cluster.populate(1)
         node1 = cluster.nodelist()[0]
         if bootstrap_from_version:
-            debug("starting source node on version {}".format(bootstrap_from_version))
+            logger.debug("starting source node on version {}".format(bootstrap_from_version))
             node1.set_install_dir(version=bootstrap_from_version)
         node1.set_configuration_options(values={'initial_token': tokens[0]})
         cluster.start(wait_other_notice=True)
@@ -77,7 +79,7 @@ class TestBootstrap(Tester):
 
         # record the size before inserting any of our own data
         empty_size = node1.data_size()
-        debug("node1 empty size : %s" % float(empty_size))
+        logger.debug("node1 empty size : %s" % float(empty_size))
 
         insert_statement = session.prepare("INSERT INTO ks.cf (key, c1, c2) VALUES (?, 'value1', 'value2')")
         execute_concurrent_with_args(session, insert_statement, [['k%d' % k] for k in range(keys)])
@@ -85,7 +87,7 @@ class TestBootstrap(Tester):
         node1.flush()
         node1.compact()
         initial_size = node1.data_size()
-        debug("node1 size before bootstrapping node2: %s" % float(initial_size))
+        logger.debug("node1 size before bootstrapping node2: %s" % float(initial_size))
 
         # Reads inserted data all during the bootstrap process. We shouldn't
         # get any error
@@ -97,11 +99,11 @@ class TestBootstrap(Tester):
         node2.compact()
 
         node1.cleanup()
-        debug("node1 size after cleanup: %s" % float(node1.data_size()))
+        logger.debug("node1 size after cleanup: %s" % float(node1.data_size()))
         node1.compact()
-        debug("node1 size after compacting: %s" % float(node1.data_size()))
+        logger.debug("node1 size after compacting: %s" % float(node1.data_size()))
 
-        debug("node2 size after compacting: %s" % float(node2.data_size()))
+        logger.debug("node2 size after compacting: %s" % float(node2.data_size()))
 
         size1 = float(node1.data_size())
         size2 = float(node2.data_size())
@@ -152,7 +154,7 @@ class TestBootstrap(Tester):
         cluster.populate(1)
         node1 = cluster.nodelist()[0]
 
-        debug("Setting up byteman on {}".format(node1.name))
+        logger.debug("Setting up byteman on {}".format(node1.name))
         # set up byteman
         node1.byteman_port = '8100'
         node1.import_config_files()
@@ -164,7 +166,7 @@ class TestBootstrap(Tester):
                       'compaction(strategy=SizeTieredCompactionStrategy, enabled=false)'])
         cluster.flush()
 
-        debug("Submitting byteman script to {} to".format(node1.name))
+        logger.debug("Submitting byteman script to {} to".format(node1.name))
         # Sleep longer than streaming_socket_timeout_in_ms to make sure the node will not be killed
         node1.byteman_submit(['./byteman/stream_5s_sleep.btm'])
 
@@ -246,7 +248,7 @@ class TestBootstrap(Tester):
         if not self.dtest_config.use_vnodes:
             cluster.set_configuration_options(values={'num_tokens': 1})
             tokens = cluster.balanced_tokens(3)
-            debug("non-vnode tokens: %r" % (tokens,))
+            logger.debug("non-vnode tokens: %r" % (tokens,))
             node1.set_configuration_options(values={'initial_token': tokens[0]})
             node2.set_configuration_options(values={'initial_token': tokens[2]})
             node3_token = tokens[1]  # Add node 3 between node1 and node2
@@ -327,7 +329,7 @@ class TestBootstrap(Tester):
         # cleanup to guarantee each node will only have sstables of its ranges
         cluster.cleanup()
 
-        debug("Check data is present")
+        logger.debug("Check data is present")
         # Let's check stream bootstrap completely transferred data
         stdout, stderr, _ = node3.stress(['read', 'n=1k', 'no-warmup', '-schema', 'replication(factor=2)', '-rate', 'threads=8'])
 
@@ -444,7 +446,7 @@ class TestBootstrap(Tester):
                                         '-rate', 'threads=5',
                                         '-errors', 'retries=2'])
 
-        debug(out)
+        logger.debug(out)
         assert_stderr_clean(err)
         regex = re.compile("Operation.+error inserting key.+Exception")
         failure = regex.search(str(out))
@@ -550,22 +552,22 @@ class TestBootstrap(Tester):
         session.execute("ALTER KEYSPACE system_traces WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'1'};")
 
         # Decommision the new node and kill it
-        debug("Decommissioning & stopping node2")
+        logger.debug("Decommissioning & stopping node2")
         node2.decommission()
         node2.stop(wait_other_notice=False)
 
         # Wipe its data
         for data_dir in node2.data_directories():
-            debug("Deleting {}".format(data_dir))
+            logger.debug("Deleting {}".format(data_dir))
             shutil.rmtree(data_dir)
 
         commitlog_dir = os.path.join(node2.get_path(), 'commitlogs')
-        debug("Deleting {}".format(commitlog_dir))
+        logger.debug("Deleting {}".format(commitlog_dir))
         shutil.rmtree(commitlog_dir)
 
         # Now start it, it should be allowed to join
         mark = node2.mark_log()
-        debug("Restarting wiped node2")
+        logger.debug("Restarting wiped node2")
         node2.start(wait_other_notice=False)
         node2.watch_log_for("JOINING:", from_mark=mark)
 
@@ -683,11 +685,11 @@ class TestBootstrap(Tester):
     def _monitor_datadir(self, node, event, basecount, jobs, failed):
         while True:
             sstables = [s for s in node.get_sstables("keyspace1", "standard1") if "tmplink" not in s]
-            debug("---")
+            logger.debug("---")
             for sstable in sstables:
-                debug(sstable)
+                logger.debug(sstable)
             if len(sstables) > basecount + jobs:
-                debug("Current count is {}, basecount was {}".format(len(sstables), basecount))
+                logger.debug("Current count is {}, basecount was {}".format(len(sstables), basecount))
                 failed.set()
                 return
             if event.is_set():
@@ -697,6 +699,6 @@ class TestBootstrap(Tester):
     def _cleanup(self, node):
         commitlog_dir = os.path.join(node.get_path(), 'commitlogs')
         for data_dir in node.data_directories():
-            debug("Deleting {}".format(data_dir))
+            logger.debug("Deleting {}".format(data_dir))
             shutil.rmtree(data_dir)
         shutil.rmtree(commitlog_dir)

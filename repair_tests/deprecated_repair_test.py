@@ -1,17 +1,19 @@
 import pytest
+import logging
 
 from distutils.version import LooseVersion
 
 from cassandra import ConsistencyLevel
 from ccmlib.common import is_win
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import assert_length_equal
 from tools.data import insert_c1c2
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since("2.2", max_version="4")
@@ -138,7 +140,7 @@ class TestDeprecatedRepairAPI(Tester):
         """
         cluster = self.cluster
 
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate([1, 1])
         node1, node2 = cluster.nodelist()
         remove_perf_disable_shared_mem(node1)

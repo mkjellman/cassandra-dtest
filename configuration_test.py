@@ -1,11 +1,14 @@
 import os
-
+import logging
 import parse
+
 from cassandra.concurrent import execute_concurrent_with_args
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
+
+logger = logging.getLogger(__name__)
 
 
 class TestConfiguration(Tester):
@@ -72,7 +75,7 @@ class TestConfiguration(Tester):
         durable_session.execute("CREATE KEYSPACE ks WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 1} "
                                 "AND DURABLE_WRITES = true")
         durable_session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
-        debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
+        logger.debug('commitlog size diff = ' + str(commitlog_size(durable_node) - durable_init_size))
         write_to_trigger_fsync(durable_session, 'ks', 'tab')
 
         assert commitlog_size(durable_node) > durable_init_size, \

@@ -1,6 +1,8 @@
 import time
 import pytest
 import re
+import logging
+
 from datetime import datetime
 from collections import Counter, namedtuple
 from re import findall, compile
@@ -12,12 +14,13 @@ from cassandra.metadata import Murmur3Token
 from ccmlib.common import is_win
 from ccmlib.node import Node, ToolError
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import assert_almost_equal, assert_one
 from tools.data import insert_c1c2
 from tools.misc import new_node
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class ConsistentState(object):
@@ -372,21 +375,21 @@ class TestIncRepair(Tester):
         create_ks(session, 'ks', 3)
         create_cf(session, 'cf', read_repair=0.0, columns={'c1': 'text', 'c2': 'text'})
 
-        debug("insert data")
+        logger.debug("insert data")
 
         insert_c1c2(session, keys=list(range(1, 50)), consistency=ConsistencyLevel.ALL)
         node1.flush()
 
-        debug("bringing down node 3")
+        logger.debug("bringing down node 3")
         node3.flush()
         node3.stop(gently=False)
 
-        debug("inserting additional data into node 1 and 2")
+        logger.debug("inserting additional data into node 1 and 2")
         insert_c1c2(session, keys=list(range(50, 100)), consistency=ConsistencyLevel.TWO)
         node1.flush()
         node2.flush()
 
-        debug("restarting and repairing node 3")
+        logger.debug("restarting and repairing node 3")
         node3.start(wait_for_binary_proto=True)
 
         if cluster.version() >= "2.2":
@@ -399,15 +402,15 @@ class TestIncRepair(Tester):
         if is_win:
             time.sleep(2)
 
-        debug("stopping node 2")
+        logger.debug("stopping node 2")
         node2.stop(gently=False)
 
-        debug("inserting data in nodes 1 and 3")
+        logger.debug("inserting data in nodes 1 and 3")
         insert_c1c2(session, keys=list(range(100, 150)), consistency=ConsistencyLevel.TWO)
         node1.flush()
         node3.flush()
 
-        debug("start and repair node 2")
+        logger.debug("start and repair node 2")
         node2.start(wait_for_binary_proto=True)
 
         if cluster.version() >= "2.2":
@@ -415,7 +418,7 @@ class TestIncRepair(Tester):
         else:
             node2.nodetool("repair -par -inc")
 
-        debug("replace node and check data integrity")
+        logger.debug("replace node and check data integrity")
         node3.stop(gently=False)
         node5 = Node('node5', cluster, True, ('127.0.0.5', 9160), ('127.0.0.5', 7000), '7500', '0', None, ('127.0.0.5', 9042))
         cluster.add(node5, False)
@@ -457,7 +460,7 @@ class TestIncRepair(Tester):
         initialOut2 = node2.run_sstablemetadata(keyspace='keyspace1').stdout.decode("utf-8")
 
         matches = findall('(?<=Repaired at:).*', '\n'.join([initialOut1, initialOut2]))
-        debug("Repair timestamps are: {}".format(matches))
+        logger.debug("Repair timestamps are: {}".format(matches))
 
         uniquematches = set(matches)
         matchcount = Counter(matches)
@@ -492,7 +495,7 @@ class TestIncRepair(Tester):
 
         matches = findall('(?<=Repaired at:).*', '\n'.join([finalOut1, finalOut2]))
 
-        debug(matches)
+        logger.debug(matches)
 
         uniquematches = set(matches)
         matchcount = Counter(matches)
@@ -582,31 +585,31 @@ class TestIncRepair(Tester):
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
 
-        debug("Inserting data with stress")
+        logger.debug("Inserting data with stress")
         node1.stress(['write', 'n=5M', 'no-warmup', '-rate', 'threads=10', '-schema', 'replication(factor=3)'])
 
-        debug("Flushing nodes")
+        logger.debug("Flushing nodes")
         cluster.flush()
 
-        debug("Waiting compactions to finish")
+        logger.debug("Waiting compactions to finish")
         cluster.wait_for_compactions()
 
         if self.cluster.version() >= '2.2':
-            debug("Repairing node1")
+            logger.debug("Repairing node1")
             node1.nodetool("repair")
-            debug("Repairing node2")
+            logger.debug("Repairing node2")
             node2.nodetool("repair")
-            debug("Repairing node3")
+            logger.debug("Repairing node3")
             node3.nodetool("repair")
         else:
-            debug("Repairing node1")
+            logger.debug("Repairing node1")
             node1.nodetool("repair -par -inc")
-            debug("Repairing node2")
+            logger.debug("Repairing node2")
             node2.nodetool("repair -par -inc")
-            debug("Repairing node3")
+            logger.debug("Repairing node3")
             node3.nodetool("repair -par -inc")
 
-        # Using "print" instead of debug() here is on purpose.  The compactions
+        # Using "print" instead of logger.debug() here is on purpose.  The compactions
         # take a long time and don't print anything by default, which can result
         # in the test being timed out after 20 minutes.  These print statements
         # prevent it from being timed out.
@@ -618,12 +621,12 @@ class TestIncRepair(Tester):
         node3.compact()
 
         # wait some time to be sure the load size is propagated between nodes
-        debug("Waiting for load size info to be propagated between nodes")
+        logger.debug("Waiting for load size info to be propagated between nodes")
         time.sleep(45)
 
         load_size_in_kb = float(sum([n.data_size() for n in [node1, node2, node3]]))
         load_size = load_size_in_kb / 1024 / 1024
-        debug("Total Load size: {}GB".format(load_size))
+        logger.debug("Total Load size: {}GB".format(load_size))
 
         # There is still some overhead, but it's lot better. We tolerate 25%.
         expected_load_size = 4.5  # In GB
@@ -642,21 +645,21 @@ class TestIncRepair(Tester):
         cluster.populate(4).start(wait_for_binary_proto=True)
         node1, node2, node3, node4 = cluster.nodelist()
 
-        debug("Inserting data with stress")
+        logger.debug("Inserting data with stress")
         node1.stress(['write', 'n=3', 'no-warmup', '-rate', 'threads=1', '-schema', 'replication(factor=3)'])
 
-        debug("Flushing nodes")
+        logger.debug("Flushing nodes")
         cluster.flush()
 
         repair_options = '' if self.cluster.version() >= '2.2' else '-inc -par'
 
-        debug("Repairing node 1")
+        logger.debug("Repairing node 1")
         node1.nodetool("repair {}".format(repair_options))
-        debug("Repairing node 2")
+        logger.debug("Repairing node 2")
         node2.nodetool("repair {}".format(repair_options))
-        debug("Repairing node 3")
+        logger.debug("Repairing node 3")
         node3.nodetool("repair {}".format(repair_options))
-        debug("Repairing node 4")
+        logger.debug("Repairing node 4")
         node4.nodetool("repair {}".format(repair_options))
 
         if cluster.version() >= '4.0':

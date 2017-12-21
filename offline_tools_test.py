@@ -4,13 +4,15 @@ import random
 import re
 import subprocess
 import pytest
+import logging
 
 from ccmlib import common
 from ccmlib.node import ToolError
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestOfflineTools(Tester):
@@ -83,8 +85,8 @@ class TestOfflineTools(Tester):
         self._check_stderr_error(error.decode("utf-8"))
         assert rc == 0, str(rc)
 
-        debug(initial_levels)
-        debug(final_levels)
+        logger.debug(initial_levels)
+        logger.debug(final_levels)
 
         # let's make sure there was at least L1 beforing resetting levels
         assert max(initial_levels) > 0
@@ -143,7 +145,7 @@ class TestOfflineTools(Tester):
         # test by flushing (sstable should be level 0)
         cluster.start(wait_for_binary_proto=True)
         session = self.patient_cql_connection(node1)
-        debug("Altering compaction strategy to LCS")
+        logger.debug("Altering compaction strategy to LCS")
         session.execute("ALTER TABLE keyspace1.standard1 with compaction={'class': 'LeveledCompactionStrategy', 'sstable_size_in_mb':1};")
 
         node1.stress(['write', 'n=1K', 'no-warmup',
@@ -168,25 +170,25 @@ class TestOfflineTools(Tester):
                       '-rate', 'threads=8'])
 
         node1.flush()
-        debug("Waiting for compactions to finish")
+        logger.debug("Waiting for compactions to finish")
         self.wait_for_compactions(node1)
-        debug("Stopping node")
+        logger.debug("Stopping node")
         cluster.stop()
-        debug("Done stopping node")
+        logger.debug("Done stopping node")
 
         # Let's reset all sstables to L0
-        debug("Getting initial levels")
+        logger.debug("Getting initial levels")
         initial_levels = list(self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families=["standard1"])))
         assert [] != initial_levels
-        debug('initial_levels:')
-        debug(initial_levels)
-        debug("Running sstablelevelreset")
+        logger.debug('initial_levels:')
+        logger.debug(initial_levels)
+        logger.debug("Running sstablelevelreset")
         node1.run_sstablelevelreset("keyspace1", "standard1")
-        debug("Getting final levels")
+        logger.debug("Getting final levels")
         final_levels = list(self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families=["standard1"])))
         assert [] != final_levels
-        debug('final levels:')
-        debug(final_levels)
+        logger.debug('final levels:')
+        logger.debug(final_levels)
 
         # let's make sure there was at least 3 levels (L0, L1 and L2)
         assert max(initial_levels) > 1
@@ -194,18 +196,18 @@ class TestOfflineTools(Tester):
         assert max(final_levels) == 0
 
         # time to relevel sstables
-        debug("Getting initial levels")
+        logger.debug("Getting initial levels")
         initial_levels = self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families=["standard1"]))
-        debug("Running sstableofflinerelevel")
+        logger.debug("Running sstableofflinerelevel")
         output, error, _ = node1.run_sstableofflinerelevel("keyspace1", "standard1")
-        debug("Getting final levels")
+        logger.debug("Getting final levels")
         final_levels = self.get_levels(node1.run_sstablemetadata(keyspace="keyspace1", column_families=["standard1"]))
 
-        debug(output)
-        debug(error)
+        logger.debug(output)
+        logger.debug(error)
 
-        debug(initial_levels)
-        debug(final_levels)
+        logger.debug(initial_levels)
+        logger.debug(final_levels)
 
         # let's check sstables were promoted after releveling
         assert max(final_levels) > 1
@@ -267,11 +269,11 @@ class TestOfflineTools(Tester):
                     elif "Checking computed hash of BigTableReader" in line:
                         hashcomputed = True
                     else:
-                        debug(line)
+                        logger.debug(line)
 
-            debug(verified)
-            debug(hashcomputed)
-            debug(sstable)
+            logger.debug(verified)
+            logger.debug(hashcomputed)
+            logger.debug(sstable)
             assert verified and hashcomputed
 
         # now try intentionally corrupting an sstable to see if hash computed is different and error recognized
@@ -324,7 +326,7 @@ class TestOfflineTools(Tester):
         cluster = self.cluster
         testversion = cluster.version()
         original_install_dir = cluster.get_install_dir()
-        debug('Original install dir: {}'.format(original_install_dir))
+        logger.debug('Original install dir: {}'.format(original_install_dir))
 
         # Set up last major version to upgrade from, assuming 2.1 branch is the oldest tested version
         if testversion < '2.2':
@@ -336,34 +338,34 @@ class TestOfflineTools(Tester):
             # (when this is fixed in CCM issue #463, install version='github:apache/cassandra-2.0' as below)
             pytest.skip('Skipping 2.1 test due to jamm.jar version upgrade problem in CCM node configuration.')
         elif testversion < '3.0':
-            debug('Test version: {} - installing github:apache/cassandra-2.1'.format(testversion))
+            logger.debug('Test version: {} - installing github:apache/cassandra-2.1'.format(testversion))
             cluster.set_install_dir(version='github:apache/cassandra-2.1')
         # As of 3.5, sstable format 'ma' from 3.0 is still the latest - install 2.2 to upgrade from
         elif testversion < '4.0':
-            debug('Test version: {} - installing github:apache/cassandra-2.2'.format(testversion))
+            logger.debug('Test version: {} - installing github:apache/cassandra-2.2'.format(testversion))
             cluster.set_install_dir(version='github:apache/cassandra-2.2')
         # From 4.0, one can only upgrade from 3.0
         else:
-            debug('Test version: {} - installing github:apache/cassandra-3.0'.format(testversion))
+            logger.debug('Test version: {} - installing github:apache/cassandra-3.0'.format(testversion))
             cluster.set_install_dir(version='github:apache/cassandra-3.0')
 
         # Start up last major version, write out an sstable to upgrade, and stop node
         cluster.populate(1).start(wait_for_binary_proto=True)
         [node1] = cluster.nodelist()
         # Check that node1 is actually what we expect
-        debug('Downgraded install dir: {}'.format(node1.get_install_dir()))
+        logger.debug('Downgraded install dir: {}'.format(node1.get_install_dir()))
         session = self.patient_cql_connection(node1)
         create_ks(session, 'ks', 1)
         session.execute('create table ks.cf (key int PRIMARY KEY, val int) with gc_grace_seconds=0')
         session.execute('insert into ks.cf (key, val) values (1,1)')
         node1.flush()
         cluster.stop()
-        debug('Beginning ks.cf sstable: {}'.format(node1.get_sstables(keyspace='ks', column_family='cf')))
+        logger.debug('Beginning ks.cf sstable: {}'.format(node1.get_sstables(keyspace='ks', column_family='cf')))
 
         # Upgrade Cassandra to original testversion and run sstableupgrade
         cluster.set_install_dir(original_install_dir)
         # Check that node1 is actually upgraded
-        debug('Upgraded to original install dir: {}'.format(node1.get_install_dir()))
+        logger.debug('Upgraded to original install dir: {}'.format(node1.get_install_dir()))
         # Perform a node start/stop so system tables get internally updated, otherwise we may get "Unknown keyspace/table ks.cf"
         cluster.start(wait_for_binary_proto=True)
         node1.flush()
@@ -376,15 +378,15 @@ class TestOfflineTools(Tester):
         # change before it's release.
         if testversion < '4.0':
             (out, error, rc) = node1.run_sstableupgrade(keyspace='ks', column_family='cf')
-            debug(out)
-            debug(error)
-            debug('Upgraded ks.cf sstable: {}'.format(node1.get_sstables(keyspace='ks', column_family='cf')))
+            logger.debug(out)
+            logger.debug(error)
+            logger.debug('Upgraded ks.cf sstable: {}'.format(node1.get_sstables(keyspace='ks', column_family='cf')))
             assert 'Found 1 sstables that need upgrading.' in out
 
         # Check that sstableupgrade finds no upgrade needed on current version.
         (out, error, rc) = node1.run_sstableupgrade(keyspace='ks', column_family='cf')
-        debug(out)
-        debug(error)
+        logger.debug(out)
+        logger.debug(error)
         assert 'Found 0 sstables that need upgrading.' in out
 
     @since('3.0')
@@ -409,12 +411,12 @@ class TestOfflineTools(Tester):
         node1.flush()
         cluster.stop()
         [(out, error, rc)] = node1.run_sstabledump(keyspace='ks', column_families=['cf'])
-        debug(out)
-        debug(error)
+        logger.debug(out)
+        logger.debug(error)
 
         # Load the json output and check that it contains the inserted key=1
         s = json.loads(out)
-        debug(s)
+        logger.debug(s)
         assert len(s) == 2
 
         # order the rows so that we have key=1 first, then key=2
@@ -429,10 +431,10 @@ class TestOfflineTools(Tester):
 
         # Check that we only get the key back using the enumerate option
         [(out, error, rc)] = node1.run_sstabledump(keyspace='ks', column_families=['cf'], enumerate_keys=True)
-        debug(out)
-        debug(error)
+        logger.debug(out)
+        logger.debug(error)
         s = json.loads(out)
-        debug(s)
+        logger.debug(s)
         assert len(s) == 2
         dumped_keys = set(row[0] for row in s)
         assert {'1', '2'} == dumped_keys

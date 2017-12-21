@@ -4,16 +4,18 @@ import pprint
 import re
 import time
 import pytest
+import logging
+
 from random import randrange
 from threading import Thread
 
 from cassandra.concurrent import execute_concurrent
 from ccmlib.node import Node
 
-from dtest import Tester, debug, create_ks
-
+from dtest import Tester, create_ks
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def wait(delay=2):
@@ -31,7 +33,7 @@ class TestConcurrentSchemaChanges(Tester):
         """
         prepares for schema changes by creating a keyspace and column family.
         """
-        debug("prepare_for_changes() " + str(namespace))
+        logger.debug("prepare_for_changes() " + str(namespace))
         # create a keyspace that will be used
         create_ks(session, "ks_%s" % namespace, 2)
         session.execute('USE ks_%s' % namespace)
@@ -79,7 +81,7 @@ class TestConcurrentSchemaChanges(Tester):
         rebuild index (via jmx)
         set default_validation_class
         """
-        debug("make_schema_changes() " + str(namespace))
+        logger.debug("make_schema_changes() " + str(namespace))
         session.execute('USE ks_%s' % namespace)
         # drop keyspace
         session.execute('DROP KEYSPACE ks2_%s' % namespace)
@@ -119,7 +121,7 @@ class TestConcurrentSchemaChanges(Tester):
 
     def validate_schema_consistent(self, node):
         """ Makes sure that there is only one schema """
-        debug("validate_schema_consistent() " + node.name)
+        logger.debug("validate_schema_consistent() " + node.name)
 
         response = node.nodetool('describecluster').stdout
         schemas = response.split('Schema versions:')[1].strip()
@@ -171,13 +173,13 @@ class TestConcurrentSchemaChanges(Tester):
 
         cmds = [("alter table base_{0} add c_{1} int".format(randrange(0, 10), n), ()) for n in range(500)]
 
-        debug("executing 500 alters")
+        logger.debug("executing 500 alters")
         results = execute_concurrent(session, cmds, raise_on_first_error=True, concurrency=150)
 
         for (success, result) in results:
             assert success, "didn't get success on table create: {}".format(result)
 
-        debug("waiting for alters to propagate")
+        logger.debug("waiting for alters to propagate")
         wait(30)
 
         session.cluster.refresh_schema_metadata()
@@ -207,7 +209,7 @@ class TestConcurrentSchemaChanges(Tester):
                 session.execute("insert into base_{0} (id, c1, c2) values (uuid(), {1}, {2})".format(n, ins, ins))
         wait(5)
 
-        debug("creating indexes")
+        logger.debug("creating indexes")
         cmds = []
         for n in range(5):
             cmds.append(("create index ix_base_{0}_c1 on base_{0} (c1)".format(n), ()))
@@ -220,7 +222,7 @@ class TestConcurrentSchemaChanges(Tester):
 
         wait(5)
 
-        debug("validating schema and index list")
+        logger.debug("validating schema and index list")
         session.cluster.control_connection.wait_for_schema_agreement()
         session.cluster.refresh_schema_metadata()
         index_meta = session.cluster.metadata.keyspaces["lots_o_indexes"].indexes
@@ -231,9 +233,9 @@ class TestConcurrentSchemaChanges(Tester):
             assert "ix_base_{0}_c1".format(n) in index_meta
             assert "ix_base_{0}_c2".format(n) in index_meta
 
-        debug("waiting for indexes to fill in")
+        logger.debug("waiting for indexes to fill in")
         wait(45)
-        debug("querying all values by secondary index")
+        logger.debug("querying all values by secondary index")
         for n in range(5):
             for ins in range(1000):
                 assert 1 == len(list(session.execute("select * from base_{0} where c1 = {1}".format(n, ins))))
@@ -263,7 +265,7 @@ class TestConcurrentSchemaChanges(Tester):
                              "WHERE c{0} IS NOT NULL AND id IS NOT NULL PRIMARY KEY (c{0}, id)".format(n)))
             session.cluster.control_connection.wait_for_schema_agreement()
 
-        debug("waiting for indexes to fill in")
+        logger.debug("waiting for indexes to fill in")
         wait(60)
         result = list(session.execute(("SELECT * FROM system_schema.views "
                                        "WHERE keyspace_name='lots_o_views' AND base_table_name='source_data' ALLOW FILTERING")))
@@ -329,7 +331,7 @@ class TestConcurrentSchemaChanges(Tester):
         session.execute("use lots_o_churn")
 
         self._do_lots_of_schema_actions(session)
-        debug("waiting for things to settle and sync")
+        logger.debug("waiting for things to settle and sync")
         wait(60)
         self._verify_lots_of_schema_actions(session)
 
@@ -348,7 +350,7 @@ class TestConcurrentSchemaChanges(Tester):
         self._do_lots_of_schema_actions(session)
         wait(15)
         node2.start(wait_other_notice=True)
-        debug("waiting for things to settle and sync")
+        logger.debug("waiting for things to settle and sync")
         wait(120)
         self._verify_lots_of_schema_actions(session)
 
@@ -356,7 +358,7 @@ class TestConcurrentSchemaChanges(Tester):
         """
         make several schema changes on the same node.
         """
-        debug("basic_test()")
+        logger.debug("basic_test()")
 
         cluster = self.cluster
         cluster.populate(2).start()
@@ -369,7 +371,7 @@ class TestConcurrentSchemaChanges(Tester):
         self.make_schema_changes(session, namespace='ns1')
 
     def test_changes_to_different_nodes(self):
-        debug("changes_to_different_nodes_test()")
+        logger.debug("changes_to_different_nodes_test()")
         cluster = self.cluster
         cluster.populate(2).start()
         node1, node2 = cluster.nodelist()
@@ -397,7 +399,7 @@ class TestConcurrentSchemaChanges(Tester):
         Make schema changes to node 1 while node 2 is down.
         Then bring up 2 and make sure it gets the changes.
         """
-        debug("changes_while_node_down_test()")
+        logger.debug("changes_while_node_down_test()")
         cluster = self.cluster
         cluster.populate(2).start()
         node1, node2 = cluster.nodelist()
@@ -424,7 +426,7 @@ class TestConcurrentSchemaChanges(Tester):
         Bring down 2, bring up 1, and finally bring up 2.
         1 should get the changes.
         """
-        debug("changes_while_node_toggle_test()")
+        logger.debug("changes_while_node_toggle_test()")
         cluster = self.cluster
         cluster.populate(2).start()
         node1, node2 = cluster.nodelist()
@@ -444,7 +446,7 @@ class TestConcurrentSchemaChanges(Tester):
         self.validate_schema_consistent(node1)
 
     def test_decommission_node(self):
-        debug("decommission_node_test()")
+        logger.debug("decommission_node_test()")
         cluster = self.cluster
 
         cluster.populate(1)
@@ -493,7 +495,7 @@ class TestConcurrentSchemaChanges(Tester):
         self.validate_schema_consistent(node1)
 
     def test_snapshot(self):
-        debug("snapshot_test()")
+        logger.debug("snapshot_test()")
         cluster = self.cluster
         cluster.populate(2).start()
         node1, node2 = cluster.nodelist()
@@ -541,7 +543,7 @@ class TestConcurrentSchemaChanges(Tester):
         """
         apply schema changes while the cluster is under load.
         """
-        debug("load_test()")
+        logger.debug("load_test()")
 
         cluster = self.cluster
         cluster.populate(1).start()
@@ -550,14 +552,14 @@ class TestConcurrentSchemaChanges(Tester):
         session = self.cql_connection(node1)
 
         def stress(args=[]):
-            debug("Stressing")
+            logger.debug("Stressing")
             node1.stress(args)
-            debug("Done Stressing")
+            logger.debug("Done Stressing")
 
         def compact():
-            debug("Compacting...")
+            logger.debug("Compacting...")
             node1.nodetool('compact')
-            debug("Done Compacting.")
+            logger.debug("Done Compacting.")
 
         # put some data into the cluster
         stress(['write', 'n=30000', 'no-warmup', '-rate', 'threads=8'])

@@ -1,5 +1,6 @@
 import time
 import pytest
+import logging
 
 from cassandra import Unauthorized
 from ccmlib.common import is_win
@@ -7,11 +8,12 @@ from ccmlib.node import Node
 
 from dtest_setup_overrides import DTestSetupOverrides
 
-from dtest import Tester, debug
+from dtest import Tester
 from tools.assertions import assert_all, assert_invalid
 from tools.misc import ImmutableMapping
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.upgrade_test
@@ -164,7 +166,7 @@ class TestAuthUpgrade(Tester):
         session.execute('DROP TABLE system_auth.permissions', timeout=60)
         # and we should still be able to authenticate and check authorization
         self.check_permissions(node1, True)
-        debug('Test completed successfully')
+        logger.debug('Test completed successfully')
 
     def check_permissions(self, node, upgraded):
         # use an exclusive connection to ensure we only talk to the specified node
@@ -199,32 +201,32 @@ class TestAuthUpgrade(Tester):
 
     def upgrade_to_version(self, tag, node):
         format_args = {'node': node.name, 'tag': tag}
-        debug('Upgrading node {node} to {tag}'.format(**format_args))
+        logger.debug('Upgrading node {node} to {tag}'.format(**format_args))
         # drain and shutdown
         node.drain()
         node.watch_log_for("DRAINED")
         node.stop(wait_other_notice=False)
-        debug('{node} stopped'.format(**format_args))
+        logger.debug('{node} stopped'.format(**format_args))
 
         # Ignore errors before upgrade on Windows
         if is_win():
             node.mark_log_for_errors()
 
         # Update Cassandra Directory
-        debug('Updating version to tag {tag}'.format(**format_args))
+        logger.debug('Updating version to tag {tag}'.format(**format_args))
         node.set_install_dir(version=tag, verbose=True)
-        debug('Set new cassandra dir for {node}: {tag}'.format(**format_args))
+        logger.debug('Set new cassandra dir for {node}: {tag}'.format(**format_args))
 
         # Restart node on new version
-        debug('Starting {node} on new version ({tag})'.format(**format_args))
+        logger.debug('Starting {node} on new version ({tag})'.format(**format_args))
         # Setup log4j / logback again (necessary moving from 2.0 -> 2.1):
         node.set_log_level("INFO")
         node.start(wait_other_notice=True)
         # wait for the conversion of legacy data to either complete or fail
         # (because not enough upgraded nodes are available yet)
-        debug('Waiting for conversion of legacy data to complete or fail')
+        logger.debug('Waiting for conversion of legacy data to complete or fail')
         node.watch_log_for('conversion of legacy permissions')
 
-        debug('Running upgradesstables')
+        logger.debug('Running upgradesstables')
         node.nodetool('upgradesstables -a')
-        debug('Upgrade of {node} complete'.format(**format_args))
+        logger.debug('Upgrade of {node} complete'.format(**format_args))

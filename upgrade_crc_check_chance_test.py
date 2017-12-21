@@ -1,6 +1,6 @@
 import pytest
 
-from dtest import Tester, debug
+from dtest import Tester
 from tools.assertions import assert_crc_check_chance_equal, assert_one
 
 since = pytest.mark.since
@@ -98,13 +98,13 @@ class TestCrcCheckChanceUpgrade(Tester):
         assert_one(session, "SELECT * FROM ks.cf1 WHERE id=7", [7, 0])
         session.shutdown()
 
-        debug('Test completed successfully')
+        logger.debug('Test completed successfully')
 
     def verify_old_crc_check_chance(self, node):
         session = self.patient_exclusive_cql_connection(node)
         session.cluster.refresh_schema_metadata(0)
         meta = session.cluster.metadata.keyspaces['ks'].tables['cf1']
-        debug(meta.options['compression_parameters'])
+        logger.debug(meta.options['compression_parameters'])
         assert '{"crc_check_chance":"0.6","sstable_compression":"org.apache.cassandra.io.compress.DeflateCompressor","chunk_length_kb":"256"}' \
                == meta.options['compression_parameters']
         session.shutdown()
@@ -120,24 +120,24 @@ class TestCrcCheckChanceUpgrade(Tester):
 
     def upgrade_to_version(self, tag, node):
         format_args = {'node': node.name, 'tag': tag}
-        debug('Upgrading node {node} to {tag}'.format(**format_args))
+        logger.debug('Upgrading node {node} to {tag}'.format(**format_args))
         # drain and shutdown
         node.drain()
         node.watch_log_for("DRAINED")
         node.stop(wait_other_notice=False)
-        debug('{node} stopped'.format(**format_args))
+        logger.debug('{node} stopped'.format(**format_args))
 
         # Update Cassandra Directory
-        debug('Updating version to tag {tag}'.format(**format_args))
+        logger.debug('Updating version to tag {tag}'.format(**format_args))
 
-        debug('Set new cassandra dir for {node}: {tag}'.format(**format_args))
+        logger.debug('Set new cassandra dir for {node}: {tag}'.format(**format_args))
         node.set_install_dir(version='git:' + tag, verbose=True)
         # Restart node on new version
-        debug('Starting {node} on new version ({tag})'.format(**format_args))
+        logger.debug('Starting {node} on new version ({tag})'.format(**format_args))
         # Setup log4j / logback again (necessary moving from 2.0 -> 2.1):
         node.set_log_level("INFO")
         node.start(wait_other_notice=True, wait_for_binary_proto=True)
 
-        debug('Running upgradesstables')
+        logger.debug('Running upgradesstables')
         node.nodetool('upgradesstables -a')
-        debug('Upgrade of {node} complete'.format(**format_args))
+        logger.debug('Upgrade of {node} complete'.format(**format_args))

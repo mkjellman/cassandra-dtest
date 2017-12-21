@@ -3,6 +3,7 @@ import struct
 import time
 import uuid
 import pytest
+import logging
 
 from thrift.protocol import TBinaryProtocol
 from thrift.Thrift import TApplicationException
@@ -12,7 +13,7 @@ from tools.assertions import assert_length_equal
 from tools.misc import ImmutableMapping
 
 from dtest_setup_overrides import DTestSetupOverrides
-from dtest import (CASSANDRA_VERSION_FROM_BUILD, Tester, debug)
+from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester
 
 from thrift_bindings.thrift010 import Cassandra
 from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
@@ -29,6 +30,7 @@ from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,
 from tools.assertions import (assert_all, assert_none, assert_one)
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def get_thrift_client(host='127.0.0.1', port=9160):
@@ -397,11 +399,11 @@ class TestMutations(ThriftTester):
         updated_columns = [Column('c1', 'value101', 1),
                            Column('c2', 'value102', 1)]
 
-        debug("Testing CAS operations on dynamic cf")
+        logger.debug("Testing CAS operations on dynamic cf")
         test_cas_operations(_SIMPLE_COLUMNS, updated_columns, 'Standard1')
-        debug("Testing CAS operations on static cf")
+        logger.debug("Testing CAS operations on static cf")
         test_cas_operations(_SIMPLE_COLUMNS, updated_columns, 'Standard3')
-        debug("Testing CAS on mixed static/dynamic cf")
+        logger.debug("Testing CAS on mixed static/dynamic cf")
         test_cas_operations(_SIMPLE_COLUMNS, updated_columns, 'Standard4')
 
     def test_missing_super(self):

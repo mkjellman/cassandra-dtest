@@ -5,17 +5,19 @@ import shutil
 import subprocess
 import time
 import pytest
+import logging
 
 from cassandra.concurrent import execute_concurrent_with_args
 
 from dtest_setup_overrides import DTestSetupOverrides
-from dtest import (Tester, create_ks, debug)
+from dtest import Tester, create_ks
 from tools.assertions import assert_one
 from tools.files import replace_in_file, safe_mkdtemp
 from tools.hacks import advance_to_next_cl_segment
-from tools.misc import (ImmutableMapping, get_current_test_name)
+from tools.misc import ImmutableMapping, get_current_test_name
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class SnapshotTester(Tester):
@@ -30,10 +32,10 @@ class SnapshotTester(Tester):
         execute_concurrent_with_args(session, insert_statement, args, concurrency=20)
 
     def make_snapshot(self, node, ks, cf, name):
-        debug("Making snapshot....")
+        logger.debug("Making snapshot....")
         node.flush()
         snapshot_cmd = 'snapshot {ks} -cf {cf} -t {name}'.format(ks=ks, cf=cf, name=name)
-        debug("Running snapshot cmd: {snapshot_cmd}".format(snapshot_cmd=snapshot_cmd))
+        logger.debug("Running snapshot cmd: {snapshot_cmd}".format(snapshot_cmd=snapshot_cmd))
         node.nodetool(snapshot_cmd)
         tmpdir = safe_mkdtemp()
         os.mkdir(os.path.join(tmpdir, ks))
@@ -49,8 +51,8 @@ class SnapshotTester(Tester):
                     snapshot_dir = snapshot_dirs[0]
                 else:
                     continue
-            debug("snapshot_dir is : " + snapshot_dir)
-            debug("snapshot copy is : " + tmpdir)
+            logger.debug("snapshot_dir is : " + snapshot_dir)
+            logger.debug("snapshot copy is : " + tmpdir)
 
             # Copy files from the snapshot dir to existing temp dir
             distutils.dir_util.copy_tree(str(snapshot_dir), os.path.join(tmpdir, str(x), ks, cf))
@@ -59,7 +61,7 @@ class SnapshotTester(Tester):
         return tmpdir
 
     def restore_snapshot(self, snapshot_dir, node, ks, cf):
-        debug("Restoring snapshot....")
+        logger.debug("Restoring snapshot....")
         for x in range(0, self.cluster.data_dir_count):
             snap_dir = os.path.join(snapshot_dir, str(x), ks, cf)
             if os.path.exists(snap_dir):
@@ -75,7 +77,7 @@ class SnapshotTester(Tester):
                                     (" ".join(args), exit_status, stdout, stderr))
 
     def restore_snapshot_schema(self, snapshot_dir, node, ks, cf):
-        debug("Restoring snapshot schema....")
+        logger.debug("Restoring snapshot schema....")
         for x in range(0, self.cluster.data_dir_count):
             schema_path = os.path.join(snapshot_dir, str(x), ks, cf, 'schema.cql')
             if os.path.exists(schema_path):
@@ -112,7 +114,7 @@ class TestSnapshot(SnapshotTester):
         rows = session.execute('SELECT count(*) from ks.cf')
 
         # clean up
-        debug("removing snapshot_dir: " + snapshot_dir)
+        logger.debug("removing snapshot_dir: " + snapshot_dir)
         shutil.rmtree(snapshot_dir)
 
         assert rows[0][0] == 100
@@ -148,7 +150,7 @@ class TestSnapshot(SnapshotTester):
         assert_one(session, "SELECT * FROM ks.cf", [1, "a", "b"])
 
         # Clean up
-        debug("removing snapshot_dir: " + snapshot_dir)
+        logger.debug("removing snapshot_dir: " + snapshot_dir)
         shutil.rmtree(snapshot_dir)
 
     @since('3.11')
@@ -184,7 +186,7 @@ class TestSnapshot(SnapshotTester):
         assert_one(session, "SELECT * FROM ks.cf", [1, "a"])
 
         # Clean up
-        debug("removing snapshot_dir: " + snapshot_dir)
+        logger.debug("removing snapshot_dir: " + snapshot_dir)
         shutil.rmtree(snapshot_dir)
 
 
@@ -197,10 +199,10 @@ class TestArchiveCommitlog(SnapshotTester):
         return dtest_setup_overrides
 
     def make_snapshot(self, node, ks, cf, name):
-        debug("Making snapshot....")
+        logger.debug("Making snapshot....")
         node.flush()
         snapshot_cmd = 'snapshot {ks} -cf {cf} -t {name}'.format(ks=ks, cf=cf, name=name)
-        debug("Running snapshot cmd: {snapshot_cmd}".format(snapshot_cmd=snapshot_cmd))
+        logger.debug("Running snapshot cmd: {snapshot_cmd}".format(snapshot_cmd=snapshot_cmd))
         node.nodetool(snapshot_cmd)
         tmpdirs = []
         base_tmpdir = safe_mkdtemp()
@@ -214,7 +216,7 @@ class TestArchiveCommitlog(SnapshotTester):
         return tmpdirs
 
     def restore_snapshot(self, snapshot_dir, node, ks, cf, name):
-        debug("Restoring snapshot for cf ....")
+        logger.debug("Restoring snapshot for cf ....")
         data_dir = os.path.join(node.get_path(), 'data{0}'.format(os.path.basename(snapshot_dir)))
         cfs = [s for s in os.listdir(snapshot_dir) if s.startswith(cf + "-")]
         if len(cfs) > 0:
@@ -227,7 +229,7 @@ class TestArchiveCommitlog(SnapshotTester):
                     os.mkdir(os.path.join(data_dir, ks))
                 os.mkdir(os.path.join(data_dir, ks, cf_id))
 
-                debug("snapshot_dir is : " + snapshot_dir)
+                logger.debug("snapshot_dir is : " + snapshot_dir)
                 distutils.dir_util.copy_tree(snapshot_dir, os.path.join(data_dir, ks, cf_id))
 
     def test_archive_commitlog(self):
@@ -274,7 +276,7 @@ class TestArchiveCommitlog(SnapshotTester):
 
         # Create a temp directory for storing commitlog archives:
         tmp_commitlog = safe_mkdtemp()
-        debug("tmp_commitlog: " + tmp_commitlog)
+        logger.debug("tmp_commitlog: " + tmp_commitlog)
 
         # Edit commitlog_archiving.properties and set an archive
         # command:
@@ -296,14 +298,14 @@ class TestArchiveCommitlog(SnapshotTester):
         )
 
         session.execute('CREATE TABLE ks.cf ( key bigint PRIMARY KEY, val text);')
-        debug("Writing first 30,000 rows...")
+        logger.debug("Writing first 30,000 rows...")
         self.insert_rows(session, 0, 30000)
         # Record when this first set of inserts finished:
         insert_cutoff_times = [time.gmtime()]
 
         # Delete all commitlog backups so far:
         for f in glob.glob(tmp_commitlog + "/*"):
-            debug('Removing {}'.format(f))
+            logger.debug('Removing {}'.format(f))
             os.remove(f)
 
         snapshot_dirs = self.make_snapshot(node1, 'ks', 'cf', 'basic')
@@ -330,14 +332,14 @@ class TestArchiveCommitlog(SnapshotTester):
 
         try:
             # Write more data:
-            debug("Writing second 30,000 rows...")
+            logger.debug("Writing second 30,000 rows...")
             self.insert_rows(session, 30000, 60000)
             node1.flush()
             time.sleep(10)
             # Record when this second set of inserts finished:
             insert_cutoff_times.append(time.gmtime())
 
-            debug("Writing final 5,000 rows...")
+            logger.debug("Writing final 5,000 rows...")
             self.insert_rows(session, 60000, 65000)
             # Record when the third set of inserts finished:
             insert_cutoff_times.append(time.gmtime())
@@ -352,9 +354,9 @@ class TestArchiveCommitlog(SnapshotTester):
             # Check that there are at least one commit log backed up that
             # is not one of the active commit logs:
             commitlog_dir = os.path.join(node1.get_path(), 'commitlogs')
-            debug("node1 commitlog dir: " + commitlog_dir)
-            debug("node1 commitlog dir contents: " + str(os.listdir(commitlog_dir)))
-            debug("tmp_commitlog contents: " + str(os.listdir(tmp_commitlog)))
+            logger.debug("node1 commitlog dir: " + commitlog_dir)
+            logger.debug("node1 commitlog dir contents: " + str(os.listdir(commitlog_dir)))
+            logger.debug("tmp_commitlog contents: " + str(os.listdir(tmp_commitlog)))
 
             assert_directory_not_empty(tmp_commitlog, commitlog_dir)
 
@@ -364,8 +366,8 @@ class TestArchiveCommitlog(SnapshotTester):
 
             # Destroy the cluster
             cluster.stop()
-            debug("node1 commitlog dir contents after stopping: " + str(os.listdir(commitlog_dir)))
-            debug("tmp_commitlog contents after stopping: " + str(os.listdir(tmp_commitlog)))
+            logger.debug("node1 commitlog dir contents after stopping: " + str(os.listdir(commitlog_dir)))
+            logger.debug("tmp_commitlog contents after stopping: " + str(os.listdir(tmp_commitlog)))
 
             self.copy_logs(name=get_current_test_name() + "_pre-restore")
             self.fixture_dtest_setup.cleanup_and_replace_cluster()
@@ -423,7 +425,7 @@ class TestArchiveCommitlog(SnapshotTester):
                     replace_in_file(os.path.join(node1.get_path(), 'conf', 'commitlog_archiving.properties'),
                                     [(r'^restore_point_in_time=.*$', 'restore_point_in_time={restore_time}'.format(restore_time=restore_time))])
 
-            debug("Restarting node1..")
+            logger.debug("Restarting node1..")
             node1.stop()
             node1.start(wait_for_binary_proto=True)
 
@@ -443,23 +445,23 @@ class TestArchiveCommitlog(SnapshotTester):
 
         finally:
             # clean up
-            debug("removing snapshot_dir: " + ",".join(snapshot_dirs))
+            logger.debug("removing snapshot_dir: " + ",".join(snapshot_dirs))
             for snapshot_dir in snapshot_dirs:
                 shutil.rmtree(snapshot_dir)
-            debug("removing snapshot_dir: " + ",".join(system_ks_snapshot_dirs))
+            logger.debug("removing snapshot_dir: " + ",".join(system_ks_snapshot_dirs))
             for system_ks_snapshot_dir in system_ks_snapshot_dirs:
                 shutil.rmtree(system_ks_snapshot_dir)
-            debug("removing snapshot_dir: " + ",".join(system_cfs_snapshot_dirs))
+            logger.debug("removing snapshot_dir: " + ",".join(system_cfs_snapshot_dirs))
             for system_cfs_snapshot_dir in system_cfs_snapshot_dirs:
                 shutil.rmtree(system_cfs_snapshot_dir)
-            debug("removing snapshot_dir: " + ",".join(system_ut_snapshot_dirs))
+            logger.debug("removing snapshot_dir: " + ",".join(system_ut_snapshot_dirs))
             for system_ut_snapshot_dir in system_ut_snapshot_dirs:
                 shutil.rmtree(system_ut_snapshot_dir)
-            debug("removing snapshot_dir: " + ",".join(system_col_snapshot_dirs))
+            logger.debug("removing snapshot_dir: " + ",".join(system_col_snapshot_dirs))
             for system_col_snapshot_dir in system_col_snapshot_dirs:
                 shutil.rmtree(system_col_snapshot_dir)
 
-            debug("removing tmp_commitlog: " + tmp_commitlog)
+            logger.debug("removing tmp_commitlog: " + tmp_commitlog)
             shutil.rmtree(tmp_commitlog)
 
     def test_archive_and_restore_commitlog_repeatedly(self):
@@ -474,7 +476,7 @@ class TestArchiveCommitlog(SnapshotTester):
 
         # Create a temp directory for storing commitlog archives:
         tmp_commitlog = safe_mkdtemp()
-        debug("tmp_commitlog: {}".format(tmp_commitlog))
+        logger.debug("tmp_commitlog: {}".format(tmp_commitlog))
 
         # Edit commitlog_archiving.properties and set an archive
         # command:
@@ -487,31 +489,31 @@ class TestArchiveCommitlog(SnapshotTester):
 
         cluster.start(wait_for_binary_proto=True)
 
-        debug("Creating initial connection")
+        logger.debug("Creating initial connection")
         session = self.patient_cql_connection(node1)
         create_ks(session, 'ks', 1)
         session.execute('CREATE TABLE ks.cf ( key bigint PRIMARY KEY, val text);')
-        debug("Writing 30,000 rows...")
+        logger.debug("Writing 30,000 rows...")
         self.insert_rows(session, 0, 60000)
 
         try:
             # Check that there are at least one commit log backed up that
             # is not one of the active commit logs:
             commitlog_dir = os.path.join(node1.get_path(), 'commitlogs')
-            debug("node1 commitlog dir: " + commitlog_dir)
+            logger.debug("node1 commitlog dir: " + commitlog_dir)
 
             cluster.flush()
 
             assert_directory_not_empty(tmp_commitlog, commitlog_dir)
 
-            debug("Flushing and doing first restart")
+            logger.debug("Flushing and doing first restart")
             cluster.compact()
             node1.drain()
             # restart the node which causes the active commitlogs to be archived
             node1.stop()
             node1.start(wait_for_binary_proto=True)
 
-            debug("Stopping and second restart")
+            logger.debug("Stopping and second restart")
             node1.stop()
             node1.start(wait_for_binary_proto=True)
 
@@ -521,7 +523,7 @@ class TestArchiveCommitlog(SnapshotTester):
             rows = session.execute('SELECT count(*) from ks.cf')
             assert rows[0][0] == 60000
         finally:
-            debug("removing tmp_commitlog: " + tmp_commitlog)
+            logger.debug("removing tmp_commitlog: " + tmp_commitlog)
             shutil.rmtree(tmp_commitlog)
 
 

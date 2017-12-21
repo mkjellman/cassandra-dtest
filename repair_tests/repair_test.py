@@ -4,6 +4,8 @@ import threading
 import time
 import re
 import pytest
+import logging
+
 from collections import namedtuple
 from threading import Thread
 
@@ -11,10 +13,11 @@ from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from ccmlib.node import ToolError
 
-from dtest import CASSANDRA_VERSION_FROM_BUILD, FlakyRetryPolicy, Tester, debug, create_ks, create_cf
+from dtest import CASSANDRA_VERSION_FROM_BUILD, FlakyRetryPolicy, Tester, create_ks, create_cf
 from tools.data import insert_c1c2, query_c1c2
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def _repair_options(version, ks='', cf=None, sequential=True):
@@ -92,7 +95,7 @@ class BaseRepairTest(Tester):
         # interfere with the test (this must be after the populate)
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start()
         node1, node2, node3 = cluster.nodelist()
 
@@ -101,7 +104,7 @@ class BaseRepairTest(Tester):
         create_cf(session, 'cf', read_repair=0.0, columns={'c1': 'text', 'c2': 'text'})
 
         # Insert 1000 keys, kill node 3, insert 1 key, restart node 3, insert 1000 more keys
-        debug("Inserting data...")
+        logger.debug("Inserting data...")
         insert_c1c2(session, n=1000, consistency=ConsistencyLevel.ALL)
         node3.flush()
         node3.stop(wait_other_notice=True)
@@ -116,23 +119,23 @@ class BaseRepairTest(Tester):
         node1, node2, node3 = cluster.nodelist()
 
         # Verify that node3 has only 2000 keys
-        debug("Checking data on node3...")
+        logger.debug("Checking data on node3...")
         self.check_rows_on_node(node3, 2000, missings=[1000])
 
         # Verify that node1 has 2001 keys
-        debug("Checking data on node1...")
+        logger.debug("Checking data on node1...")
         self.check_rows_on_node(node1, 2001, found=[1000])
 
         # Verify that node2 has 2001 keys
-        debug("Checking data on node2...")
+        logger.debug("Checking data on node2...")
         self.check_rows_on_node(node2, 2001, found=[1000])
 
         time.sleep(10)  # see CASSANDRA-4373
         # Run repair
         start = time.time()
-        debug("starting repair...")
+        logger.debug("starting repair...")
         node1.repair(_repair_options(self.cluster.version(), ks='ks', sequential=sequential))
-        debug("Repair time: {end}".format(end=time.time() - start))
+        logger.debug("Repair time: {end}".format(end=time.time() - start))
 
         # Validate that only one range was transfered
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
@@ -165,7 +168,7 @@ class TestRepair(BaseRepairTest):
         @jira_ticket CASSANDRA-10422
         """
         cluster = self.cluster
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate([2, 2]).start(wait_for_binary_proto=True)
         node1_1, node2_1, node1_2, node2_2 = cluster.nodelist()
         node1_1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=4)', '-rate', 'threads=50'])
@@ -189,14 +192,14 @@ class TestRepair(BaseRepairTest):
         """
         self.fixture_dtest_setup.ignore_log_patterns = [r'Unknown keyspace/cf pair']
         cluster = self.cluster
-        debug('Starting nodes')
+        logger.debug('Starting nodes')
         cluster.populate(2).start(wait_for_binary_proto=True)
         node1, _ = cluster.nodelist()
-        debug('Creating keyspace and tables')
+        logger.debug('Creating keyspace and tables')
         node1.stress(stress_options=['write', 'n=1', 'no-warmup',
                                      'cl=ONE', '-schema', 'replication(factor=2)',
                                      '-rate', 'threads=1'])
-        debug('Repairing non-existent table')
+        logger.debug('Repairing non-existent table')
 
         def repair_non_existent_table():
             global nodetool_error
@@ -218,7 +221,7 @@ class TestRepair(BaseRepairTest):
         if self.cluster.version() >= '3.0':
             assert 'nodetool_error' in globals() and isinstance(nodetool_error, ToolError), \
                 'Repair thread on inexistent table did not throw exception'
-            debug(repr(nodetool_error))
+            logger.debug(repr(nodetool_error))
             assert 'Unknown keyspace/cf pair' in repr(nodetool_error),\
                 'Repair thread on inexistent table did not detect inexistent table.'
 
@@ -233,7 +236,7 @@ class TestRepair(BaseRepairTest):
         @jira_ticket CASSANDRA-10422
         """
         cluster = self.cluster
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate([2, 2]).start(wait_for_binary_proto=True)
         node1_1, node2_1, node1_2, node2_2 = cluster.nodelist()
         node1_1.stress(stress_options=['write', 'n=100K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=4)', '-rate', 'threads=50'])
@@ -254,7 +257,7 @@ class TestRepair(BaseRepairTest):
         @jira_ticket CASSANDRA-10422
         """
         cluster = self.cluster
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
         node1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=3)', '-rate', 'threads=50'])
@@ -294,7 +297,7 @@ class TestRepair(BaseRepairTest):
         @jira_ticket CASSANDRA-13153
         """
         cluster = self.cluster
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         # disable JBOD conf since the test expects sstables to be on the same disk
         cluster.set_datadir_count(1)
         cluster.populate(3).start(wait_for_binary_proto=True)
@@ -329,7 +332,7 @@ class TestRepair(BaseRepairTest):
         @jira_ticket CASSANDRA-10422
         """
         cluster = self.cluster
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate([2, 2]).start(wait_for_binary_proto=True)
         node1_1, node2_1, node1_2, node2_2 = cluster.nodelist()
         node1_1.stress(stress_options=['write', 'n=50K', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=4)'])
@@ -605,7 +608,7 @@ class TestRepair(BaseRepairTest):
         node1 = cluster.nodes["node1"]
         node2 = cluster.nodes["node2"]
 
-        debug("starting repair...")
+        logger.debug("starting repair...")
         opts = ["-local"]
         opts += _repair_options(self.cluster.version(), ks="ks")
         node1.repair(opts)
@@ -634,7 +637,7 @@ class TestRepair(BaseRepairTest):
         node2 = cluster.nodes["node2"]
         node3 = cluster.nodes["node3"]
 
-        debug("starting repair...")
+        logger.debug("starting repair...")
         opts = ["-dc", "dc1", "-dc", "dc2"]
         opts += _repair_options(self.cluster.version(), ks="ks")
         node1.repair(opts)
@@ -664,7 +667,7 @@ class TestRepair(BaseRepairTest):
         node2 = cluster.nodes["node2"]
         node3 = cluster.nodes["node3"]
 
-        debug("starting repair...")
+        logger.debug("starting repair...")
         opts = ["-dc", "dc1", "-dc", "dc2", "-dcpar"]
         opts += _repair_options(self.cluster.version(), ks="ks", sequential=False)
         node1.repair(opts)
@@ -700,7 +703,7 @@ class TestRepair(BaseRepairTest):
         # interfer with the test (this must be after the populate)
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         # populate 2 nodes in dc1, and one node each in dc2 and dc3
         cluster.populate([2, 1, 1]).start(wait_for_binary_proto=True)
 
@@ -711,7 +714,7 @@ class TestRepair(BaseRepairTest):
         create_cf(session, 'cf', read_repair=0.0, columns={'c1': 'text', 'c2': 'text'})
 
         # Insert 1000 keys, kill node 2, insert 1 key, restart node 2, insert 1000 more keys
-        debug("Inserting data...")
+        logger.debug("Inserting data...")
         insert_c1c2(session, n=1000, consistency=ConsistencyLevel.ALL)
         node2.flush()
         node2.stop(wait_other_notice=True)
@@ -723,7 +726,7 @@ class TestRepair(BaseRepairTest):
         cluster.flush()
 
         # Verify that only node2 has only 2000 keys and others have 2001 keys
-        debug("Checking data...")
+        logger.debug("Checking data...")
         self.check_rows_on_node(node2, 2000, missings=[1000])
         for node in [node1, node3, node4]:
             self.check_rows_on_node(node, 2001, found=[1000])
@@ -747,7 +750,7 @@ class TestRepair(BaseRepairTest):
         ]
 
         cluster = self.cluster
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate([3]).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
         node1.stress(stress_options=['write', 'n=10k', 'no-warmup', 'cl=ONE', '-schema', 'replication(factor=3)', '-rate', 'threads=50'])
@@ -784,7 +787,7 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
 
         node1, node2, node3 = cluster.nodelist()
@@ -808,13 +811,13 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
 
         node1, node2, node3 = cluster.nodelist()
 
         # Insert data, kill node 2, insert more data, restart node 2, insert another set of data
-        debug("Inserting data...")
+        logger.debug("Inserting data...")
         node1.stress(['write', 'n=1k', 'no-warmup', 'cl=ALL', '-schema', 'replication(factor=2)', '-rate', 'threads=30'])
         node2.flush()
         node2.stop(wait_other_notice=True)
@@ -857,7 +860,7 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
 
         node1, node2, node3 = cluster.nodelist()
@@ -881,7 +884,7 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
 
         node1, node2, node3 = cluster.nodelist()
@@ -914,7 +917,7 @@ class TestRepair(BaseRepairTest):
         node1, node2, node3 = cluster.nodelist()
 
         # Insert data, kill node 2, insert more data, restart node 2, insert another set of data
-        debug("Inserting data...")
+        logger.debug("Inserting data...")
         node1.stress(['write', 'n=20K', 'no-warmup', 'cl=ALL', '-schema', 'replication(factor=2)', '-rate', 'threads=30'])
 
         node2.flush()
@@ -955,12 +958,12 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
 
         node1, node2, node3 = cluster.nodelist()
 
-        debug("Inserting data...")
+        logger.debug("Inserting data...")
         node1.stress(['write', 'n=20K', 'no-warmup', 'cl=ALL', '-schema', 'replication(factor=2)', '-rate', 'threads=30'])
 
         node2.flush()
@@ -998,14 +1001,14 @@ class TestRepair(BaseRepairTest):
         cluster = self.cluster
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.populate(3).start(wait_for_binary_proto=True)
 
         node1, node2, node3 = cluster.nodelist()
 
         # Valid job thread counts: 1, 2, 3, and 4
         for job_thread_count in range(1, 5):
-            debug("Inserting data...")
+            logger.debug("Inserting data...")
             node1.stress(['write', 'n=2K', 'no-warmup', 'cl=ALL', '-schema', 'replication(factor=2)', '-rate',
                           'threads=30', '-pop', 'seq={}..{}K'.format(2 * (job_thread_count - 1), 2 * job_thread_count)])
 
@@ -1097,12 +1100,12 @@ class TestRepair(BaseRepairTest):
             node1.watch_log_for('requesting merkle trees', filename='system.log')
             time.sleep(2)
 
-        debug("stopping node1")
+        logger.debug("stopping node1")
         node1.stop(gently=False, wait_other_notice=True)
         t1.join()
-        debug("starting node1 - first repair should have failed")
+        logger.debug("starting node1 - first repair should have failed")
         node1.start(wait_for_binary_proto=True, wait_other_notice=True)
-        debug("running second repair")
+        logger.debug("running second repair")
         if cluster.version() >= "2.2":
             node1.repair()
         else:
@@ -1154,34 +1157,34 @@ class TestRepair(BaseRepairTest):
         # interfere with the test (this must be after the populate)
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         cluster.set_batch_commitlog(enabled=True)
-        debug("Setting up cluster..")
+        logger.debug("Setting up cluster..")
         cluster.populate(3)
         node1, node2, node3 = cluster.nodelist()
 
         node_to_kill = node2 if (phase == 'sync' and initiator) else node3
-        debug("Setting up byteman on {}".format(node_to_kill.name))
+        logger.debug("Setting up byteman on {}".format(node_to_kill.name))
         # set up byteman
         node_to_kill.byteman_port = '8100'
         node_to_kill.import_config_files()
 
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.start(wait_other_notice=True)
 
-        debug("stopping node3")
+        logger.debug("stopping node3")
         node3.stop(gently=False, wait_other_notice=True)
 
         self.patient_exclusive_cql_connection(node1)
-        debug("inserting data while node3 is down")
+        logger.debug("inserting data while node3 is down")
         node1.stress(stress_options=['write', 'n=1k',
                                      'no-warmup', 'cl=ONE',
                                      '-schema', 'replication(factor=3)',
                                      '-rate', 'threads=10'])
 
-        debug("bring back node3")
+        logger.debug("bring back node3")
         node3.start(wait_other_notice=True, wait_for_binary_proto=True)
 
         script = 'stream_sleep.btm' if phase == 'sync' else 'repair_{}_sleep.btm'.format(phase)
-        debug("Submitting byteman script to {}".format(node_to_kill.name))
+        logger.debug("Submitting byteman script to {}".format(node_to_kill.name))
         # Sleep on anticompaction/stream so there will be time for node to be killed
         node_to_kill.byteman_submit(['./byteman/{}'.format(script)])
 
@@ -1192,12 +1195,12 @@ class TestRepair(BaseRepairTest):
             except Exception as e:
                 nodetool_error = e
 
-        debug("repair node1")
+        logger.debug("repair node1")
         # Launch in a external thread so it does not hang process
         t = Thread(target=node1_repair)
         t.start()
 
-        debug("Will kill {} in middle of {}".format(node_to_kill.name, phase))
+        logger.debug("Will kill {} in middle of {}".format(node_to_kill.name, phase))
         msg_to_wait = 'streaming plan for Repair'
         if phase == 'anticompaction':
             msg_to_wait = 'Got anticompaction request'
@@ -1206,7 +1209,7 @@ class TestRepair(BaseRepairTest):
         node_to_kill.watch_log_for(msg_to_wait, filename='debug.log')
         node_to_kill.stop(gently=False, wait_other_notice=True)
 
-        debug("Killed {}, now waiting repair to finish".format(node_to_kill.name))
+        logger.debug("Killed {}, now waiting repair to finish".format(node_to_kill.name))
         t.join(timeout=60)
         assert not t.isAlive, 'Repair still running after sync {} was killed'\
             .format("initiator" if initiator else "participant")
@@ -1277,8 +1280,8 @@ class TestRepairDataSystemTable(Tester):
 
     @pytest.mark.skip(reason='hangs CI')
     def test_initial_empty_repair_tables(self):
-        debug('repair tables:')
-        debug(self.repair_table_contents(node=self.node1, include_system_keyspaces=False))
+        logger.debug('repair tables:')
+        logger.debug(self.repair_table_contents(node=self.node1, include_system_keyspaces=False))
         repair_tables_dict = self.repair_table_contents(node=self.node1, include_system_keyspaces=False)._asdict()
         for table_name, table_contents in list(repair_tables_dict.items()):
             assert not table_contents, '{} is non-empty'.format(table_name)

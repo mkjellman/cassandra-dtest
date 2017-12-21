@@ -1,6 +1,7 @@
 import time
 import uuid
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel, Unauthorized
 from cassandra.query import SimpleStatement
@@ -10,6 +11,7 @@ from tools.assertions import assert_invalid
 from plugins.assert_tools import assert_regexp_matches
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def listify(item):

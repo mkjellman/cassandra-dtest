@@ -1,9 +1,10 @@
 import itertools
 import pytest
+import logging
 
 from cassandra.query import dict_factory
 
-from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester, debug
+from dtest import RUN_STATIC_UPGRADE_MATRIX, Tester
 from thrift_bindings.thrift010 import Cassandra
 from thrift_bindings.thrift010.Cassandra import (Column, ColumnDef,
                                            ColumnParent, ConsistencyLevel,
@@ -13,8 +14,8 @@ from tools.assertions import assert_length_equal
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs
 
-
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 def _create_dense_super_cf(name):
@@ -105,12 +106,12 @@ def _validate_dense_thrift(client, cf='dense_super_1'):
 @pytest.mark.upgrade_test
 class UpgradeSuperColumnsThrough(Tester):
     def upgrade_to_version(self, tag, nodes=None):
-        debug('Upgrading to ' + tag)
+        logger.debug('Upgrading to ' + tag)
         if nodes is None:
             nodes = self.cluster.nodelist()
 
         for node in nodes:
-            debug('Shutting down node: ' + node.name)
+            logger.debug('Shutting down node: ' + node.name)
             node.drain()
             node.watch_log_for("DRAINED")
             node.stop(wait_other_notice=False)
@@ -119,12 +120,12 @@ class UpgradeSuperColumnsThrough(Tester):
         for node in nodes:
             node.set_install_dir(version=tag)
             node.set_configuration_options(values={'start_rpc': 'true'})
-            debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
+            logger.debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
         self.cluster.set_install_dir(version=tag)
 
         # Restart nodes on new version
         for node in nodes:
-            debug('Starting %s on new version (%s)' % (node.name, tag))
+            logger.debug('Starting %s on new version (%s)' % (node.name, tag))
             # Setup log4j / logback again (necessary moving from 2.0 -> 2.1):
             node.set_log_level("INFO")
             node.start(wait_other_notice=True, wait_for_binary_proto=True)
@@ -296,7 +297,7 @@ class TestThrift(UpgradeTester):
         _validate_dense_thrift(client)
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
-            debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
+            logger.debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             _validate_dense_cql(cursor)
             _validate_dense_thrift(client)
@@ -329,7 +330,7 @@ class TestThrift(UpgradeTester):
         _validate_dense_thrift(client, cf='dense_super_2')
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
-            debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
+            logger.debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             _validate_dense_cql(cursor, cf='dense_super_2', key='renamed_key', column1='renamed_column1', column2='renamed_column2', value='renamed_value')
             _validate_dense_thrift(client, cf='dense_super_2')
@@ -366,7 +367,7 @@ class TestThrift(UpgradeTester):
         _validate_sparse_cql(cursor, column1='renamed_column1', key='renamed_key')
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
-            debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
+            logger.debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             _validate_sparse_cql(cursor, column1='renamed_column1', key='renamed_key')
             _validate_sparse_thrift(client)
@@ -400,7 +401,7 @@ class TestThrift(UpgradeTester):
         _validate_sparse_cql(cursor, cf='sparse_super_2')
 
         for is_upgraded, cursor in self.do_upgrade(cursor, row_factory=dict_factory, use_thrift=True):
-            debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
+            logger.debug("Querying {} node".format("upgraded" if is_upgraded else "old"))
             client = get_thrift_client(host, port)
             _validate_sparse_thrift(client, cf='sparse_super_2')
             _validate_sparse_cql(cursor, cf='sparse_super_2')

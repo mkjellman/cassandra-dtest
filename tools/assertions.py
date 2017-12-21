@@ -79,7 +79,7 @@ def assert_unavailable(fun, *args):
 
     Examples:
     assert_unavailable(session2.execute, "SELECT * FROM ttl_table;")
-    assert_unavailable(lambda c: debug(c.execute(statement)), session)
+    assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
     """
     _assert_exception(fun, *args, expected=(Unavailable, WriteTimeout, WriteFailure, ReadTimeout, ReadFailure))
 

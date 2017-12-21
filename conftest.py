@@ -1,6 +1,4 @@
 import pytest
-from datetime import datetime
-from distutils.version import LooseVersion
 import logging
 import os
 import shutil
@@ -11,23 +9,18 @@ import copy
 import inspect
 import subprocess
 
+from datetime import datetime
+from distutils.version import LooseVersion
 from netifaces import AF_INET
-import netifaces as ni
-
 from psutil import virtual_memory
+
+import netifaces as ni
 
 from ccmlib.common import get_version_from_build, is_win
 
 from dtest import cleanup_cluster
 from dtest_setup import DTestSetup
 from dtest_setup_overrides import DTestSetupOverrides
-
-"""
-logging.basicConfig(stream=sys.stdout,
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    level=logging.DEBUG)
-"""
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +124,16 @@ def fixture_dtest_setup_overrides():
     return DTestSetupOverrides()
 
 
-@pytest.fixture(scope="session", autouse=True)
+"""
+Not exactly sure why :\ but, this fixture needs to be scoped to class level and not
+session. If you invoke pytest with tests across multiple test classes, when scopped
+at session, the root logger appears to get reset between each test class invocation.
+this means that the first test to run not from the first test class (and all subsequent 
+tests), will have the root logger reset and see a level of NOTSET. Scoping it at the
+class level seems to work, and I guess it's not that much extra overhead to setup the
+logger once per test class vs. once per session in the grand scheme of things.
+"""
+@pytest.fixture(scope="class", autouse=True)
 def fixture_logging_setup(request):
     # set the root logger level to whatever the user asked for
     # all new loggers created will use the root logger as a template
@@ -167,6 +169,13 @@ def fixture_logging_setup(request):
 
     logging.basicConfig(level=log_level,
                         format=logging_format)
+
+
+@pytest.fixture(scope="session")
+def log_global_env_facts(fixture_dtest_config):
+    if pytest.config.pluginmanager.hasplugin('junitxml'):
+        my_junit = getattr(pytest.config, '_xml', None)
+        my_junit.add_global_property('USE_VNODES', fixture_dtest_config.use_vnodes)
 
 
 @pytest.fixture

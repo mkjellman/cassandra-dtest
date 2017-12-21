@@ -1,5 +1,6 @@
 import pytest
 import time
+import logging
 
 from cassandra import ConsistencyLevel
 from thrift.protocol import TBinaryProtocol
@@ -13,6 +14,7 @@ from tools.data import (create_c1c2_table, insert_c1c2, insert_columns, putget,
 from tools.misc import ImmutableMapping, retry_till_success
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestPutGet(Tester):

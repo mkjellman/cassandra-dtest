@@ -1,16 +1,19 @@
 import re
 import time
 import pytest
+import logging
+
 from threading import Thread
 
 from cassandra import ConsistencyLevel
 from ccmlib.node import TimeoutError, ToolError
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import assert_almost_equal, assert_all, assert_none
 from tools.data import insert_c1c2, query_c1c2
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestTopology(Tester):
@@ -38,13 +41,13 @@ class TestTopology(Tester):
         system.size_estimates for multi-dc, multi-ks scenario
         @jira_ticket CASSANDRA-9639
         """
-        debug("Creating cluster")
+        logger.debug("Creating cluster")
         cluster = self.cluster
         cluster.set_configuration_options(values={'num_tokens': 2})
         cluster.populate([2, 1])
         node1_1, node1_2, node2_1 = cluster.nodelist()
 
-        debug("Setting tokens")
+        logger.debug("Setting tokens")
         node1_tokens, node2_tokens, node3_tokens = ['-6639341390736545756,-2688160409776496397',
                                                     '-2506475074448728501,8473270337963525440',
                                                     '-3736333188524231709,8673615181726552074']
@@ -53,20 +56,20 @@ class TestTopology(Tester):
         node2_1.set_configuration_options(values={'initial_token': node3_tokens})
         cluster.set_configuration_options(values={'num_tokens': 2})
 
-        debug("Starting cluster")
+        logger.debug("Starting cluster")
         cluster.start()
 
         out, _, _ = node1_1.nodetool('ring')
-        debug("Nodetool ring output {}".format(out))
+        logger.debug("Nodetool ring output {}".format(out))
 
-        debug("Creating keyspaces")
+        logger.debug("Creating keyspaces")
         session = self.patient_cql_connection(node1_1)
         create_ks(session, 'ks1', 3)
         create_ks(session, 'ks2', {'dc1': 2})
         create_cf(session, 'ks1.cf1', columns={'c1': 'text', 'c2': 'text'})
         create_cf(session, 'ks2.cf2', columns={'c1': 'text', 'c2': 'text'})
 
-        debug("Refreshing size estimates")
+        logger.debug("Refreshing size estimates")
         node1_1.nodetool('refreshsizeestimates')
         node1_2.nodetool('refreshsizeestimates')
         node2_1.nodetool('refreshsizeestimates')
@@ -94,7 +97,7 @@ class TestTopology(Tester):
         127.0.0.3   8673615181726552074
         """
 
-        debug("Checking node1_1 size_estimates primary ranges")
+        logger.debug("Checking node1_1 size_estimates primary ranges")
         session = self.patient_exclusive_cql_connection(node1_1)
         assert_all(session, "SELECT range_start, range_end FROM system.size_estimates "
                             "WHERE keyspace_name = 'ks1'", [['-3736333188524231709', '-2688160409776496397'],
@@ -107,7 +110,7 @@ class TestTopology(Tester):
                                                             ['8473270337963525440', '8673615181726552074'],
                                                             ['8673615181726552074', '-9223372036854775808']])
 
-        debug("Checking node1_2 size_estimates primary ranges")
+        logger.debug("Checking node1_2 size_estimates primary ranges")
         session = self.patient_exclusive_cql_connection(node1_2)
         assert_all(session, "SELECT range_start, range_end FROM system.size_estimates "
                             "WHERE keyspace_name = 'ks1'", [['-2506475074448728501', '8473270337963525440'],
@@ -116,7 +119,7 @@ class TestTopology(Tester):
                             "WHERE keyspace_name = 'ks2'", [['-2506475074448728501', '8473270337963525440'],
                                                             ['-2688160409776496397', '-2506475074448728501']])
 
-        debug("Checking node2_1 size_estimates primary ranges")
+        logger.debug("Checking node2_1 size_estimates primary ranges")
         session = self.patient_exclusive_cql_connection(node2_1)
         assert_all(session, "SELECT range_start, range_end FROM system.size_estimates "
                             "WHERE keyspace_name = 'ks1'", [['-6639341390736545756', '-3736333188524231709'],
@@ -323,7 +326,7 @@ class TestTopology(Tester):
             query_c1c2(session, n, ConsistencyLevel.QUORUM)
 
         sizes = [node.data_size() for node in cluster.nodelist() if node.is_running()]
-        debug(sizes)
+        logger.debug(sizes)
         assert_almost_equal(sizes[0], sizes[1])
         assert_almost_equal((2.0 / 3.0) * sizes[0], sizes[2])
         assert_almost_equal(sizes[2], init_size)
@@ -374,11 +377,11 @@ class TestTopology(Tester):
         self.cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = self.cluster.nodelist()
 
-        debug('decommissioning...')
+        logger.debug('decommissioning...')
         node3.decommission(force=self.cluster.version() >= '4.0')
-        debug('stopping...')
+        logger.debug('stopping...')
         node3.stop()
-        debug('attempting restart...')
+        logger.debug('attempting restart...')
         node3.start(wait_other_notice=False)
         try:
             # usually takes 3 seconds, so give it a generous 15
@@ -422,17 +425,17 @@ class TestTopology(Tester):
         while t.is_alive():
             out = self.show_status(node2)
             if null_status_pattern.search(out):
-                debug("Matched null status entry")
+                logger.debug("Matched null status entry")
                 break
-            debug("Restarting node2")
+            logger.debug("Restarting node2")
             node2.stop(gently=False)
             node2.start(wait_for_binary_proto=True, wait_other_notice=False)
 
-        debug("Waiting for decommission to complete")
+        logger.debug("Waiting for decommission to complete")
         t.join()
         self.show_status(node2)
 
-        debug("Sleeping for 30 seconds to allow gossip updates")
+        logger.debug("Sleeping for 30 seconds to allow gossip updates")
         time.sleep(30)
         out = self.show_status(node2)
         assert not null_status_pattern.search(out)
@@ -466,8 +469,8 @@ class TestTopology(Tester):
 
     def show_status(self, node):
         out, _, _ = node.nodetool('status')
-        debug("Status as reported by node {}".format(node.address()))
-        debug(out)
+        logger.debug("Status as reported by node {}".format(node.address()))
+        logger.debug(out)
         return out
 
 
@@ -483,8 +486,8 @@ class DecommissionInParallel(Thread):
         try:
             out, err, _ = node.nodetool("decommission")
             node.watch_log_for("DECOMMISSIONED", from_mark=mark)
-            debug(out)
-            debug(err)
+            logger.debug(out)
+            logger.debug(err)
         except ToolError as e:
-            debug("Decommission failed with exception: " + str(e))
+            logger.debug("Decommission failed with exception: " + str(e))
             pass

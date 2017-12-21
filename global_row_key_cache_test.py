@@ -1,8 +1,11 @@
 import time
+import logging
 
 from cassandra.concurrent import execute_concurrent_with_args
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
+
+logger = logging.getLogger(__name__)
 
 
 class TestGlobalRowKeyCache(Tester):
@@ -15,7 +18,7 @@ class TestGlobalRowKeyCache(Tester):
         for keycache_size in (0, 10):
             for rowcache_size in (0, 10):
                 cluster.stop()
-                debug("Testing with keycache size of %d MB, rowcache size of %d MB " %
+                logger.debug("Testing with keycache size of %d MB, rowcache size of %d MB " %
                       (keycache_size, rowcache_size))
                 keyspace_name = 'ks_%d_%d' % (keycache_size, rowcache_size)
 
@@ -87,12 +90,12 @@ class TestGlobalRowKeyCache(Tester):
                 session.shutdown()
 
                 # let the data be written to the row/key caches.
-                debug("Letting caches be saved to disk")
+                logger.debug("Letting caches be saved to disk")
                 time.sleep(10)
-                debug("Stopping cluster")
+                logger.debug("Stopping cluster")
                 cluster.stop()
                 time.sleep(1)
-                debug("Starting cluster")
+                logger.debug("Starting cluster")
                 cluster.start()
                 time.sleep(5)  # read the data back from row and key caches
 

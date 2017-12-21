@@ -2,6 +2,7 @@ import itertools
 import struct
 import time
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel, InvalidRequest
 from cassandra.metadata import NetworkTopologyStrategy, SimpleStrategy
@@ -25,6 +26,7 @@ from tools.metadata_wrapper import (UpdatingClusterMetadataWrapper,
                                     UpdatingTableMetadataWrapper)
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class CQLTester(Tester):
@@ -822,7 +824,7 @@ class AbortedQueryTester(CQLTester):
         statement = SimpleStatement("SELECT * from test1",
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
-        assert_unavailable(lambda c: debug(c.execute(statement)), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
         node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
     def test_remote_query(self):
@@ -877,22 +879,22 @@ class AbortedQueryTester(CQLTester):
         statement = SimpleStatement("SELECT * from test2",
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
-        assert_unavailable(lambda c: debug(c.execute(statement)), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
 
         statement = SimpleStatement("SELECT * from test2 where id = 1",
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
-        assert_unavailable(lambda c: debug(c.execute(statement)), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
 
         statement = SimpleStatement("SELECT * from test2 where id IN (1, 2, 3) AND col > 10",
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
-        assert_unavailable(lambda c: debug(c.execute(statement)), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
 
         statement = SimpleStatement("SELECT * from test2 where col > 5 ALLOW FILTERING",
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
-        assert_unavailable(lambda c: debug(c.execute(statement)), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
 
         node2.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
@@ -941,7 +943,7 @@ class AbortedQueryTester(CQLTester):
         statement = session.prepare("SELECT * from test3 WHERE col = ? ALLOW FILTERING")
         statement.consistency_level = ConsistencyLevel.ONE
         statement.retry_policy = FallthroughRetryPolicy()
-        assert_unavailable(lambda c: debug(c.execute(statement, [50])), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement, [50])), session)
         node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
     def test_materialized_view(self):
@@ -995,7 +997,7 @@ class AbortedQueryTester(CQLTester):
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
 
-        assert_unavailable(lambda c: debug(c.execute(statement)), session)
+        assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
         node2.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
 
 

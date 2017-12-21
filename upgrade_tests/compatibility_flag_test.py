@@ -1,9 +1,11 @@
 import pytest
+import logging
 
-from dtest import Tester, debug
+from dtest import Tester
 from tools.assertions import assert_all
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.upgrade_test
@@ -28,7 +30,7 @@ class CompatibilityFlagTest(Tester):
         node1.drain()
         node1.watch_log_for("DRAINED")
         node1.stop(wait_other_notice=False)
-        debug("Upgrading to current version")
+        logger.debug("Upgrading to current version")
         self.set_node_to_current_version(node1)
         node1.start(wait_for_binary_proto=True)
 
@@ -49,7 +51,7 @@ class CompatibilityFlagTest(Tester):
         node1.drain()
         node1.watch_log_for("DRAINED")
         node1.stop(wait_other_notice=False)
-        debug("Upgrading to current version")
+        logger.debug("Upgrading to current version")
         self.set_node_to_current_version(node1)
         node1.start(jvm_args=["-Dcassandra.force_3_0_protocol_version=true"], wait_for_binary_proto=True)
 

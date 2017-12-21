@@ -1,13 +1,15 @@
 import os
 import pytest
 import re
+import logging
 
 from ccmlib.node import ToolError
-from dtest import Tester, debug
+from dtest import Tester
 from tools.assertions import assert_all, assert_invalid
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestNodetool(Tester):
@@ -57,7 +59,7 @@ class TestNodetool(Tester):
             out_str = out
             if isinstance(out, (bytes, bytearray)):
                 out_str = out.decode("utf-8")
-            debug(out_str)
+            logger.debug(out_str)
             for line in out_str.split(os.linesep):
                 if line.startswith('Data Center'):
                     assert line.endswith(node.data_center), \
@@ -87,7 +89,7 @@ class TestNodetool(Tester):
         for timeout_type in types:
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             assert 0 == len(err), err
-            debug(out)
+            logger.debug(out)
             assert re.search(r'.* \d+ ms', out)
 
         # set all of the timeouts to 123
@@ -99,7 +101,7 @@ class TestNodetool(Tester):
         for timeout_type in types:
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
             assert 0 == len(err), err
-            debug(out)
+            logger.debug(out)
             assert re.search(r'.* 123 ms', out)
 
     def test_meaningless_notice_in_status(self):

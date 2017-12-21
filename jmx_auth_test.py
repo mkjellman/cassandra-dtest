@@ -1,4 +1,5 @@
 import pytest
+import logging
 from distutils.version import LooseVersion
 
 from ccmlib.node import ToolError
@@ -6,6 +7,7 @@ from dtest import Tester
 from tools.jmxutils import apply_jmx_authentication
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('3.6')

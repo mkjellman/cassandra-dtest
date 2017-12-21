@@ -3,13 +3,15 @@ import subprocess
 import time
 import distutils.dir_util
 import pytest
+import logging
 
 from ccmlib import common as ccmcommon
 
-from dtest import Tester, debug, create_ks, create_cf
+from dtest import Tester, create_ks, create_cf
 from tools.assertions import assert_all, assert_none, assert_one
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 # WARNING: sstableloader tests should be added to TestSSTableGenerationAndLoading (below),
@@ -96,8 +98,8 @@ class BaseSStableLoaderTest(Tester):
                     cmd_args = [sstableloader, '--nodes', host, full_cf_dir]
                     p = subprocess.Popen(cmd_args, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=env)
                     exit_status = p.wait()
-                    debug('stdout: {out}'.format(out=p.stdout))
-                    debug('stderr: {err}'.format(err=p.stderr))
+                    logger.debug('stdout: {out}'.format(out=p.stdout))
+                    logger.debug('stderr: {err}'.format(err=p.stderr))
                     assert 0 == exit_status, \
                         "sstableloader exited with a non-zero status: {}".format(exit_status)
 
@@ -115,22 +117,22 @@ class BaseSStableLoaderTest(Tester):
         for compression_option in (pre_compression, post_compression):
             assert compression_option in (None, 'Snappy', 'Deflate')
 
-        debug("Testing sstableloader with pre_compression=%s and post_compression=%s" % (pre_compression, post_compression))
+        logger.debug("Testing sstableloader with pre_compression=%s and post_compression=%s" % (pre_compression, post_compression))
         if self.upgrade_from:
-            debug("Testing sstableloader with upgrade_from=%s and compact=%s" % (self.upgrade_from, self.compact))
+            logger.debug("Testing sstableloader with upgrade_from=%s and compact=%s" % (self.upgrade_from, self.compact))
 
         cluster = self.cluster
         if self.upgrade_from:
-            debug("Generating sstables with version %s" % (self.upgrade_from))
+            logger.debug("Generating sstables with version %s" % (self.upgrade_from))
             default_install_dir = self.cluster.get_install_dir()
             # Forcing cluster version on purpose
             cluster.set_install_dir(version=self.upgrade_from)
-        debug("Using jvm_args={}".format(self.jvm_args))
+        logger.debug("Using jvm_args={}".format(self.jvm_args))
         cluster.populate(2).start(jvm_args=list(self.jvm_args))
         node1, node2 = cluster.nodelist()
         time.sleep(.5)
 
-        debug("creating keyspace and inserting")
+        logger.debug("creating keyspace and inserting")
         session = self.cql_connection(node1)
         self.create_schema(session, ks, pre_compression)
 
@@ -143,28 +145,28 @@ class BaseSStableLoaderTest(Tester):
         node2.nodetool('drain')
         node2.stop()
 
-        debug("Making a copy of the sstables")
+        logger.debug("Making a copy of the sstables")
         # make a copy of the sstables
         self.copy_sstables(cluster, node1)
 
-        debug("Wiping out the data and restarting cluster")
+        logger.debug("Wiping out the data and restarting cluster")
         # wipe out the node data.
         cluster.clear()
 
         if self.upgrade_from:
-            debug("Running sstableloader with version from %s" % (default_install_dir))
+            logger.debug("Running sstableloader with version from %s" % (default_install_dir))
             # Return to previous version
             cluster.set_install_dir(install_dir=default_install_dir)
 
         cluster.start(jvm_args=list(self.jvm_args))
         time.sleep(5)  # let gossip figure out what is going on
 
-        debug("re-creating the keyspace and column families.")
+        logger.debug("re-creating the keyspace and column families.")
         session = self.cql_connection(node1)
         self.create_schema(session, ks, post_compression)
         time.sleep(2)
 
-        debug("Calling sstableloader")
+        logger.debug("Calling sstableloader")
         # call sstableloader to re-load each cf.
         self.load_sstables(cluster, node1, ks)
 
@@ -175,18 +177,18 @@ class BaseSStableLoaderTest(Tester):
                 query = "SELECT * FROM counter1 WHERE KEY='{}'".format(i)
                 assert_one(session, query, [str(i), 1])
 
-        debug("Reading data back")
+        logger.debug("Reading data back")
         # Now we should have sstables with the loaded data, and the existing
         # data. Lets read it all to make sure it is all there.
         read_and_validate_data(session)
 
-        debug("scrubbing, compacting, and repairing")
+        logger.debug("scrubbing, compacting, and repairing")
         # do some operations and try reading the data again.
         node1.nodetool('scrub')
         node1.nodetool('compact')
         node1.nodetool('repair')
 
-        debug("Reading data back one more time")
+        logger.debug("Reading data back one more time")
         read_and_validate_data(session)
 
         # check that RewindableDataInputStreamPlus spill files are properly cleaned up
@@ -196,7 +198,7 @@ class BaseSStableLoaderTest(Tester):
                 for ddir in os.listdir(data_dir):
                     keyspace_dir = os.path.join(data_dir, ddir)
                     temp_files = self.glob_data_dirs(os.path.join(keyspace_dir, '*', "tmp", "*.dat"))
-                    debug("temp files: " + str(temp_files))
+                    logger.debug("temp files: " + str(temp_files))
                     assert 0 == len(temp_files), "Temporary files were not cleaned up."
 
 

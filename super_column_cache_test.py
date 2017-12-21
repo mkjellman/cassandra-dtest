@@ -1,4 +1,5 @@
 import pytest
+import logging
 
 from dtest_setup_overrides import DTestSetupOverrides
 
@@ -13,6 +14,7 @@ from thrift_tests import get_thrift_client
 from tools.misc import ImmutableMapping
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.0', max_version='4')

@@ -1,5 +1,6 @@
 import uuid
 import pytest
+import logging
 
 from cassandra import ConsistencyLevel, WriteFailure, WriteTimeout
 
@@ -8,6 +9,7 @@ from thrift_bindings.thrift010 import ttypes as thrift_types
 from thrift_tests import get_thrift_client
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 KEYSPACE = "foo"
 

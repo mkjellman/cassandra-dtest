@@ -1,11 +1,14 @@
 import random
 import threading
 import uuid
+import logging
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 
 from dtest import Tester, create_ks
+
+logger = logging.getLogger(__name__)
 
 
 class DeleteInsertTest(Tester):

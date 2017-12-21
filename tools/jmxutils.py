@@ -3,11 +3,13 @@ import os
 import subprocess
 import urllib.request
 import urllib.parse
+import logging
 
 import ccmlib.common as common
 
-from dtest import warning
 from distutils.version import LooseVersion
+
+logger = logging.getLogger(__name__)
 
 JOLOKIA_JAR = os.path.join('lib', 'jolokia-jvm-1.2.3-agent.jar')
 CLASSPATH_SEP = ';' if common.is_win() else ':'
@@ -19,7 +21,7 @@ def jolokia_classpath():
         tools_jar = os.path.join(os.environ['JAVA_HOME'], 'lib', 'tools.jar')
         return CLASSPATH_SEP.join((tools_jar, JOLOKIA_JAR))
     else:
-        warning("Environment variable $JAVA_HOME not present: jmx-based " +
+        logger.warning("Environment variable $JAVA_HOME not present: jmx-based " +
                 "tests may fail because of missing $JAVA_HOME/lib/tools.jar.")
         return JOLOKIA_JAR
 

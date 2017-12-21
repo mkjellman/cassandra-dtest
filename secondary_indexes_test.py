@@ -4,6 +4,7 @@ import re
 import time
 import uuid
 import pytest
+import logging
 
 from cassandra import InvalidRequest
 from cassandra.concurrent import (execute_concurrent,
@@ -11,12 +12,13 @@ from cassandra.concurrent import (execute_concurrent,
 from cassandra.protocol import ConfigurationException
 from cassandra.query import BatchStatement, SimpleStatement
 
-from dtest import (Tester, debug, CASSANDRA_VERSION_FROM_BUILD, create_ks, create_cf)
+from dtest import Tester, CASSANDRA_VERSION_FROM_BUILD, create_ks, create_cf
 from tools.assertions import assert_bootstrap_state, assert_invalid, assert_none, assert_one, assert_row_count
 from tools.data import block_until_index_is_built, rows_to_list
 from tools.misc import new_node
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestSecondaryIndexes(Tester):
@@ -153,7 +155,7 @@ class TestSecondaryIndexes(Tester):
         # This only occurs when dropping and recreating with
         # the same name, so loop through this test a few times:
         for i in range(10):
-            debug("round %s" % i)
+            logger.debug("round %s" % i)
             try:
                 session.execute("DROP KEYSPACE ks")
             except ConfigurationException:
@@ -191,7 +193,7 @@ class TestSecondaryIndexes(Tester):
         # This only occurs when dropping and recreating with
         # the same name, so loop through this test a few times:
         for i in range(10):
-            debug("round %s" % i)
+            logger.debug("round %s" % i)
             try:
                 session.execute("DROP COLUMNFAMILY ks.cf")
             except InvalidRequest:
@@ -457,22 +459,22 @@ class TestSecondaryIndexes(Tester):
         session.execute("CREATE TABLE k.t (k int PRIMARY KEY, v int)")
         session.execute("INSERT INTO k.t(k, v) VALUES (0, 1)")
 
-        debug("Create the index")
+        logger.debug("Create the index")
         session.execute("CREATE INDEX idx ON k.t(v)")
         block_until_index_is_built(node, session, 'k', 't', 'idx')
         before_files = self._index_sstables_files(node, 'k', 't', 'idx')
 
-        debug("Verify the index is marked as built and it can be queried")
+        logger.debug("Verify the index is marked as built and it can be queried")
         assert_one(session, """SELECT table_name, index_name FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
 
-        debug("Restart the node and verify the index build is not submitted")
+        logger.debug("Restart the node and verify the index build is not submitted")
         node.stop()
         node.start(wait_for_binary_proto=True)
         after_files = self._index_sstables_files(node, 'k', 't', 'idx')
         assert before_files == after_files
 
-        debug("Verify the index is still marked as built and it can be queried")
+        logger.debug("Verify the index is still marked as built and it can be queried")
         session = self.patient_cql_connection(node)
         assert_one(session, """SELECT table_name, index_name FROM system."IndexInfo" WHERE table_name='k'""", ['k', 'idx'])
         assert_one(session, "SELECT * FROM k.t WHERE v = 1", [0, 1])
@@ -561,7 +563,7 @@ class TestSecondaryIndexes(Tester):
                               actual=match_counts[event_source], all=match_counts))
 
         def retry_on_failure(trace, regex, expected_matches, match_counts, event_source, min_expected, max_expected):
-            debug("Trace event inspection did not match expected, sleeping before re-fetching trace events. "
+            logger.debug("Trace event inspection did not match expected, sleeping before re-fetching trace events. "
                   "Expected: {expected} Actual: {actual}".format(expected=expected_matches, actual=match_counts))
             time.sleep(2)
             trace.populate(max_wait=2.0)
@@ -1107,22 +1109,22 @@ class TestUpgradeSecondaryIndexes(Tester):
         node1.drain()
         node1.watch_log_for("DRAINED")
         node1.stop(wait_other_notice=False)
-        debug("Upgrading to current version")
+        logger.debug("Upgrading to current version")
         self.set_node_to_current_version(node1)
         node1.start(wait_other_notice=True)
 
         [node1] = cluster.nodelist()
         session = self.patient_cql_connection(node1)
-        debug(cluster.cassandra_version())
+        logger.debug(cluster.cassandra_version())
         assert_one(session, query, [0, 0])
 
     def upgrade_to_version(self, tag, nodes=None):
-        debug('Upgrading to ' + tag)
+        logger.debug('Upgrading to ' + tag)
         if nodes is None:
             nodes = self.cluster.nodelist()
 
         for node in nodes:
-            debug('Shutting down node: ' + node.name)
+            logger.debug('Shutting down node: ' + node.name)
             node.drain()
             node.watch_log_for("DRAINED")
             node.stop(wait_other_notice=False)
@@ -1130,12 +1132,12 @@ class TestUpgradeSecondaryIndexes(Tester):
         # Update Cassandra Directory
         for node in nodes:
             node.set_install_dir(version=tag)
-            debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
+            logger.debug("Set new cassandra dir for %s: %s" % (node.name, node.get_install_dir()))
         self.cluster.set_install_dir(version=tag)
 
         # Restart nodes on new version
         for node in nodes:
-            debug('Starting %s on new version (%s)' % (node.name, tag))
+            logger.debug('Starting %s on new version (%s)' % (node.name, tag))
             # Setup log4j / logback again (necessary moving from 2.0 -> 2.1):
             node.set_log_level("INFO")
             node.start(wait_other_notice=True)

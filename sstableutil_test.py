@@ -3,14 +3,16 @@ import os
 import subprocess
 import time
 import pytest
+import logging
 
 from ccmlib import common
 from ccmlib.node import ToolError
 
-from dtest import Tester, debug
+from dtest import Tester
 from tools.intervention import InterruptCompaction
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 # These must match the stress schema names
 KeyspaceName = 'keyspace1'
@@ -70,7 +72,7 @@ class SSTableUtilTest(Tester):
         t.start()
 
         try:
-            debug("Compacting...")
+            logger.debug("Compacting...")
             node.compact()
         except ToolError:
             pass  # expected to fail
@@ -83,7 +85,7 @@ class SSTableUtilTest(Tester):
         # In most cases we should end up with some temporary files to clean up, but it may happen
         # that no temporary files are created if compaction finishes too early or starts too late
         # see CASSANDRA-11497
-        debug("Got {} final files and {} tmp files after compaction was interrupted"
+        logger.debug("Got {} final files and {} tmp files after compaction was interrupted"
               .format(len(finalfiles), len(tmpfiles)))
 
         self._invoke_sstableutil(KeyspaceName, TableName, cleanup=True)
@@ -91,7 +93,7 @@ class SSTableUtilTest(Tester):
         self._check_files(node, KeyspaceName, TableName, finalfiles, [])
 
         # restart to make sure not data is lost
-        debug("Restarting node...")
+        logger.debug("Restarting node...")
         node.start(wait_for_binary_proto=True)
         # in some environments, a compaction may start that would change sstable files. We should wait if so
         node.wait_for_compactions()
@@ -99,7 +101,7 @@ class SSTableUtilTest(Tester):
         finalfiles, tmpfiles = self._check_files(node, KeyspaceName, TableName)
         assert 0 == len(tmpfiles)
 
-        debug("Running stress to ensure data is readable")
+        logger.debug("Running stress to ensure data is readable")
         self._read_data(node, numrecords)
 
     def _create_data(self, node, ks, table, numrecords):
@@ -134,16 +136,16 @@ class SSTableUtilTest(Tester):
         else:
             expected_tmpfiles = _normcase_all(expected_tmpfiles)
 
-        debug("Comparing all files...")
+        logger.debug("Comparing all files...")
         assert sstablefiles == allfiles
 
-        debug("Comparing final files...")
+        logger.debug("Comparing final files...")
         assert expected_finalfiles == finalfiles
 
-        debug("Comparing tmp files...")
+        logger.debug("Comparing tmp files...")
         assert expected_tmpfiles == tmpfiles
 
-        debug("Comparing op logs...")
+        logger.debug("Comparing op logs...")
         assert expected_oplogs == oplogs
 
         return finalfiles, tmpfiles
@@ -152,7 +154,7 @@ class SSTableUtilTest(Tester):
         """
         Invoke sstableutil and return the list of files, if any
         """
-        debug("About to invoke sstableutil with type {}...".format(type))
+        logger.debug("About to invoke sstableutil with type {}...".format(type))
         node1 = self.cluster.nodelist()[0]
         env = common.make_cassandra_env(node1.get_install_cassandra_root(), node1.get_node_cassandra_root())
         tool_bin = node1.get_tool('sstableutil')
@@ -173,11 +175,11 @@ class SSTableUtilTest(Tester):
         assert p.returncode, 0 == "Error invoking sstableutil; returned {code}".format(code=p.returncode)
 
         if stdout:
-            debug(stdout)
+            logger.debug(stdout)
 
         match = ks + os.sep + table + '-'
         ret = sorted([s for s in stdout.decode("utf-8").splitlines() if match in s])
-        debug("Got {} files of type {}".format(len(ret), type))
+        logger.debug("Got {} files of type {}".format(len(ret), type))
         return ret
 
     def _get_sstable_files(self, node, ks, table):

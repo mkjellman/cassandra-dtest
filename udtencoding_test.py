@@ -1,7 +1,10 @@
 import time
+import logging
 
 from tools.assertions import assert_invalid
 from dtest import Tester, create_ks
+
+logger = logging.getLogger(__name__)
 
 
 class TestUDTEncoding(Tester):

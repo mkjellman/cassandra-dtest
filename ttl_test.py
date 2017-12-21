@@ -1,16 +1,19 @@
 import time
 import pytest
+import logging
+
 from collections import OrderedDict
 
 from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from cassandra.util import sortedset
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.assertions import (assert_all, assert_almost_equal, assert_none,
                               assert_row_count, assert_unavailable)
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.0')
@@ -426,8 +429,8 @@ class TestDistributedTTL(Tester):
         ttl_1 = self.session1.execute('SELECT ttl(col1) FROM ttl_table;')[0][0]
         ttl_2 = session2.execute('SELECT ttl(col1) FROM ttl_table;')[0][0]
 
-        debug("ttl_1 is {}:".format(ttl_1))
-        debug("ttl_2 is {}:".format(ttl_2))
+        logger.debug("ttl_1 is {}:".format(ttl_1))
+        logger.debug("ttl_2 is {}:".format(ttl_2))
         assert abs(ttl_1 - ttl_2) <= 1
 
     def test_ttl_is_respected_on_repair(self):

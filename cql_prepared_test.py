@@ -1,9 +1,11 @@
 import time
 import pytest
+import logging
 
 from dtest import Tester, create_ks
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since("1.2")

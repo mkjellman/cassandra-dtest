@@ -1,17 +1,20 @@
 import math
 import time
 import pytest
+import logging
+
 from distutils.version import LooseVersion
 
 from cassandra import FunctionFailure
 
 from dtest_setup_overrides import DTestSetupOverrides
 
-from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug, create_ks
+from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, create_ks
 from tools.assertions import assert_invalid, assert_none, assert_one
 from tools.misc import ImmutableMapping
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.2')
@@ -239,7 +242,7 @@ class TestUserFunctions(Tester):
             frozen_vals = (True,)
 
         for frozen in frozen_vals:
-            debug("Using {} UDTs".format("frozen" if frozen else "non-frozen"))
+            logger.debug("Using {} UDTs".format("frozen" if frozen else "non-frozen"))
 
             table_name = "tab_frozen" if frozen else "tab"
             column_type = "frozen<test>" if frozen else "test"

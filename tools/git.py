@@ -1,17 +1,17 @@
 import subprocess
+import logging
 
-from dtest import CASSANDRA_DIR, debug
+logger = logging.getLogger(__name__)
 
 
-def cassandra_git_branch(cdir=None):
+def cassandra_git_branch(cassandra_dir):
     '''Get the name of the git branch at CASSANDRA_DIR.
     '''
-    cdir = CASSANDRA_DIR if cdir is None else cdir
     try:
-        p = subprocess.Popen(['git', 'branch'], cwd=cdir,
+        p = subprocess.Popen(['git', 'branch'], cwd=cassandra_dir,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as e:  # e.g. if git isn't available, just give up and return None
-        debug('shelling out to git failed: {}'.format(e))
+        logger.debug('shelling out to git failed: {}'.format(e))
         return
 
     out, err = p.communicate()

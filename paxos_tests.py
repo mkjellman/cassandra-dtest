@@ -1,5 +1,6 @@
 import time
 import pytest
+import logging
 
 from threading import Thread
 
@@ -10,6 +11,7 @@ from tools.assertions import assert_unavailable
 from dtest import Tester, create_ks
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.0.6')

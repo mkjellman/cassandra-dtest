@@ -11,7 +11,7 @@ from cassandra.cluster import NoHostAvailable
 from cassandra.protocol import ServerError, SyntaxException
 
 from dtest_setup_overrides import DTestSetupOverrides
-from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
+from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester
 from tools.assertions import (assert_all, assert_exception, assert_invalid,
                               assert_length_equal, assert_one,
                               assert_unauthorized)

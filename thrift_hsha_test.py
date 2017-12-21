@@ -5,15 +5,14 @@ import subprocess
 import time
 import unittest
 import pytest
+import logging
 
-from dtest import DEFAULT_DIR, Tester, debug, create_ks
+from dtest import DEFAULT_DIR, Tester, create_ks
 from thrift_tests import get_thrift_client
-from tools.jmxutils import (JolokiaAgent, make_mbean,
-                            remove_perf_disable_shared_mem)
-
+from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 since = pytest.mark.since
-
+logger = logging.getLogger(__name__)
 
 JNA_PATH = '/usr/share/java/jna.jar'
 ATTACK_JAR = 'lib/cassandra-attack.jar'
@@ -21,7 +20,7 @@ ATTACK_JAR = 'lib/cassandra-attack.jar'
 # Use jna.jar in {CASSANDRA_DIR,DEFAULT_DIR}/lib/, since >=2.1 needs correct version
 try:
     if glob.glob('%s/lib/jna-*.jar' % os.environ['CASSANDRA_DIR']):
-        debug('Using jna.jar in CASSANDRA_DIR/lib..')
+        logger.debug('Using jna.jar in CASSANDRA_DIR/lib..')
         JNA_IN_LIB = glob.glob('%s/lib/jna-*.jar' % os.environ['CASSANDRA_DIR'])
         JNA_PATH = JNA_IN_LIB[0]
 except KeyError:
@@ -65,13 +64,13 @@ class ThriftHSHATest(Tester):
         pools = []
         connected_thrift_clients = make_mbean('metrics', type='Client', name='connectedThriftClients')
         for i in range(10):
-            debug("Creating connection pools..")
+            logger.debug("Creating connection pools..")
             for x in range(3):
                 pools.append(make_connection())
-            debug("Disabling/Enabling thrift iteration #{i}".format(i=i))
+            logger.debug("Disabling/Enabling thrift iteration #{i}".format(i=i))
             node1.nodetool('disablethrift')
             node1.nodetool('enablethrift')
-            debug("Closing connections from the client side..")
+            logger.debug("Closing connections from the client side..")
             for client in pools:
                 client.transport.close()
 
@@ -106,7 +105,7 @@ class ThriftHSHATest(Tester):
         cluster.populate(2)
         nodes = (node1, node2) = cluster.nodelist()
         [n.start(use_jna=True) for n in nodes]
-        debug("Cluster started.")
+        logger.debug("Cluster started.")
 
         session = self.patient_cql_connection(node1)
         create_ks(session, 'tmp', 2)
@@ -119,13 +118,13 @@ class ThriftHSHATest(Tester):
 ) WITH COMPACT STORAGE;
 """)
 
-        debug("running attack jar...")
+        logger.debug("running attack jar...")
         p = subprocess.Popen(shlex.split("java -jar {attack_jar}".format(attack_jar=ATTACK_JAR)))
         p.communicate()
 
-        debug("Stopping cluster..")
+        logger.debug("Stopping cluster..")
         cluster.stop()
-        debug("Starting cluster..")
+        logger.debug("Starting cluster..")
         cluster.start(no_wait=True)
-        debug("Waiting 10 seconds before we're done..")
+        logger.debug("Waiting 10 seconds before we're done..")
         time.sleep(10)

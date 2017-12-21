@@ -1,15 +1,17 @@
 import time
 import pytest
+import logging
 
 from dtest_setup_overrides import DTestSetupOverrides
-
-from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
-                                  ConsistencyLevel, CounterColumn)
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from thrift_tests import get_thrift_client
 from tools.misc import ImmutableMapping
 
+from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
+                                  ConsistencyLevel, CounterColumn)
+
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.0', max_version='4')
@@ -59,10 +61,10 @@ class TestSuperCounterClusterRestart(Tester):
         time.sleep(1)
         cluster.flush()
 
-        debug("Stopping cluster")
+        logger.debug("Stopping cluster")
         cluster.stop()
         time.sleep(5)
-        debug("Starting cluster")
+        logger.debug("Starting cluster")
         cluster.start()
         time.sleep(5)
 
@@ -78,9 +80,9 @@ class TestSuperCounterClusterRestart(Tester):
             column_or_super_column = thrift_conn.get('row_0', column_path,
                                                      ConsistencyLevel.QUORUM)
             val = column_or_super_column.counter_column.value
-            debug(str(val)),
+            logger.debug(str(val)),
             from_db.append(val)
-        debug("")
+        logger.debug("")
 
         expected = [NUM_ADDS for i in range(NUM_SUBCOLS)]
 

@@ -1,7 +1,10 @@
 import threading
 import time
+import logging
 
 from dtest import Tester
+
+logger = logging.getLogger(__name__)
 
 
 class TestMetadata(Tester):

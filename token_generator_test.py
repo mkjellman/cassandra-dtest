@@ -3,14 +3,16 @@ import subprocess
 import time
 import pytest
 import parse
+import logging
 
 from cassandra.util import sortedset
 from ccmlib import common
 
-from dtest import Tester, debug
+from dtest import Tester
 from tools.data import rows_to_list
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 @since('2.0.16', max_version='3.0.0')
@@ -37,7 +39,7 @@ class TestTokenGenerator(Tester):
         for n in nodes:
             args.append(str(n))
 
-        debug('Invoking {}'.format(args))
+        logger.debug('Invoking {}'.format(args))
         token_gen_output = subprocess.check_output(args)
         lines = token_gen_output.split("\n")
         dc_tokens = None

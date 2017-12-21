@@ -6,6 +6,7 @@ import struct
 import time
 from distutils.version import LooseVersion
 import pytest
+import logging
 
 from cassandra import WriteTimeout
 from cassandra.cluster import NoHostAvailable, OperationTimedOut
@@ -13,11 +14,12 @@ from ccmlib.common import is_win
 from ccmlib.node import Node, TimeoutError
 from parse import parse
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.assertions import (assert_almost_equal, assert_none, assert_one, assert_lists_equal_ignoring_order)
 from tools.data import rows_to_list
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestCommitLog(Tester):
@@ -46,7 +48,7 @@ class TestCommitLog(Tester):
         default_conf = {'commitlog_sync_period_in_ms': 1000}
 
         set_conf = dict(default_conf, **configuration)
-        debug('setting commitlog configuration with the following values: '
+        logger.debug('setting commitlog configuration with the following values: '
               '{set_conf} and the following kwargs: {kwargs}'.format(
                   set_conf=set_conf, kwargs=kwargs))
         self.cluster.set_configuration_options(values=set_conf, **kwargs)
@@ -66,15 +68,15 @@ class TestCommitLog(Tester):
 
     def _change_commitlog_perms(self, mod):
         for path in self._get_commitlog_paths():
-            debug('changing permissions to {perms} on {path}'.format(perms=oct(mod), path=path))
+            logger.debug('changing permissions to {perms} on {path}'.format(perms=oct(mod), path=path))
             os.chmod(path, mod)
             commitlogs = glob.glob(path + '/*')
 
             if commitlogs:
-                debug('changing permissions to {perms} on the following files:'
+                logger.debug('changing permissions to {perms} on the following files:'
                       '\n  {files}'.format(perms=oct(mod), files='\n  '.join(commitlogs)))
             else:
-                debug(self._change_commitlog_perms.__name__ + ' called on empty commitlog directory '
+                logger.debug(self._change_commitlog_perms.__name__ + ' called on empty commitlog directory '
                       '{path} with permissions {perms}'.format(path=path, perms=oct(mod)))
 
             for commitlog in commitlogs:
@@ -121,9 +123,9 @@ class TestCommitLog(Tester):
         for i, f in enumerate(commitlogs):
             size = os.path.getsize(f)
             size_in_mb = int(size / 1024 / 1024)
-            debug('segment file {} {}; smaller already found: {}'.format(f, size_in_mb, smaller_found))
+            logger.debug('segment file {} {}; smaller already found: {}'.format(f, size_in_mb, smaller_found))
             if size_in_mb < 1 or size < (segment_size * 0.1):
-                debug('segment file not yet used; moving to next file')
+                logger.debug('segment file not yet used; moving to next file')
                 continue  # commitlog not yet used
 
             try:
@@ -146,7 +148,7 @@ class TestCommitLog(Tester):
         """
         Provoke the commitlog failure
         """
-        debug('Provoking commitlog failure')
+        logger.debug('Provoking commitlog failure')
         # Test things are ok at this point
         self.session1.execute("""
             INSERT INTO test (key, col1) VALUES (1, 1);
@@ -178,7 +180,7 @@ class TestCommitLog(Tester):
         node1.start()
         session = self.patient_cql_connection(node1)
 
-        debug("Creating schema")
+        logger.debug("Creating schema")
         create_ks(session, 'Test', 1)
         session.execute("""
             CREATE TABLE mytable (
@@ -196,7 +198,7 @@ class TestCommitLog(Tester):
             PRIMARY KEY (a, b);
         """)
 
-        debug("Insert data")
+        logger.debug("Insert data")
         num_rows = 1024  # maximum number of mutations replayed at once by the commit log
         for i in range(num_rows):
             session.execute("INSERT INTO Test.mytable (a, b, c) VALUES (0, {i}, {i})".format(i=i))
@@ -204,16 +206,16 @@ class TestCommitLog(Tester):
         node1.stop(gently=False)
         node1.mark_log_for_errors()
 
-        debug("Verify commitlog was written before abrupt stop")
+        logger.debug("Verify commitlog was written before abrupt stop")
         commitlog_files = os.listdir(os.path.join(node1.get_path(), 'commitlogs'))
         assert [] != commitlog_files
 
         # set a short timeout to ensure lock contention will generally exceed this
         node1.set_configuration_options({'write_request_timeout_in_ms': 30})
-        debug("Starting node again")
+        logger.debug("Starting node again")
         node1.start()
 
-        debug("Verify commit log was replayed on startup")
+        logger.debug("Verify commit log was replayed on startup")
         start_time, replay_complete = time.time(), False
         while not replay_complete:
             matches = node1.grep_log(r".*WriteTimeoutException.*")
@@ -222,9 +224,9 @@ class TestCommitLog(Tester):
             replay_complete = node1.grep_log("Log replay complete")
             assert time.time() - start_time < 120, "Did not finish commitlog replay within 120 seconds"
 
-        debug("Reconnecting to node")
+        logger.debug("Reconnecting to node")
         session = self.patient_cql_connection(node1)
-        debug("Make query to ensure data is present")
+        logger.debug("Make query to ensure data is present")
         res = list(session.execute("SELECT * FROM Test.mytable"))
         assert num_rows == len(res), res
 
@@ -236,7 +238,7 @@ class TestCommitLog(Tester):
         node1.set_batch_commitlog(enabled=True)
         node1.start()
 
-        debug("Insert data")
+        logger.debug("Insert data")
         session = self.patient_cql_connection(node1)
         create_ks(session, 'Test', 1)
         session.execute("""
@@ -251,28 +253,28 @@ class TestCommitLog(Tester):
         session.execute("INSERT INTO Test. users (user_name, password, gender, state, birth_year) "
                         "VALUES('gandalf', 'p@$$', 'male', 'WA', 1955);")
 
-        debug("Verify data is present")
+        logger.debug("Verify data is present")
         session = self.patient_cql_connection(node1)
         res = session.execute("SELECT * FROM Test. users")
         assert rows_to_list(res) == [['gandalf', 1955, 'male', 'p@$$', 'WA']]
 
-        debug("Stop node abruptly")
+        logger.debug("Stop node abruptly")
         node1.stop(gently=False)
 
-        debug("Verify commitlog was written before abrupt stop")
+        logger.debug("Verify commitlog was written before abrupt stop")
         commitlog_dir = os.path.join(node1.get_path(), 'commitlogs')
         commitlog_files = os.listdir(commitlog_dir)
         assert len(commitlog_files) > 0
 
-        debug("Verify no SSTables were flushed before abrupt stop")
+        logger.debug("Verify no SSTables were flushed before abrupt stop")
         assert 0 == len(node1.get_sstables('test', 'users'))
 
-        debug("Verify commit log was replayed on startup")
+        logger.debug("Verify commit log was replayed on startup")
         node1.start()
         node1.watch_log_for("Log replay complete")
         # Here we verify from the logs that some mutations were replayed
         replays = [match_tuple[0] for match_tuple in node1.grep_log(" \d+ replayed mutations")]
-        debug('The following log lines indicate that mutations were replayed: {msgs}'.format(msgs=replays))
+        logger.debug('The following log lines indicate that mutations were replayed: {msgs}'.format(msgs=replays))
         num_replayed_mutations = [
             parse('{} {num_mutations:d} replayed mutations{}', line).named['num_mutations']
             for line in replays
@@ -280,7 +282,7 @@ class TestCommitLog(Tester):
         # assert there were some lines where more than zero mutations were replayed
         assert [m for m in num_replayed_mutations if m > 0] != []
 
-        debug("Make query and ensure data is present")
+        logger.debug("Make query and ensure data is present")
         session = self.patient_cql_connection(node1)
         res = session.execute("SELECT * FROM Test. users")
         assert_lists_equal_ignoring_order(rows_to_list(res), [['gandalf', 1955, 'male', 'p@$$', 'WA']])
@@ -319,7 +321,7 @@ class TestCommitLog(Tester):
 
         self._provoke_commitlog_failure()
         failure = self.node1.grep_log("Failed .+ commit log segments. Commit disk failure policy is stop; terminating thread")
-        debug(failure)
+        logger.debug(failure)
         assert failure, "Cannot find the commitlog failure message in logs"
         assert self.node1.is_running(), "Node1 should still be running"
 
@@ -349,19 +351,19 @@ class TestCommitLog(Tester):
 
         self._provoke_commitlog_failure()
         failure = self.node1.grep_log("Failed .+ commit log segments. Commit disk failure policy is stop_commit; terminating thread")
-        debug(failure)
+        logger.debug(failure)
         assert failure, "Cannot find the commitlog failure message in logs"
         assert self.node1.is_running(), "Node1 should still be running"
 
         # Cannot write anymore after the failure
-        debug('attempting to insert to node with failing commitlog; should fail')
+        logger.debug('attempting to insert to node with failing commitlog; should fail')
         with pytest.raises((OperationTimedOut, WriteTimeout)):
             self.session1.execute("""
               INSERT INTO test (key, col1) VALUES (2, 2);
             """)
 
         # Should be able to read
-        debug('attempting to read from node with failing commitlog; should succeed')
+        logger.debug('attempting to read from node with failing commitlog; should succeed')
         assert_one(
             self.session1,
             "SELECT * FROM test where key=2;",
@@ -378,7 +380,7 @@ class TestCommitLog(Tester):
 
         self._provoke_commitlog_failure()
         failure = self.node1.grep_log("ERROR \[COMMIT-LOG-ALLOCATOR\].+JVM state determined to be unstable.  Exiting forcefully")
-        debug(failure)
+        logger.debug(failure)
         assert failure, "Cannot find the commitlog failure message in logs"
         assert not self.node1.is_running(), "Node1 should not be running"
 

@@ -3,16 +3,18 @@ import time
 import pytest
 import parse
 import re
+import logging
 
 import ccmlib.common
 from ccmlib.node import ToolError
 
-from dtest import Tester, debug
+from dtest import Tester
 from tools.jmxutils import (JolokiaAgent, enable_jmx_ssl, make_mbean,
                             remove_perf_disable_shared_mem)
 from tools.misc import generate_ssl_stores
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class TestJMX(Tester):
@@ -67,7 +69,7 @@ class TestJMX(Tester):
         node1.stress(['write', 'n=10K', 'no-warmup', '-schema', 'replication(factor=3)'])
 
         typeName = "ColumnFamily" if version <= '2.2.X' else 'Table'
-        debug('Version {} typeName {}'.format(version, typeName))
+        logger.debug('Version {} typeName {}'.format(version, typeName))
 
         # TODO the keyspace and table name are capitalized in 2.0
         memtable_size = make_mbean('metrics', type=typeName, keyspace='keyspace1', scope='standard1',
@@ -205,8 +207,8 @@ class TestJMX(Tester):
             progress = int(parse.search(var, progress_string).named['progress'])
             updated_progress = int(parse.search(var, updated_progress_string).named['progress'])
 
-            debug(progress_string)
-            debug(updated_progress_string)
+            logger.debug(progress_string)
+            logger.debug(updated_progress_string)
 
             # We want to make sure that the progress is increasing,
             # and that values other than zero are displayed.
@@ -220,10 +222,10 @@ class TestJMX(Tester):
             # and never ends.
             start = time.time()
             max_query_timeout = 600
-            debug("Waiting for compaction to finish:")
+            logger.debug("Waiting for compaction to finish:")
             while (len(jmx.read_attribute(compaction_manager, 'CompactionSummary')) > 0) and (
                     time.time() - start < max_query_timeout):
-                debug(jmx.read_attribute(compaction_manager, 'CompactionSummary'))
+                logger.debug(jmx.read_attribute(compaction_manager, 'CompactionSummary'))
                 time.sleep(2)
 
     @since('2.2')

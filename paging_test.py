@@ -1,6 +1,8 @@
 import time
 import uuid
 import pytest
+import logging
+
 from distutils.version import LooseVersion
 
 from cassandra import ConsistencyLevel as CL
@@ -9,7 +11,7 @@ from cassandra.policies import FallthroughRetryPolicy
 from cassandra.query import (SimpleStatement, dict_factory,
                              named_tuple_factory, tuple_factory)
 
-from dtest import Tester, debug, run_scenarios, create_ks
+from dtest import Tester, run_scenarios, create_ks
 from tools.assertions import (assert_all, assert_invalid, assert_length_equal,
                               assert_one, assert_lists_equal_ignoring_order)
 from tools.data import rows_to_list
@@ -17,6 +19,7 @@ from tools.datahelp import create_rows, flatten_into_set, parse_data_into_dicts
 from tools.paging import PageAssertionMixin, PageFetcher
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class BasePagingTester(Tester):
@@ -1467,7 +1470,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
         PAGE_SIZES = (2, 3, 4, 5, 15, 16, 17, 100)
 
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test" % selector))
@@ -1482,7 +1485,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # IN over the partitions
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a IN (0, 1, 2, 3)" % selector))
@@ -1500,7 +1503,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
             session.execute("INSERT INTO test (a, b, c, s1, s2) VALUES (%d, %d, %d, %d, %d)" % (99, i, i, 17, 42))
 
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99" % selector))
@@ -1515,7 +1518,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # reversed
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 ORDER BY b DESC" % selector))
@@ -1530,7 +1533,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # IN on clustering column
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b IN (3, 4, 8, 14, 15)" % selector))
@@ -1545,7 +1548,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # reversed IN on clustering column
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b IN (3, 4, 8, 14, 15) ORDER BY b DESC" % selector))
@@ -1560,7 +1563,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # slice on clustering column with set start
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3" % selector))
@@ -1575,7 +1578,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # reversed slice on clustering column with set finish
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 ORDER BY b DESC" % selector))
@@ -1590,7 +1593,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # slice on clustering column with set finish
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b < 14" % selector))
@@ -1605,7 +1608,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # reversed slice on clustering column with set start
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b < 14 ORDER BY b DESC" % selector))
@@ -1620,7 +1623,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # slice on clustering column with start and finish
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 AND b < 14" % selector))
@@ -1635,7 +1638,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
 
         # reversed slice on clustering column with start and finish
         for page_size in PAGE_SIZES:
-            debug("Current page size is {}".format(page_size))
+            logger.debug("Current page size is {}".format(page_size))
             session.default_fetch_size = page_size
             for selector in selectors:
                 results = list(session.execute("SELECT %s FROM test WHERE a = 99 AND b > 3 AND b < 14 ORDER BY b DESC" % selector))

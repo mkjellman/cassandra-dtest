@@ -130,22 +130,7 @@ def reset_environment_vars():
     os.environ.update(initial_environment)
     os.environ['PYTEST_CURRENT_TEST'] = pytest_current_test
 
-
-def warning(msg):
-    logger.warning(msg)
-    #logger.warning(CURRENT_TEST + ' - ' + str(msg))
-    #if PRINT_DEBUG:
-    #    print("WARN: %s" % str(msg))
-
-
-def debug(msg):
-    logger.debug(msg)
-    #logger.debug(CURRENT_TEST + ' - ' + str(msg))
-    #if PRINT_DEBUG:
-    #    print("DEBUG: %s" % str(msg))
-
-
-debug("Python driver version in use: {}".format(cassandra.__version__))
+logger.debug("Python driver version in use: {}".format(cassandra.__version__))
 
 
 
@@ -162,21 +147,21 @@ class FlakyRetryPolicy(RetryPolicy):
 
     def on_read_timeout(self, *args, **kwargs):
         if kwargs['retry_num'] < self.max_retries:
-            debug("Retrying read after timeout. Attempt #" + str(kwargs['retry_num']))
+            logger.debug("Retrying read after timeout. Attempt #" + str(kwargs['retry_num']))
             return (self.RETRY, None)
         else:
             return (self.RETHROW, None)
 
     def on_write_timeout(self, *args, **kwargs):
         if kwargs['retry_num'] < self.max_retries:
-            debug("Retrying write after timeout. Attempt #" + str(kwargs['retry_num']))
+            logger.debug("Retrying write after timeout. Attempt #" + str(kwargs['retry_num']))
             return (self.RETRY, None)
         else:
             return (self.RETHROW, None)
 
     def on_unavailable(self, *args, **kwargs):
         if kwargs['retry_num'] < self.max_retries:
-            debug("Retrying request after UE. Attempt #" + str(kwargs['retry_num']))
+            logger.debug("Retrying request after UE. Attempt #" + str(kwargs['retry_num']))
             return (self.RETRY, None)
         else:
             return (self.RETHROW, None)
@@ -482,7 +467,7 @@ def kill_windows_cassandra_procs():
                         print('Found running cassandra process with pid: ' + str(pinfo['pid']) + '. Killing.')
                         psutil.Process(pinfo['pid']).kill()
         except ImportError:
-            debug("WARN: psutil not installed. Cannot detect and kill "
+            logger.debug("WARN: psutil not installed. Cannot detect and kill "
                   "running cassandra processes - you may see cascading dtest failures.")
 
 
@@ -518,10 +503,10 @@ def cleanup_cluster(dtest_setup):
                 if dtest_setup.log_watch_thread:
                     stop_active_log_watch(dtest_setup.log_watch_thread)
             finally:
-                debug("removing ccm cluster {name} at: {path}".format(name=dtest_setup.cluster.name, path=dtest_setup.test_path))
+                logger.debug("removing ccm cluster {name} at: {path}".format(name=dtest_setup.cluster.name, path=dtest_setup.test_path))
                 dtest_setup.cluster.remove()
 
-                debug("clearing ssl stores from [{0}] directory".format(dtest_setup.test_path))
+                logger.debug("clearing ssl stores from [{0}] directory".format(dtest_setup.test_path))
                 for filename in ('keystore.jks', 'truststore.jks', 'ccm_node.cer'):
                     try:
                         os.remove(os.path.join(dtest_setup.test_path, filename))
@@ -600,7 +585,7 @@ def maybe_setup_jacoco(dtest_config, dtest_setup, cluster_name='test'):
     jacoco_execfile = os.environ.get('JACOCO_EXECFILE', os.path.join(dtest_config.cassandra_dir, 'build/jacoco/jacoco.exec'))
 
     if os.path.isfile(agent_location):
-        debug("Jacoco agent found at {}".format(agent_location))
+        logger.debug("Jacoco agent found at {}".format(agent_location))
         with open(os.path.join(
                 dtest_setup.test_path, cluster_name, 'cassandra.in.sh'), 'w') as f:
 
@@ -608,11 +593,11 @@ def maybe_setup_jacoco(dtest_config, dtest_setup, cluster_name='test'):
                     .format(jar_path=agent_location, exec_file=jacoco_execfile))
 
             if os.path.isfile(jacoco_execfile):
-                debug("Jacoco execfile found at {}, execution data will be appended".format(jacoco_execfile))
+                logger.debug("Jacoco execfile found at {}, execution data will be appended".format(jacoco_execfile))
             else:
-                debug("Jacoco execfile will be created at {}".format(jacoco_execfile))
+                logger.debug("Jacoco execfile will be created at {}".format(jacoco_execfile))
     else:
-        debug("Jacoco agent not found or is not file. Execution will not be recorded.")
+        logger.debug("Jacoco agent not found or is not file. Execution will not be recorded.")
 
 
 class ReusableClusterTester(Tester):
@@ -688,7 +673,7 @@ class ReusableClusterTester(Tester):
         do so by overriding post_initialize_cluster().
         """
         cls.test_path = get_test_path()
-        cls.cluster = create_ccm_cluster(cls.test_path, name='test', config=dtest_config)
+        #cls.cluster = create_ccm_cluster(cls.test_path, name='test', config=dtest_config)
         cls.init_config()
 
         maybe_setup_jacoco(cls.test_path)
@@ -708,10 +693,6 @@ class ReusableClusterTester(Tester):
         test method failures.
         """
         pass
-
-    @classmethod
-    def init_config(cls):
-        init_default_config(cls.cluster, cls.cluster_options)
 
 
 class MultiError(Exception):
@@ -754,19 +735,19 @@ def run_scenarios(scenarios, handler, deferred_exceptions=tuple()):
     tracebacks = []
 
     for i, scenario in enumerate(scenarios, 1):
-        debug("running scenario {}/{}: {}".format(i, len(scenarios), scenario))
+        logger.debug("running scenario {}/{}: {}".format(i, len(scenarios), scenario))
 
         try:
             handler(scenario)
         except deferred_exceptions as e:
             tracebacks.append(traceback.format_exc(sys.exc_info()))
             errors.append(type(e)('encountered {} {} running scenario:\n  {}\n'.format(e.__class__.__name__, str(e), scenario)))
-            debug("scenario {}/{} encountered a deferrable exception, continuing".format(i, len(scenarios)))
+            logger.debug("scenario {}/{} encountered a deferrable exception, continuing".format(i, len(scenarios)))
         except Exception as e:
             # catch-all for any exceptions not intended to be deferred
             tracebacks.append(traceback.format_exc(sys.exc_info()))
             errors.append(type(e)('encountered {} {} running scenario:\n  {}\n'.format(e.__class__.__name__, str(e), scenario)))
-            debug("scenario {}/{} encountered a non-deferrable exception, aborting".format(i, len(scenarios)))
+            logger.debug("scenario {}/{} encountered a non-deferrable exception, aborting".format(i, len(scenarios)))
             raise MultiError(errors, tracebacks)
 
     if errors:

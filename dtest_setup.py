@@ -457,6 +457,13 @@ class DTestSetup:
         return cluster
 
     def set_cluster_log_levels(self):
+        """
+        The root logger gets configured in the fixture named fixture_logging_setup.
+        Based on the logging configuration options the user invoked pytest with,
+        that fixture sets the root logger to that configuration. We then ensure all
+        Cluster objects we work with "inherit" these logging settings (which we can
+        lookup off the root logger)
+        """
         self.cluster.set_log_level(logging.getLevelName(logging.root.level))
 
     def initialize_cluster(self):

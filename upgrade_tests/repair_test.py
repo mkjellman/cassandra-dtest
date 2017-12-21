@@ -1,10 +1,11 @@
 import time
 import pytest
+import logging
 
-from dtest import debug
 from repair_tests.repair_test import BaseRepairTest
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 LEGACY_SSTABLES_JVM_ARGS = ["-Dcassandra.streamdes.initial_mem_buffer_size=1",
                             "-Dcassandra.streamdes.max_mem_buffer_size=5",
@@ -24,7 +25,7 @@ class TestUpgradeRepair(BaseRepairTest):
         """
         default_install_dir = self.cluster.get_install_dir()
         cluster = self.cluster
-        debug("Setting version to 2.2.5")
+        logger.debug("Setting version to 2.2.5")
         cluster.set_install_dir(version="2.2.5")
         self._populate_cluster()
 
@@ -35,7 +36,7 @@ class TestUpgradeRepair(BaseRepairTest):
         cluster = self.cluster
 
         for node in cluster.nodelist():
-            debug("Upgrading %s to current version" % node.name)
+            logger.debug("Upgrading %s to current version" % node.name)
             if node.is_running():
                 node.flush()
                 time.sleep(1)

@@ -1,8 +1,9 @@
 import os
 import time
 import pytest
+import logging
 
-from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester, debug
+from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester
 from sstable_generation_loading_test import BaseSStableLoaderTest
 from thrift_bindings.thrift010.Cassandra import (ConsistencyLevel, Deletion,
                                            Mutation, SlicePredicate,
@@ -13,6 +14,7 @@ from tools.assertions import (assert_all, assert_length_equal, assert_none,
 from tools.misc import new_node
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 LEGACY_SSTABLES_JVM_ARGS = ["-Dcassandra.streamdes.initial_mem_buffer_size=1",
                             "-Dcassandra.streamdes.max_mem_buffer_size=5",
@@ -70,7 +72,7 @@ class TestStorageEngineUpgrade(Tester):
             node2.start(wait_for_binary_proto=True, jvm_args=self.jvm_args)
 
             temp_files = self.glob_data_dirs(os.path.join('*', "tmp", "*.dat"))
-            debug("temp files: " + str(temp_files))
+            logger.debug("temp files: " + str(temp_files))
             assert 0 == len(temp_files), "Temporary files were not cleaned up."
 
         cursor = self.patient_cql_connection(node1)

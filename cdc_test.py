@@ -5,6 +5,7 @@ import time
 import uuid
 from collections import namedtuple
 import pytest
+import logging
 
 from itertools import repeat
 
@@ -13,7 +14,7 @@ from cassandra.concurrent import (execute_concurrent,
                                   execute_concurrent_with_args)
 from ccmlib.node import Node
 
-from dtest import Tester, create_ks, debug
+from dtest import Tester, create_ks
 from tools.data import rows_to_list
 from tools.files import size_of_files_in_dir
 from tools.funcutils import get_rate_limited_function
@@ -21,6 +22,7 @@ from tools.hacks import advance_to_next_cl_segment
 from tools.assertions import assert_lists_equal_ignoring_order
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 _16_uuid_column_spec = (
@@ -37,7 +39,7 @@ def _insert_rows(session, table_name, insert_stmt, values):
                        concurrency=500, raise_on_first_error=True)
 
     data_loaded = rows_to_list(session.execute('SELECT * FROM ' + table_name))
-    debug('{n} rows inserted into {table_name}'.format(n=len(data_loaded), table_name=table_name))
+    logger.debug('{n} rows inserted into {table_name}'.format(n=len(data_loaded), table_name=table_name))
     # use assert_equal over assert_length_equal to avoid printing out
     # potentially large lists
     assert len(values) == len(data_loaded)
@@ -49,7 +51,7 @@ def _move_contents(source_dir, dest_dir, verbose=True):
         source_path, dest_path = (os.path.join(source_dir, source_filename),
                                   os.path.join(dest_dir, source_filename))
         if verbose:
-            debug('moving {} to {}'.format(source_path, dest_path))
+            logger.debug('moving {} to {}'.format(source_path, dest_path))
         shutil.move(source_path, dest_path)
 
 
@@ -91,7 +93,7 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
             "it should."
 
         # If we haven't logged from here in the last 5s, do so.
-        rate_limited_debug(
+        rate_limited_logger.debug(
             "  data load step has lasted {s:.2f}s, " +
             "loaded {r} rows".format(s=(time.time() - start), r=rows_loaded))
 
@@ -115,7 +117,7 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
         # Finally, if we find a WriteFailure, that means we've inserted all
         # the CDC data we can and so we flip error_found to exit the loop.
         if any(isinstance(result, WriteFailure) for (_, result) in batch_results):
-            debug("write failed (presumably because we've overrun "
+            logger.debug("write failed (presumably because we've overrun "
                   'designated CDC commitlog space) after '
                   'loading {r} rows in {s:.2f}s'.format(
                       r=rows_loaded,
@@ -160,7 +162,7 @@ def _set_cdc_on_table(session, table_name, value, ks_name=None):
     value_string = 'true' if value else 'false'
     stmt = 'ALTER TABLE ' + table_string + ' WITH CDC = ' + value_string
 
-    debug(stmt)
+    logger.debug(stmt)
     session.execute(stmt)
 
 
@@ -210,12 +212,12 @@ class TestCDC(Tester):
         down.
         """
         if verbose:
-            debug('creating ' + dir_name)
+            logger.debug('creating ' + dir_name)
         try:
             os.mkdir(dir_name)
         except OSError as e:
             if e.errno != errno.EEXIST:
-                debug(dir_name + ' already exists. removing and recreating.')
+                logger.debug(dir_name + ' already exists. removing and recreating.')
                 shutil.rmtree(dir_name)
                 os.mkdir(dir_name)
             else:
@@ -223,7 +225,7 @@ class TestCDC(Tester):
 
         def debug_and_rmtree():
             shutil.rmtree(dir_name)
-            debug(dir_name + ' removed')
+            logger.debug(dir_name + ' removed')
 
         self.addCleanup(debug_and_rmtree)
 
@@ -270,7 +272,7 @@ class TestCDC(Tester):
                 ks_name, table_name, column_spec,
                 options=options
             )
-            debug(stmt)
+            logger.debug(stmt)
             session.execute(stmt)
 
         return node, session
@@ -371,10 +373,10 @@ class TestCDC(Tester):
         # Here, we insert values into the first CDC table until we get a
         # WriteFailure. This should happen when the CDC commitlogs take up 1MB
         # or more.
-        debug('flushing non-CDC commitlogs')
+        logger.debug('flushing non-CDC commitlogs')
         node.flush()
         # Then, we insert rows into the CDC table until we can't anymore.
-        debug('beginning data insert to fill CDC commitlogs')
+        logger.debug('beginning data insert to fill CDC commitlogs')
         rows_loaded = _write_to_cdc_WriteFailure(session, full_cdc_table_info.insert_stmt)
 
         assert 0 < rows_loaded, 'No CDC rows inserted. ' \
@@ -382,7 +384,7 @@ class TestCDC(Tester):
 
         commitlog_dir = os.path.join(node.get_path(), 'commitlogs')
         commitlogs_size = size_of_files_in_dir(commitlog_dir)
-        debug('Commitlog dir ({d}) is {b}B'.format(d=commitlog_dir, b=commitlogs_size))
+        logger.debug('Commitlog dir ({d}) is {b}B'.format(d=commitlog_dir, b=commitlogs_size))
 
         # We should get a WriteFailure when trying to write to the CDC table
         # that's filled the designated CDC space...
@@ -420,11 +422,11 @@ class TestCDC(Tester):
         # First, write to non-cdc tables.
         start, time_limit = time.time(), 600
         rate_limited_debug = get_rate_limited_function(debug, 5)
-        debug('writing to non-cdc table')
+        logger.debug('writing to non-cdc table')
         # We write until we get a new commitlog segment.
         while _get_commitlog_files(node.get_path()) <= pre_non_cdc_write_segments:
             elapsed = time.time() - start
-            rate_limited_debug('  non-cdc load step has lasted {s:.2f}s'.format(s=elapsed))
+            rate_limited_logger.debug('  non-cdc load step has lasted {s:.2f}s'.format(s=elapsed))
             assert elapsed <= time_limit, \
                 "It's been over a {s}s and we haven't written a new commitlog segment. Something is wrong.".format(s=time_limit)
 
@@ -452,16 +454,16 @@ class TestCDC(Tester):
             initial_token=None,
             binary_interface=('127.0.0.2', 9042)
         )
-        debug('adding node')
+        logger.debug('adding node')
         self.cluster.add(loading_node, is_seed=True)
-        debug('starting new node')
+        logger.debug('starting new node')
         loading_node.start(wait_for_binary_proto=True)
-        debug('recreating ks and table')
+        logger.debug('recreating ks and table')
         loading_session = self.patient_exclusive_cql_connection(loading_node)
         create_ks(loading_session, ks_name, rf=1)
-        debug('creating new table')
+        logger.debug('creating new table')
         loading_session.execute(create_stmt)
-        debug('stopping new node')
+        logger.debug('stopping new node')
         loading_node.stop()
         loading_session.cluster.shutdown()
         return loading_node
@@ -497,9 +499,9 @@ class TestCDC(Tester):
         inserted_rows = _insert_rows(generation_session, cdc_table_info.name, cdc_table_info.insert_stmt, repeat((), 10000))
 
         # drain the node to guarantee all cl segements will be recycled
-        debug('draining')
+        logger.debug('draining')
         generation_node.drain()
-        debug('stopping')
+        logger.debug('stopping')
         # stop the node and clean up all sessions attached to it
         generation_node.stop()
         generation_session.cluster.shutdown()
@@ -510,22 +512,22 @@ class TestCDC(Tester):
         # move cdc_raw contents to commitlog directories, then start the
         # node again to trigger commitlog replay, which should replay the
         # cdc_raw files we moved to commitlogs into memtables.
-        debug('moving cdc_raw and restarting node')
+        logger.debug('moving cdc_raw and restarting node')
         _move_contents(
             os.path.join(generation_node.get_path(), 'cdc_raw'),
             os.path.join(loading_node.get_path(), 'commitlogs')
         )
         loading_node.start(wait_for_binary_proto=True)
-        debug('node successfully started; waiting on log replay')
+        logger.debug('node successfully started; waiting on log replay')
         loading_node.grep_log('Log replay complete')
-        debug('log replay complete')
+        logger.debug('log replay complete')
 
         # final assertions
         validation_session = self.patient_exclusive_cql_connection(loading_node)
         data_in_cdc_table_after_restart = rows_to_list(
             validation_session.execute('SELECT * FROM ' + cdc_table_info.name)
         )
-        debug('found {cdc} values in CDC table'.format(
+        logger.debug('found {cdc} values in CDC table'.format(
             cdc=len(data_in_cdc_table_after_restart)
         ))
         # Then we assert that the CDC data that we expect to be there is there.

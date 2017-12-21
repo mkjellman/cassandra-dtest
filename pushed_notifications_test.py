@@ -1,5 +1,7 @@
 import time
 import pytest
+import logging
+
 from datetime import datetime
 from distutils.version import LooseVersion
 from threading import Event
@@ -9,10 +11,10 @@ from cassandra import ReadFailure
 from cassandra.query import SimpleStatement
 from ccmlib.node import Node, TimeoutError
 
-
-from dtest import Tester, debug, get_ip_from_node, create_ks
+from dtest import Tester, get_ip_from_node, create_ks
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
 
 
 class NotificationWaiter(object):
@@ -50,7 +52,7 @@ class NotificationWaiter(object):
         """
         Called when a notification is pushed from Cassandra.
         """
-        debug("Got {} from {} at {}".format(notification, self.address, datetime.now()))
+        logger.debug("Got {} from {} at {}".format(notification, self.address, datetime.now()))
 
         if self.keyspace and notification['keyspace'] and self.keyspace != notification['keyspace']:
             return  # we are not interested in this schema change
@@ -75,7 +77,7 @@ class NotificationWaiter(object):
         return self.notifications
 
     def clear_notifications(self):
-        debug("Clearing notifications...")
+        logger.debug("Clearing notifications...")
         self.notifications = []
         self.event.clear()
 
@@ -98,16 +100,16 @@ class TestPushedNotifications(Tester):
 
         # The first node sends NEW_NODE for the other 2 nodes during startup, in case they are
         # late due to network delays let's block a bit longer
-        debug("Waiting for unwanted notifications....")
+        logger.debug("Waiting for unwanted notifications....")
         waiters[0].wait_for_notifications(timeout=30, num_notifications=2)
         waiters[0].clear_notifications()
 
-        debug("Issuing move command....")
+        logger.debug("Issuing move command....")
         node1 = list(self.cluster.nodes.values())[0]
         node1.move("123")
 
         for waiter in waiters:
-            debug("Waiting for notification from {}".format(waiter.address,))
+            logger.debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(60.0)
             assert 1 == len(notifications), notifications
             notification = notifications[0]
@@ -138,16 +140,16 @@ class TestPushedNotifications(Tester):
 
         # The first node sends NEW_NODE for the other 2 nodes during startup, in case they are
         # late due to network delays let's block a bit longer
-        debug("Waiting for unwanted notifications...")
+        logger.debug("Waiting for unwanted notifications...")
         waiters[0].wait_for_notifications(timeout=30, num_notifications=2)
         waiters[0].clear_notifications()
 
-        debug("Issuing move command....")
+        logger.debug("Issuing move command....")
         node1 = list(self.cluster.nodes.values())[0]
         node1.move("123")
 
         for waiter in waiters:
-            debug("Waiting for notification from {}".format(waiter.address,))
+            logger.debug("Waiting for notification from {}".format(waiter.address,))
             notifications = waiter.wait_for_notifications(30.0)
             assert 1 if waiter.node is node1 else 0 == len(notifications), notifications
 
@@ -163,7 +165,7 @@ class TestPushedNotifications(Tester):
 
         # need to block for up to 2 notifications (NEW_NODE and UP) so that these notifications
         # don't confuse the state below.
-        debug("Waiting for unwanted notifications...")
+        logger.debug("Waiting for unwanted notifications...")
         waiter.wait_for_notifications(timeout=30, num_notifications=2)
         waiter.clear_notifications()
 
@@ -172,10 +174,10 @@ class TestPushedNotifications(Tester):
         version = self.cluster.cassandra_version()
         expected_notifications = 2 if version >= '2.2' else 3
         for i in range(5):
-            debug("Restarting second node...")
+            logger.debug("Restarting second node...")
             node2.stop(wait_other_notice=True)
             node2.start(wait_other_notice=True)
-            debug("Waiting for notifications from {}".format(waiter.address))
+            logger.debug("Waiting for notifications from {}".format(waiter.address))
             notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=expected_notifications)
             assert expected_notifications, len(notifications) == notifications
             for notification in notifications:
@@ -210,12 +212,12 @@ class TestPushedNotifications(Tester):
         waiter = NotificationWaiter(self, node1, ["STATUS_CHANGE", "TOPOLOGY_CHANGE"])
 
         # restart node 2
-        debug("Restarting second node...")
+        logger.debug("Restarting second node...")
         node2.stop(wait_other_notice=True)
         node2.start(wait_other_notice=True)
 
         # check that node1 did not send UP or DOWN notification for node2
-        debug("Waiting for notifications from {}".format(waiter.address,))
+        logger.debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=30.0, num_notifications=2)
         assert 0 == len(notifications), notifications
 
@@ -232,7 +234,7 @@ class TestPushedNotifications(Tester):
 
         # need to block for up to 2 notifications (NEW_NODE and UP) so that these notifications
         # don't confuse the state below
-        debug("Waiting for unwanted notifications...")
+        logger.debug("Waiting for unwanted notifications...")
         waiter.wait_for_notifications(timeout=30, num_notifications=2)
         waiter.clear_notifications()
 
@@ -241,11 +243,11 @@ class TestPushedNotifications(Tester):
         session.execute("ALTER KEYSPACE system_distributed WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'1'};")
         session.execute("ALTER KEYSPACE system_traces WITH REPLICATION = {'class':'SimpleStrategy', 'replication_factor':'1'};")
 
-        debug("Adding second node...")
+        logger.debug("Adding second node...")
         node2 = Node('node2', self.cluster, True, None, ('127.0.0.2', 7000), '7200', '0', None, binary_interface=('127.0.0.2', 9042))
         self.cluster.add(node2, False)
         node2.start(wait_other_notice=True)
-        debug("Waiting for notifications from {}".format(waiter.address))
+        logger.debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
         assert 2 == len(notifications), notifications
         for notification in notifications:
@@ -253,11 +255,11 @@ class TestPushedNotifications(Tester):
             assert "NEW_NODE" == notifications[0]["change_type"]
             assert "UP" == notifications[1]["change_type"]
 
-        debug("Removing second node...")
+        logger.debug("Removing second node...")
         waiter.clear_notifications()
         node2.decommission()
         node2.stop(gently=False)
-        debug("Waiting for notifications from {}".format(waiter.address))
+        logger.debug("Waiting for notifications from {}".format(waiter.address))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=2)
         assert 2 == len(notifications), notifications
         for notification in notifications:
@@ -273,13 +275,13 @@ class TestPushedNotifications(Tester):
 
         i = 0
         for node in cluster.nodelist():
-            debug('Set 127.0.0.1 to prevent IPv6 java prefs, set rpc_address: localhost in cassandra.yaml')
+            logger.debug('Set 127.0.0.1 to prevent IPv6 java prefs, set rpc_address: localhost in cassandra.yaml')
             if cluster.version() < '4':
                 node.network_interfaces['thrift'] = ('127.0.0.1', node.network_interfaces['thrift'][1] + i)
             node.network_interfaces['binary'] = ('127.0.0.1', node.network_interfaces['binary'][1] + i)
             node.import_config_files()  # this regenerates the yaml file and sets 'rpc_address' to the 'thrift' address
             node.set_configuration_options(values={'rpc_address': 'localhost'})
-            debug(node.show())
+            logger.debug(node.show())
             i += 2
 
     @since("3.0")
@@ -306,7 +308,7 @@ class TestPushedNotifications(Tester):
         session.execute("drop TABLE t")
         session.execute("drop KEYSPACE ks")
 
-        debug("Waiting for notifications from {}".format(waiter.address,))
+        logger.debug("Waiting for notifications from {}".format(waiter.address,))
         notifications = waiter.wait_for_notifications(timeout=60.0, num_notifications=8)
         assert 8 == len(notifications), notifications
         # assert dict contains subset

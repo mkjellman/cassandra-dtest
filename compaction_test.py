@@ -7,12 +7,16 @@ import time
 from distutils.version import LooseVersion
 import pytest
 import parse
+import logging
 
-from dtest import Tester, debug, create_ks
+from dtest import Tester, create_ks
 from tools.assertions import assert_length_equal, assert_none, assert_one
 
 since = pytest.mark.since
+logger = logging.getLogger(__name__)
+
 strategies = ['LeveledCompactionStrategy', 'SizeTieredCompactionStrategy', 'DateTieredCompactionStrategy']
+
 
 class TestCompaction(Tester):
 
@@ -80,8 +84,8 @@ class TestCompaction(Tester):
             output = output[output.find("Space used (live)"):]
             initialValue = int(output[output.find(":") + 1:output.find("\n")].strip())
         else:
-            debug("datasize not found")
-            debug(output)
+            logger.debug("datasize not found")
+            logger.debug(output)
 
         node1.flush()
         node1.compact()
@@ -93,7 +97,7 @@ class TestCompaction(Tester):
             output = output[output.find("Space used (live)"):]
             finalValue = int(output[output.find(":") + 1:output.find("\n")].strip())
         else:
-            debug("datasize not found")
+            logger.debug("datasize not found")
         # allow 5% size increase - if we have few sstables it is not impossible that live size increases *slightly* after compaction
         assert finalValue < initialValue * 1.05
 
@@ -140,15 +144,15 @@ class TestCompaction(Tester):
         else:
             sstable_count = len(node1.get_sstables('keyspace1', 'standard1'))
             dir_count = len(node1.data_directories())
-            debug("sstable_count is: {}".format(sstable_count))
-            debug("dir_count is: {}".format(dir_count))
+            logger.debug("sstable_count is: {}".format(sstable_count))
+            logger.debug("dir_count is: {}".format(dir_count))
             if node1.get_cassandra_version() < LooseVersion('3.2'):
                 size_factor = sstable_count
             else:
                 size_factor = sstable_count / float(dir_count)
 
-        debug("bloom filter size is: {}".format(bfSize))
-        debug("size factor = {}".format(size_factor))
+        logger.debug("bloom filter size is: {}".format(bfSize))
+        logger.debug("size factor = {}".format(size_factor))
         assert bfSize >= size_factor * min_bf_size
         assert bfSize <= size_factor * max_bf_size
 
@@ -280,7 +284,7 @@ class TestCompaction(Tester):
         units = ['MB'] if cluster.version() < LooseVersion('3.6') else ['KiB', 'MiB', 'GiB']
         assert found_units in units
 
-        debug(avgthroughput)
+        logger.debug(avgthroughput)
         avgthroughput_mb = unit_conversion_dct[found_units] * float(avgthroughput)
 
         # The throughput in the log is computed independantly from the throttling and on the output files while
@@ -506,7 +510,7 @@ class TestCompaction(Tester):
         node1.nodetool('flush keyspace1 standard1')
 
         sstable_files = ' '.join(node1.get_sstable_data_files('keyspace1', 'standard1'))
-        debug('Compacting {}'.format(sstable_files))
+        logger.debug('Compacting {}'.format(sstable_files))
         node1.nodetool('compact --user-defined {}'.format(sstable_files))
 
         sstable_files = node1.get_sstable_data_files('keyspace1', 'standard1')
@@ -530,7 +534,7 @@ class TestCompaction(Tester):
         node1.nodetool('disableautocompaction')
 
         session = self.patient_cql_connection(node1)
-        debug("Altering compaction strategy to LCS")
+        logger.debug("Altering compaction strategy to LCS")
         session.execute("ALTER TABLE keyspace1.standard1 with compaction={'class': 'LeveledCompactionStrategy', 'sstable_size_in_mb':1, 'fanout_size':10};")
 
         stress_write(node1, keycount=1000000)
@@ -548,7 +552,7 @@ class TestCompaction(Tester):
         m = p.search(output)
         assert 10 * len(node1.data_directories()) == int(m.group(1))
 
-        debug("Altering the fanout_size")
+        logger.debug("Altering the fanout_size")
         session.execute("ALTER TABLE keyspace1.standard1 with compaction={'class': 'LeveledCompactionStrategy', 'sstable_size_in_mb':1, 'fanout_size':5};")
 
         # trigger the compaction
