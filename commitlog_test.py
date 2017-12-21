@@ -441,7 +441,8 @@ class TestCommitLog(Tester):
         @jira_ticket CASSANDRA-9749
         """
         expected_error = "Exiting due to error while processing commit log during initialization."
-        self.fixture_dtest_setup.ignore_log_patterns.append(expected_error)
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            expected_error]
         node = self.node1
         assert isinstance(node, Node)
         node.set_configuration_options({'commit_failure_policy': 'stop', 'commitlog_sync_period_in_ms': 1000})
@@ -512,7 +513,8 @@ class TestCommitLog(Tester):
         the commit_failure_policy is stop, C* shouldn't start up
         """
         expected_error = 'Could not create Compression for type org.apache.cassandra.io.compress.LZ5Compressor'
-        self.fixture_dtest_setup.ignore_log_patterns.append(expected_error)
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            expected_error]
         node = self.node1
         assert isinstance(node, Node)
         node.set_configuration_options({'commit_failure_policy': 'stop',

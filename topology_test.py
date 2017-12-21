@@ -372,7 +372,8 @@ class TestTopology(Tester):
         - asserting that the node is not running.
         """
         rejoin_err = 'This node was decommissioned and will not rejoin the ring'
-        self.fixture_dtest_setup.ignore_log_patterns.append(rejoin_err)
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            rejoin_err]
 
         self.cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = self.cluster.nodelist()

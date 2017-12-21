@@ -293,8 +293,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
     @pytest.mark.resource_intensive
     def test_replace_active_node(self):
-        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)\
-            .append(r'Exception encountered during startup')
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            r'Exception encountered during startup']
 
         self._setup(n=3)
         self._do_replace(wait_for_binary_proto=False)
@@ -305,12 +305,11 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
     @pytest.mark.resource_intensive
     def test_replace_nonexistent_node(self):
-        additional_ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)
-        # This is caused by starting a node improperly (replacing active/nonexistent)
-        additional_ignore_log_patterns.append(r'Exception encountered during startup')
-        # This is caused by trying to replace a nonexistent node
-        additional_ignore_log_patterns.append(r'Exception in thread Thread')
-        self.fixture_dtest_setup.ignore_log_patterns = additional_ignore_log_patterns
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            # This is caused by starting a node improperly (replacing active/nonexistent)
+            r'Exception encountered during startup',
+            # This is caused by trying to replace a nonexistent node
+            r'Exception in thread Thread']
 
         self._setup(n=3)
         self._do_replace(replace_address='127.0.0.5', wait_for_binary_proto=False)
@@ -328,8 +327,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         to use replace_address.
         @jira_ticket CASSANDRA-10134
         """
-        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)\
-            .append(r'Exception encountered during startup')
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            r'Exception encountered during startup']
 
         self._setup(n=3)
         self._insert_data()
@@ -368,8 +367,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
 
         @jira_ticket CASSANDRA-10134
         """
-        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)\
-            .append(r'Exception encountered during startup')
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            r'Exception encountered during startup']
 
         self._setup(n=3)
         self._insert_data()
@@ -448,8 +447,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self._test_restart_failed_replace(mode='wipe')
 
     def _test_restart_failed_replace(self, mode):
-        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)\
-            .append(r'Error while waiting on bootstrap to complete')
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            r'Error while waiting on bootstrap to complete']
 
         self._setup(n=3, enable_byteman=True)
         self._insert_data(n="1k")
@@ -515,8 +514,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         Test that replace fails when there are insufficient replicas
         @jira_ticket CASSANDRA-11848
         """
-        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns)\
-            .append(r'Unable to find sufficient sources for streaming range')
+        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [
+            r'Unable to find sufficient sources for streaming range']
 
         self._setup(n=3)
         self._insert_data(rf=2)
