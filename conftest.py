@@ -90,9 +90,16 @@ def pytest_addoption(parser):
                      help="Forces the execution of tests marked as resource_intensive")
     parser.addoption("--skip-resource-intensive-tests", action="store_true", default=False,
                      help="Skip all tests marked as resource_intensive")
-    parser.addoption("--cassandra-dir", action="store", default=None)
-    parser.addoption("--cassandra-version", action="store", default=None)
-    parser.addoption("--delete-logs", action="store_true", default=False)
+    parser.addoption("--cassandra-dir", action="store", default=None,
+                     help="The directory containing the built C* artifacts to run the tests against. "
+                          "(e.g. the path to the root of a cloned C* git directory. Before executing dtests using "
+                          "this directory you must build C* with 'ant clean jar'). If you're doing C* development and "
+                          "want to run the tests this is almost always going to be the correct option.")
+    parser.addoption("--cassandra-version", action="store", default=None,
+                     help="A specific C* version to run the dtests against. The dtest framework will "
+                          "pull the required artifacts for this version.")
+    parser.addoption("--delete-logs", action="store_true", default=False,
+                     help="Delete all generated logs created by a test after the completion of a test.")
     parser.addoption("--execute-upgrade-tests", action="store_true", default=False,
                      help="Execute Cassandra Upgrade Tests (e.g. tests annotated with the upgrade_test mark)")
     parser.addoption("--disable-active-log-watching", action="store_true", default=False,

@@ -1,102 +1,48 @@
 #!/usr/bin/env python
 """
-Usage: run_dtests.py [--nose-options NOSE_OPTIONS] [TESTS...] [--vnodes VNODES_OPTIONS...]
-                 [--runner-debug | --runner-quiet] [--dry-run]
+usage: run_dtests.py [-h] [--use-vnodes] [--use-off-heap-memtables] [--num-tokens NUM_TOKENS] [--data-dir-count-per-instance DATA_DIR_COUNT_PER_INSTANCE] [--force-resource-intensive-tests]
+                     [--skip-resource-intensive-tests] [--cassandra-dir CASSANDRA_DIR] [--cassandra-version CASSANDRA_VERSION] [--delete-logs] [--execute-upgrade-tests] [--disable-active-log-watching]
+                     [--keep-test-dir] [--enable-jacoco-code-coverage] [--dtest-enable-debug-logging] [--dtest-print-tests-only] [--dtest-print-tests-output DTEST_PRINT_TESTS_OUTPUT]
+                     [--pytest-options PYTEST_OPTIONS] [--dtest-tests DTEST_TESTS]
 
-nosetests options:
-    --nose-options NOSE_OPTIONS  specify options to pass to `nosetests`.
-    TESTS                        space-separated list of tests to pass to `nosetests`
-
-script configuration options:
-    --runner-debug -d            print debug statements in this script
-    --runner-quiet -q            quiet all output from this script
-
-cluster configuration options:
-    --vnodes VNODES_OPTIONS...   specify whether to run with or without vnodes.
-                                 valid values: 'true' and 'false'
-
-example:
-    The following command will execute nosetests with the '-v' (verbose) option, vnodes disabled, and run a single test:
-    ./run_dtests.py --nose-options -v --vnodes false repair_tests/repair_test.py:TestRepair.token_range_repair_test_with_cf
-
+optional arguments:
+  -h, --help                                                 show this help message and exit
+  --use-vnodes                                               Determines wither or not to setup clusters using vnodes for tests (default: False)
+  --use-off-heap-memtables                                   Enable Off Heap Memtables when creating test clusters for tests (default: False)
+  --num-tokens NUM_TOKENS                                    Number of tokens to set num_tokens yaml setting to when creating instances with vnodes enabled (default: 256)
+  --data-dir-count-per-instance DATA_DIR_COUNT_PER_INSTANCE  Control the number of data directories to create per instance (default: 3)
+  --force-resource-intensive-tests                           Forces the execution of tests marked as resource_intensive (default: False)
+  --skip-resource-intensive-tests                            Skip all tests marked as resource_intensive (default: False)
+  --cassandra-dir CASSANDRA_DIR
+  --cassandra-version CASSANDRA_VERSION
+  --delete-logs
+  --execute-upgrade-tests                                    Execute Cassandra Upgrade Tests (e.g. tests annotated with the upgrade_test mark) (default: False)
+  --disable-active-log-watching                              Disable ccm active log watching, which will cause dtests to check for errors in the logs in a single operation instead of semi-realtime
+                                                             processing by consuming ccm _log_error_handler callbacks (default: False)
+  --keep-test-dir                                            Do not remove/cleanup the test ccm cluster directory and it's artifacts after the test completes (default: False)
+  --enable-jacoco-code-coverage                              Enable JaCoCo Code Coverage Support (default: False)
+  --dtest-enable-debug-logging                               Enable debug logging (for this script, pytest, and during execution of test functions) (default: False)
+  --dtest-print-tests-only                                   Print list of all tests found eligible for execution given the provided options. (default: False)
+  --dtest-print-tests-output DTEST_PRINT_TESTS_OUTPUT        Path to file where the output of --dtest-print-tests-only should be written to (default: False)
+  --pytest-options PYTEST_OPTIONS                            Additional command line arguments to proxy directly thru when invoking pytest. (default: None)
+  --dtest-tests DTEST_TESTS                                  Comma separated list of test files, test classes, or test methods to execute. (default: None)
 """
-
-
 import subprocess
 import sys
 import os
 import re
 import logging
 
-from collections import namedtuple
-from os import getcwd, environ
+from os import getcwd
 from tempfile import NamedTemporaryFile
 from bs4 import BeautifulSoup
 
-import pytest
 from _pytest.config import Parser
 import argparse
 
 from conftest import pytest_addoption
 
 logger = logging.getLogger(__name__)
-
-
-class ValidationResult(namedtuple('_ValidationResult', ['serialized', 'error_messages'])):
-    """
-    A value to be returned from validation functions. If serialization works,
-    return one with 'serialized' set, otherwise return a list of string on the
-    'error_messages' attribute.
-    """
-    __slots__ = ()
-
-    def __new__(cls, serialized=None, error_messages=None):
-        if error_messages is None:
-            error_messages = []
-
-        success_result = serialized is not None
-        failure_result = bool(error_messages)
-
-        if success_result + failure_result != 1:
-            msg = ('attempted to instantiate a {cls_name} with serialized='
-                   '{serialized} and error_messages={error_messages}. {cls_name} '
-                   'objects must be instantiated with either a serialized or '
-                   'error_messages argument, but not both.')
-            msg = msg.format(cls_name=cls.__name__,
-                             serialized=serialized,
-                             error_messages=error_messages)
-            raise ValueError(msg)
-
-        return super(ValidationResult, cls).__new__(cls, serialized=serialized, error_messages=error_messages)
-
-
-def _validate_and_serialize_vnodes(vnodes_value):
-    """
-    Validate the values received for vnodes configuration. Returns a
-    ValidationResult.
-
-    If the values validate, return a ValidationResult with 'serialized' set to
-    the equivalent of:
-
-        tuple(set({'true': True, 'false':False}[v.lower()] for v in vnodes_value))
-
-    If the values don't validate, return a ValidationResult with 'messages' set
-    to a list of strings, each of which points out an invalid value.
-    """
-    messages = []
-    vnodes_value = set(v.lower() for v in vnodes_value)
-    value_map = {'true': True, 'false': False}
-
-    for v in vnodes_value:
-        if v not in value_map:
-            messages.append('{} not a valid value for --vnodes option. '
-                            'valid values are {} (case-insensitive)'.format(v, ', '.join(list(value_map))))
-
-    if messages:
-        return ValidationResult(error_messages=messages)
-
-    serialized = tuple({value_map[v] for v in vnodes_value})
-    return ValidationResult(serialized=serialized)
 
 
 class RunDTests():
@@ -173,13 +119,14 @@ class RunDTests():
 
         logger.debug("args to call with: [%s]" % original_raw_cmd_args)
 
+        # the original run_dtests.py script did it like this to hack around nosetest
+        # limitations -- i'm not sure if they still apply or not in a pytest world
+        # but for now just leaving it as is, because it does the job (although
+        # certainly is still pretty complicated code and has a hacky feeling)
         to_execute = (
                 "import pytest\n" +
                 (
                 "pytest.main([{options}])\n").format(options=original_raw_cmd_args)
-                #"pytest.main(['--collect-only', '--use-vnodes'])\n")
-                #"pytest.main(['--collect-only', '-p', 'no:terminal'], plugins=[my_plugin])\n")
-                #"nose.main(addplugins=[DtestConfigPlugin({config}), DTestXunit(), DTestCollect(), DTestTag()])\n" if "TEST_TAG" in environ else "nose.main(addplugins=[DtestConfigPlugin({config}), DTestCollect(), DTestXunit()])\n")
         )
         temp = NamedTemporaryFile(dir=getcwd())
         logger.debug('Writing the following to {}:'.format(temp.name))
