@@ -213,7 +213,7 @@ class TestAuth(Tester):
 
         session.execute("UPDATE system_auth.roles SET is_superuser=null WHERE role='bob'")
 
-        self.fixture_dtest_setup.ignore_log_patterns = list(self.fixture_dtest_setup.ignore_log_patterns) + [r'Invalid metadata has been detected for role bob']
+        self.fixture_dtest_setup.ignore_log_patterns.append(r'Invalid metadata has been detected for role bob')
         assert_exception(session, "LIST USERS", "Invalid metadata has been detected for role", expected=(ServerError))
         try:
             self.get_session(user='bob', password='12345')

@@ -316,6 +316,7 @@ def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrid
 
     for con in dtest_setup.connections:
         con.cluster.shutdown()
+    dtest_setup.connections = []
 
     failed = False
     try:
