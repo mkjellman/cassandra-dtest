@@ -159,9 +159,9 @@ def block_until_index_is_built(node, session, keyspace, table_name, idx_name):
     DtestTimeoutError if it is not.
     """
     start = time.time()
-    rate_limited_debug = get_rate_limited_function(debug, 5)
+    rate_limited_debug_logger = get_rate_limited_function(logger.debug, 5)
     while time.time() < start + 30:
-        rate_limited_logger.debug("waiting for index to build")
+        rate_limited_debug_logger("waiting for index to build")
         time.sleep(1)
         if index_is_built(node, session, keyspace, table_name, idx_name):
             break

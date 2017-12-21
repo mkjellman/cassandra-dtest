@@ -81,7 +81,7 @@ def _get_create_table_statement(ks_name, table_name, column_spec, options=None):
 def _write_to_cdc_WriteFailure(session, insert_stmt):
     prepared = session.prepare(insert_stmt)
     start, rows_loaded, error_found = time.time(), 0, False
-    rate_limited_debug = get_rate_limited_function(debug, 5)
+    rate_limited_debug_logger = get_rate_limited_function(logger.debug, 5)
     while not error_found:
         # We want to fail if inserting data takes too long. Locally this
         # takes about 10s, but let's be generous.
@@ -93,7 +93,7 @@ def _write_to_cdc_WriteFailure(session, insert_stmt):
             "it should."
 
         # If we haven't logged from here in the last 5s, do so.
-        rate_limited_logger.debug(
+        rate_limited_debug_logger(
             "  data load step has lasted {s:.2f}s, " +
             "loaded {r} rows".format(s=(time.time() - start), r=rows_loaded))
 
@@ -421,12 +421,12 @@ class TestCDC(Tester):
         #
         # First, write to non-cdc tables.
         start, time_limit = time.time(), 600
-        rate_limited_debug = get_rate_limited_function(debug, 5)
+        rate_limited_debug_logger = get_rate_limited_function(logger.debug, 5)
         logger.debug('writing to non-cdc table')
         # We write until we get a new commitlog segment.
         while _get_commitlog_files(node.get_path()) <= pre_non_cdc_write_segments:
             elapsed = time.time() - start
-            rate_limited_logger.debug('  non-cdc load step has lasted {s:.2f}s'.format(s=elapsed))
+            rate_limited_debug_logger('  non-cdc load step has lasted {s:.2f}s'.format(s=elapsed))
             assert elapsed <= time_limit, \
                 "It's been over a {s}s and we haven't written a new commitlog segment. Something is wrong.".format(s=time_limit)
 

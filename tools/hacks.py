@@ -8,7 +8,6 @@ import logging
 
 from cassandra.concurrent import execute_concurrent
 
-import dtest
 from tools.funcutils import get_rate_limited_function
 
 logger = logging.getLogger(__name__)
@@ -51,11 +50,12 @@ def advance_to_next_cl_segment(session, commitlog_dir,
 
     start = time.time()
     stop_time = start + timeout
+    rate_limited_debug_logger = get_rate_limited_function(logger.debug, 5)
     logger.debug('attempting to write until we start writing to new CL segments: {}'.format(initial_cl_files))
 
     while _files_in(commitlog_dir) <= initial_cl_files:
         elapsed = time.time() - start
-        logger.debug('  commitlog-advancing load step has lasted {s:.2f}s'.format(s=elapsed))
+        rate_limited_debug_logger('  commitlog-advancing load step has lasted {s:.2f}s'.format(s=elapsed))
         assert (
             time.time() <= stop_time), "It's been over a {s}s and we haven't written a new " + \
             "commitlog segment. Something is wrong.".format(s=timeout)
