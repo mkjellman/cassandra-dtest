@@ -170,6 +170,14 @@ def fixture_logging_setup(request):
     logging.basicConfig(level=log_level,
                         format=logging_format)
 
+    # next, regardless of the level we set above (and requested by the user),
+    # reconfigure the "cassandra" logger to minimum INFO level to override the
+    # logging level that the "cassandra.*" imports should use; DEBUG is just
+    # insanely noisy and verbose, with the extra logging of very limited help
+    # in the context of dtest execution
+    cassandra_module_log_level = logging.INFO if log_level == logging.DEBUG else log_level
+    logging.getLogger("cassandra").setLevel(cassandra_module_log_level)
+
 
 @pytest.fixture(scope="session")
 def log_global_env_facts(fixture_dtest_config):
