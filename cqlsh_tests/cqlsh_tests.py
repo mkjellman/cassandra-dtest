@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class TestCqlsh(Tester):
-    maxDiff = None
 
     @classmethod
     def setUpClass(cls):
@@ -539,7 +538,7 @@ VALUES (4, blobAsInt(0x), '', blobAsBigint(0x), 0x, blobAsBoolean(0x), blobAsDec
 
         output, err = self.run_cqlsh(node1, "select intcol, bigintcol, varintcol from CASSANDRA_7196.has_all_types where num in (0, 1, 2, 3, 4)")
         if common.is_win():
-            output = output.replace('\r', '')
+            output = output.decode("utf-8").replace('\r', '')
 
         expected = """
  intcol      | bigintcol            | varintcol

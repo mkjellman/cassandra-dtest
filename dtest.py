@@ -1,39 +1,29 @@
 import configparser
 import copy
 import errno
-import glob
 import logging
 import os
-import pprint
 import re
-import signal
 import subprocess
 import sys
 import tempfile
-import _thread
 import threading
 import time
 import traceback
 import pytest
-from collections import OrderedDict
 from subprocess import CalledProcessError
-from unittest import TestCase
 
 import cassandra
 import ccmlib.repository
 from cassandra import ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster as PyCluster
-from cassandra.cluster import NoHostAvailable
-from cassandra.cluster import ExecutionProfile, EXEC_PROFILE_DEFAULT
-from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy, RoundRobinPolicy
-from ccmlib.cluster import Cluster
+from cassandra.cluster import ExecutionProfile
+from cassandra.policies import RetryPolicy, RoundRobinPolicy
 from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
 from distutils.version import LooseVersion
 
 from tools.context import log_filter
-from tools.funcutils import merge_dicts
 
 LOG_SAVED_DIR = "logs"
 try:
@@ -50,20 +40,13 @@ config = configparser.RawConfigParser()
 if len(config.read(os.path.expanduser('~/.cassandra-dtest'))) > 0:
     if config.has_option('main', 'default_dir'):
         DEFAULT_DIR = os.path.expanduser(config.get('main', 'default_dir'))
-#CASSANDRA_DIR = os.environ.get('CASSANDRA_DIR', DEFAULT_DIR)
 
-NO_SKIP = os.environ.get('SKIP', '').lower() in ('no', 'false')
-DEBUG = os.environ.get('DEBUG', '').lower() in ('yes', 'true')
-TRACE = os.environ.get('TRACE', '').lower() in ('yes', 'true')
-KEEP_LOGS = os.environ.get('KEEP_LOGS', '').lower() in ('yes', 'true')
 KEEP_TEST_DIR = os.environ.get('KEEP_TEST_DIR', '').lower() in ('yes', 'true')
 PRINT_DEBUG = os.environ.get('PRINT_DEBUG', '').lower() in ('yes', 'true')
 RECORD_COVERAGE = os.environ.get('RECORD_COVERAGE', '').lower() in ('yes', 'true')
 IGNORE_REQUIRE = os.environ.get('IGNORE_REQUIRE', '').lower() in ('yes', 'true')
 ENABLE_ACTIVE_LOG_WATCHING = os.environ.get('ENABLE_ACTIVE_LOG_WATCHING', '').lower() in ('yes', 'true')
 RUN_STATIC_UPGRADE_MATRIX = os.environ.get('RUN_STATIC_UPGRADE_MATRIX', '').lower() in ('yes', 'true')
-
-CURRENT_TEST = ""
 
 """
 logging.basicConfig(stream=sys.stdout,
@@ -115,7 +98,6 @@ else:
     #CASSANDRA_GITREF = get_sha(dtest_config.cassandra_dir)
 
 
-#CASSANDRA_LIBJEMALLOC = find_libjemalloc()
 # copy the initial environment variables so we can reset them later:
 initial_environment = copy.deepcopy(os.environ)
 
@@ -130,10 +112,8 @@ def reset_environment_vars():
     os.environ.update(initial_environment)
     os.environ['PYTEST_CURRENT_TEST'] = pytest_current_test
 
+
 logger.debug("Python driver version in use: {}".format(cassandra.__version__))
-
-
-
 
 
 class FlakyRetryPolicy(RetryPolicy):
@@ -221,12 +201,7 @@ def make_execution_profile(retry_policy=FlakyRetryPolicy(), consistency_level=Co
                                 **kwargs)
 
 
-#@pytest.mark.usefixtures("fixture_dtest_config")
-#class Tester(TestCase):
-class Tester():
-
-    maxDiff = None
-    connections = []
+class Tester:
 
     def __getattribute__(self, name):
         try:
@@ -271,24 +246,6 @@ class Tester():
         self.connections = []
         self.runners = []
     """
-
-    # this is intentionally spelled 'tst' instead of 'test' to avoid
-    # making unittest think it's a test method
-    def set_current_tst_name(self):
-        global CURRENT_TEST
-        CURRENT_TEST = self.id()
-
-    def maybe_begin_active_log_watch(self):
-        if ENABLE_ACTIVE_LOG_WATCHING:
-            if not self.allow_log_errors:
-                self.begin_active_log_watch()
-
-    """
-    Finds files matching the glob pattern specified as argument on
-    the given keyspace in all nodes
-    """
-
-
 
     """
     @classmethod
@@ -556,143 +513,6 @@ def write_last_test_file(test_path, cluster):
     with open(LAST_TEST_DIR, 'w') as f:
         f.write(test_path + '\n')
         f.write(cluster.name)
-
-
-def set_log_levels(cluster):
-    if DEBUG:
-        cluster.set_log_level("DEBUG")
-    if TRACE:
-        cluster.set_log_level("TRACE")
-
-    if os.environ.get('DEBUG', 'no').lower() not in ('no', 'false', 'yes', 'true'):
-        classes_to_debug = os.environ.get('DEBUG').split(":")
-        cluster.set_log_level('DEBUG', None if len(classes_to_debug) == 0 else classes_to_debug)
-
-    if os.environ.get('TRACE', 'no').lower() not in ('no', 'false', 'yes', 'true'):
-        classes_to_trace = os.environ.get('TRACE').split(":")
-        cluster.set_log_level('TRACE', None if len(classes_to_trace) == 0 else classes_to_trace)
-
-
-def maybe_setup_jacoco(dtest_config, dtest_setup, cluster_name='test'):
-    """Setup JaCoCo code coverage support"""
-
-    if not RECORD_COVERAGE:
-        return
-
-    # use explicit agent and execfile locations
-    # or look for a cassandra build if they are not specified
-    agent_location = os.environ.get('JACOCO_AGENT_JAR', os.path.join(dtest_config.cassandra_dir, 'build/lib/jars/jacocoagent.jar'))
-    jacoco_execfile = os.environ.get('JACOCO_EXECFILE', os.path.join(dtest_config.cassandra_dir, 'build/jacoco/jacoco.exec'))
-
-    if os.path.isfile(agent_location):
-        logger.debug("Jacoco agent found at {}".format(agent_location))
-        with open(os.path.join(
-                dtest_setup.test_path, cluster_name, 'cassandra.in.sh'), 'w') as f:
-
-            f.write('JVM_OPTS="$JVM_OPTS -javaagent:{jar_path}=destfile={exec_file}"'
-                    .format(jar_path=agent_location, exec_file=jacoco_execfile))
-
-            if os.path.isfile(jacoco_execfile):
-                logger.debug("Jacoco execfile found at {}, execution data will be appended".format(jacoco_execfile))
-            else:
-                logger.debug("Jacoco execfile will be created at {}".format(jacoco_execfile))
-    else:
-        logger.debug("Jacoco agent not found or is not file. Execution will not be recorded.")
-
-
-class ReusableClusterTester(Tester):
-    """
-    A Tester designed for reusing the same cluster across multiple
-    test methods.  This makes test suites with many small tests run
-    much, much faster.  However, there are a couple of downsides:
-
-    First, test setup and teardown must be diligent about cleaning
-    up any data or schema elements that may interfere with other
-    tests.
-
-    Second, errors triggered by one test method may cascade
-    into other test failures.  In an attempt to limit this, the
-    cluster will be restarted if a test fails or an exception is
-    caught.  However, there may still be undetected problems in
-    Cassandra that cause cascading failures.
-    """
-
-    test_path = None
-    cluster = None
-    cluster_options = None
-
-    @classmethod
-    def setUpClass(cls):
-        kill_windows_cassandra_procs()
-        maybe_cleanup_cluster_from_last_test_file()
-        cls.initialize_cluster()
-
-    def setUp(self):
-        self.set_current_tst_name()
-        self.connections = []
-        # TODO enable active log watching
-        # This needs to happen in setUp() and not setUpClass() so that individual
-        # test methods can set allow_log_errors and so that error handling
-        # only fails a single test method instead of the entire class.
-        # The problem with this is that ccm doesn't yet support stopping the
-        # active log watcher -- it runs until the cluster is destroyed.  Since
-        # we reuse the same cluster, this doesn't work for us.
-
-    def tearDown(self):
-        # test_is_ending prevents active log watching from being able to interrupt the test
-        self.test_is_ending = True
-
-        failed = False
-        try:
-            if not self.allow_log_errors and self.check_logs_for_errors():
-                failed = True
-                raise AssertionError('Unexpected error in log, see stdout')
-        finally:
-            try:
-                # save the logs for inspection
-                if failed or KEEP_LOGS:
-                    self.copy_logs(self.cluster)
-            except Exception as e:
-                print("Error saving log:", str(e))
-            finally:
-                reset_environment_vars()
-                if failed:
-                    cleanup_cluster(self.cluster, self.test_path)
-                    kill_windows_cassandra_procs()
-                    self.initialize_cluster(self.dtest_config)
-
-    def initialize_cluster(cls, dtest_config):
-        """
-        This method is responsible for initializing and configuring a ccm
-        cluster for the next set of tests.  This can be called for two
-        different reasons:
-         * A class of tests is starting
-         * A test method failed/errored, so the cluster has been wiped
-
-        Subclasses that require custom initialization should generally
-        do so by overriding post_initialize_cluster().
-        """
-        cls.test_path = get_test_path()
-        #cls.cluster = create_ccm_cluster(cls.test_path, name='test', config=dtest_config)
-        cls.init_config()
-
-        maybe_setup_jacoco(cls.test_path)
-        cls.init_config()
-        write_last_test_file(cls.test_path, cls.cluster)
-        set_log_levels(cls.cluster)
-
-        cls.post_initialize_cluster()
-
-    @classmethod
-    def post_initialize_cluster(cls):
-        """
-        This method is called after the ccm cluster has been created
-        and default config options have been applied.  Any custom
-        initialization for a test class should generally be done
-        here in order to correctly handle cluster restarts after
-        test method failures.
-        """
-        pass
 
 
 class MultiError(Exception):
