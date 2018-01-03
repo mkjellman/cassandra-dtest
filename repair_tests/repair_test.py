@@ -278,7 +278,7 @@ class TestRepair(BaseRepairTest):
         out = node.run_sstablemetadata(keyspace=keyspace).stdout
 
         def matches(pattern):
-            return [_f for _f in [pattern.match(l) for l in out.split('\n')] if _f]
+            return [_f for _f in [pattern.match(l) for l in out.decode("utf-8").split('\n')] if _f]
 
         names = [m.group(1) for m in matches(_sstable_name)]
         repaired_times = [int(m.group(1)) for m in matches(_repaired_at)]
