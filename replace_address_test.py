@@ -536,7 +536,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         """
         Test that multi-dc replace works when rf=1 on each dc
         """
-        self._setup(n=1)
+        self._setup(n=[1, 1])
 
         yaml_config = """
         # Create the keyspace and table
