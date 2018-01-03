@@ -300,9 +300,9 @@ class TestCqlsh(Tester):
 
         output, err = self.run_cqlsh(node, 'use testks; SELECT * FROM varcharmaptable', ['--encoding=utf-8'])
 
-        assert output.count('Можам да јадам стакло, а не ме штета.') == 16
-        assert output.count(' ⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑') == 16
-        assert output.count('᚛᚛ᚉᚑᚅᚔᚉᚉᚔᚋ ᚔᚈᚔ ᚍᚂᚐᚅᚑ ᚅᚔᚋᚌᚓᚅᚐ᚜') == 2
+        assert output.decode("utf-8").count('Можам да јадам стакло, а не ме штета.') == 16
+        assert output.decode("utf-8").count(' ⠊⠀⠉⠁⠝⠀⠑⠁⠞⠀⠛⠇⠁⠎⠎⠀⠁⠝⠙⠀⠊⠞⠀⠙⠕⠑⠎⠝⠞⠀⠓⠥⠗⠞⠀⠍⠑') == 16
+        assert output.decode("utf-8").count('᚛᚛ᚉᚑᚅᚔᚉᚉᚔᚋ ᚔᚈᚔ ᚍᚂᚐᚅᚑ ᚅᚔᚋᚌᚓᚅᚐ᚜') == 2
 
     def test_eat_glass(self):
 
@@ -1673,13 +1673,13 @@ Tracing session:""")
         return p.communicate()
 
 
-class CqlshSmokeTest(Tester):
+class TestCqlshSmoke(Tester):
     """
     Tests simple use cases for clqsh.
     """
 
-    def setUp(self):
-        super(CqlshSmokeTest, self).setUp()
+    @pytest.fixture(scope='function', autouse=True)
+    def fixture_cluster_setup(self, fixture_dtest_setup):
         self.cluster.populate(1).start(wait_for_binary_proto=True)
         [self.node1] = self.cluster.nodelist()
         self.session = self.patient_cql_connection(self.node1)
@@ -1950,12 +1950,13 @@ class CqlLoginTest(Tester):
     Tests login which requires password authenticator
     """
 
-    def setUp(self):
-        super(CqlLoginTest, self).setUp()
+    @pytest.fixture(scope='function', autouse=True)
+    def fixture_cluster_setup(self, fixture_dtest_setup):
+        cluster = fixture_dtest_setup.cluster
         config = {'authenticator': 'org.apache.cassandra.auth.PasswordAuthenticator'}
-        self.cluster.set_configuration_options(values=config)
-        self.cluster.populate(1).start(wait_for_binary_proto=True)
-        [self.node1] = self.cluster.nodelist()
+        cluster.set_configuration_options(values=config)
+        cluster.populate(1).start(wait_for_binary_proto=True)
+        [self.node1] = cluster.nodelist()
         self.node1.watch_log_for('Created default superuser')
         self.session = self.patient_cql_connection(self.node1, user='cassandra', password='cassandra')
 

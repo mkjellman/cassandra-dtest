@@ -198,7 +198,7 @@ def run_func_docstring(tester, test_func, globs=None, verbose=False, compileflag
 
 
 @since('2.2')
-class ToJsonSelectTests(Tester):
+class TestToJsonSelect(Tester):
     """
     Tests using toJson with a SELECT statement
     """
@@ -458,7 +458,7 @@ class ToJsonSelectTests(Tester):
 
 
 @since('2.2')
-class FromJsonUpdateTests(Tester):
+class TestFromJsonUpdate(Tester):
     """
     Tests using fromJson within UPDATE statements.
     """
@@ -759,7 +759,7 @@ class FromJsonUpdateTests(Tester):
 
 
 @since('2.2')
-class FromJsonSelectTests(Tester):
+class TestFromJsonSelect(Tester):
     """
     Tests using fromJson in conjunction with a SELECT statement
     """
@@ -841,7 +841,7 @@ class FromJsonSelectTests(Tester):
 
 
 @since('2.2')
-class FromJsonInsertTests(Tester):
+class TestFromJsonInsert(Tester):
     """
     Tests using fromJson within INSERT statements.
     """
@@ -1064,7 +1064,7 @@ class FromJsonInsertTests(Tester):
 
 
 @since('2.2')
-class FromJsonDeleteTests(Tester):
+class TestFromJsonDelete(Tester):
     """
     Tests using fromJson within DELETE statements.
     """
@@ -1128,7 +1128,7 @@ class FromJsonDeleteTests(Tester):
 
 
 @since('2.2')
-class JsonFullRowInsertSelect(Tester):
+class TestJsonFullRowInsertSelect(Tester):
     """
     Tests for creating full rows from json documents, selecting full rows back as json documents, and related functionality.
     """

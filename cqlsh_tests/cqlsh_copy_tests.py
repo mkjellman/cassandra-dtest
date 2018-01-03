@@ -58,7 +58,7 @@ class UTC(datetime.tzinfo):
         return datetime.timedelta(0)
 
 
-class CqlshCopyTest(Tester):
+class TestCqlshCopy(Tester):
     """
     Tests the COPY TO and COPY FROM features in cqlsh.
     @jira_ticket CASSANDRA-3906
@@ -78,7 +78,7 @@ class CqlshCopyTest(Tester):
 
     def tearDown(self):
         self.delete_temp_files()
-        super(CqlshCopyTest, self).tearDown()
+        super(TestCqlshCopy, self).tearDown()
 
     def get_temp_file(self, prefix=template, suffix=""):
         """
@@ -2631,9 +2631,9 @@ class CqlshCopyTest(Tester):
             metadata = self.session.cluster.metadata
             metadata.token_map.rebuild_keyspace(self.ks, build_if_absent=True)
             ring = [t.value for t in list(metadata.token_map.tokens_to_hosts_by_ks[self.ks].keys())]
-            assert len(ring), 3 >= 'Not enough ranges in the ring for this test'
+            assert len(ring) >= 3, 'Not enough ranges in the ring for this test'
             ring.sort()
-            idx = len(ring) / 2
+            idx = len(ring) // 2
             start = ring[idx]
             end = ring[idx + 1]
 
@@ -2992,16 +2992,14 @@ class CqlshCopyTest(Tester):
         # do an ordinary COPY TO AND FROM roundtrip
         logger.debug('Exporting to csv file: {}'.format(tempfile.name))
         ret = self.run_cqlsh(cmds="COPY ks.testauth TO '{}'".format(tempfile.name), auth_enabled=True)
-        assert num_records == len(open(tempfile.name).readlines(),
-                         msg="Failed to export {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n"
-                         .format(num_records, ret.stderr, ret.stdout))
+        assert num_records == len(open(tempfile.name).readlines()), \
+            "Failed to export {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n".format(num_records, ret.stderr, ret.stdout)
 
         self.session.execute("TRUNCATE testauth")
         logger.debug('Importing from csv file: {}'.format(tempfile.name))
         ret = self.run_cqlsh(cmds="COPY ks.testauth FROM '{}'".format(tempfile.name), auth_enabled=True)
-        assert [[num_records]] == rows_to_list(self.session.execute("SELECT COUNT(*) FROM ks.testauth"),
-                         msg="Failed to import {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n"
-                         .format(num_records, ret.stderr, ret.stdout))
+        assert [[num_records]] == rows_to_list(self.session.execute("SELECT COUNT(*) FROM ks.testauth")), \
+            "Failed to import {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n".format(num_records, ret.stderr, ret.stdout)
 
         # do another COPY TO AND FROM roundtrip but invoke copy via the source command
         copy_to_cql = self.get_temp_file()
@@ -3014,30 +3012,26 @@ class CqlshCopyTest(Tester):
 
         logger.debug('Exporting to csv file {} via source of {}'.format(tempfile.name, copy_to_cql.name))
         ret = self.run_cqlsh(cmds="SOURCE '{}'".format(copy_to_cql.name), auth_enabled=True)
-        assert num_records == len(open(tempfile.name).readlines(),
-                         msg="Failed to export {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n"
-                         .format(num_records, ret.stderr, ret.stdout))
+        assert num_records == len(open(tempfile.name).readlines()), \
+            "Failed to export {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n".format(num_records, ret.stderr, ret.stdout)
 
         self.session.execute("TRUNCATE testauth")
         logger.debug('Importing from csv file {} via source of {}'.format(tempfile.name, copy_from_cql.name))
         ret = self.run_cqlsh(cmds="SOURCE '{}'".format(copy_from_cql.name), auth_enabled=True)
-        assert [[num_records]] == rows_to_list(self.session.execute("SELECT COUNT(*) FROM ks.testauth"),
-                         msg="Failed to import {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n"
-                         .format(num_records, ret.stderr, ret.stdout))
+        assert [[num_records]] == rows_to_list(self.session.execute("SELECT COUNT(*) FROM ks.testauth")), \
+            "Failed to import {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n".format(num_records, ret.stderr, ret.stdout)
 
         # do another COPY TO AND FROM roundtrip but invoke copy via the -f cqlsh option
         logger.debug('Exporting to csv file {} via --file={}'.format(tempfile.name, copy_to_cql.name))
         ret = self.run_cqlsh(cmds='', cqlsh_options=['--file={}'.format(copy_to_cql.name)], auth_enabled=True)
-        assert num_records == len(open(tempfile.name).readlines(),
-                         msg="Failed to export {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n"
-                         .format(num_records, ret.stderr, ret.stdout))
+        assert num_records == len(open(tempfile.name).readlines()), \
+            "Failed to export {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n".format(num_records, ret.stderr, ret.stdout)
 
         self.session.execute("TRUNCATE testauth")
         logger.debug('Importing from csv file {} via --file={}'.format(tempfile.name, copy_from_cql.name))
         ret = self.run_cqlsh(cmds='', cqlsh_options=['--file={}'.format(copy_from_cql.name)], auth_enabled=True)
-        assert [[num_records]] == rows_to_list(self.session.execute("SELECT COUNT(*) FROM ks.testauth"),
-                         msg="Failed to import {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n"
-                         .format(num_records, ret.stderr, ret.stdout))
+        assert [[num_records]] == rows_to_list(self.session.execute("SELECT COUNT(*) FROM ks.testauth")), \
+            "Failed to import {} rows\nSTDOUT:\n{}\nSTDERR:\n{}\n".format(num_records, ret.stderr, ret.stdout)
 
     @since('2.2')
     def test_reading_pk_timestamps_with_counters(self):

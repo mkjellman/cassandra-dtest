@@ -49,7 +49,6 @@ def _repair_options(version, ks='', cf=None, sequential=True):
 
 
 class BaseRepairTest(Tester):
-    __test__ = False
 
     def check_rows_on_node(self, node_to_check, rows, found=None, missings=None, restart=True):
         """
@@ -140,14 +139,15 @@ class BaseRepairTest(Tester):
         # Validate that only one range was transfered
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
 
-        assert len(out_of_sync_logs), 2 == "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
+        assert len(out_of_sync_logs) == 2, "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
 
         valid_out_of_sync_pairs = [{node1.address(), node3.address()},
                                    {node2.address(), node3.address()}]
 
         for line, m in out_of_sync_logs:
             num_out_of_sync_ranges, out_of_sync_nodes = m.group(3), {m.group(1), m.group(2)}
-            assert int(num_out_of_sync_ranges) == 1, "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes == num_out_of_sync_ranges)
+            assert int(num_out_of_sync_ranges) == 1, \
+                "Expecting 1 range out of sync for {}, but saw {}".format(out_of_sync_nodes, num_out_of_sync_ranges)
             assert out_of_sync_nodes, valid_out_of_sync_pairs in str(out_of_sync_nodes)
 
         # Check node3 now has the key
@@ -513,14 +513,14 @@ class TestRepair(BaseRepairTest):
             for i in range(0, 10):
                 query = SimpleStatement("SELECT c1, c2 FROM {} WHERE key='k{}'".format(cf, i), consistency_level=ConsistencyLevel.ALL)
                 res = list(session.execute(query))
-                assert len([x for x in res if len(x) != 0]), 0 == res
+                assert len([x for x in res if len(x) != 0]) == 0, res
 
         # check log for no repair happened for gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for cf1")
-        assert len(out_of_sync_logs), 0 == "GC-able data does not need to be repaired with empty data: " + str([elt[0] for elt in out_of_sync_logs])
+        assert len(out_of_sync_logs) == 0, "GC-able data does not need to be repaired with empty data: " + str([elt[0] for elt in out_of_sync_logs])
         # check log for actual repair for non gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for cf2")
-        assert len(out_of_sync_logs), 0 > "Non GC-able data should be repaired"
+        assert len(out_of_sync_logs) > 0, "Non GC-able data should be repaired"
 
     def _range_tombstone_digest(self, sequential):
         """
@@ -596,7 +596,7 @@ class TestRepair(BaseRepairTest):
 
         # check log for no repair happened for gcable data
         out_of_sync_logs = node2.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync for table1")
-        assert len(out_of_sync_logs), 0 == "Digest mismatch for range tombstone: {}".format(str([elt[0] for elt in out_of_sync_logs]))
+        assert len(out_of_sync_logs) == 0, "Digest mismatch for range tombstone: {}".format(str([elt[0] for elt in out_of_sync_logs]))
 
     def test_local_dc_repair(self):
         """
@@ -615,7 +615,7 @@ class TestRepair(BaseRepairTest):
 
         # Verify that only nodes in dc1 are involved in repair
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        assert len(out_of_sync_logs), 1 == "Lines matching: {}".format(len(out_of_sync_logs))
+        assert len(out_of_sync_logs) == 1, "Lines matching: {}".format(len(out_of_sync_logs))
 
         line, m = out_of_sync_logs[0]
         num_out_of_sync_ranges, out_of_sync_nodes = m.group(3), {m.group(1), m.group(2)}
@@ -644,7 +644,7 @@ class TestRepair(BaseRepairTest):
 
         # Verify that only nodes in dc1 and dc2 are involved in repair
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        assert len(out_of_sync_logs), 2 == "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
+        assert len(out_of_sync_logs) == 2, "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
         valid_out_of_sync_pairs = [{node1.address(), node2.address()},
                                    {node2.address(), node3.address()}]
 
@@ -674,7 +674,7 @@ class TestRepair(BaseRepairTest):
 
         # Verify that only nodes in dc1 and dc2 are involved in repair
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
-        assert len(out_of_sync_logs), 2 == "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
+        assert len(out_of_sync_logs) == 2, "Lines matching: " + str([elt[0] for elt in out_of_sync_logs])
         valid_out_of_sync_pairs = [{node1.address(), node2.address()},
                                    {node2.address(), node3.address()}]
 
@@ -688,9 +688,9 @@ class TestRepair(BaseRepairTest):
 
         # Check the repair was a dc parallel repair
         if self.cluster.version() >= '2.2':
-            assert len(node1.grep_log('parallelism: dc_parallel')), 1 == str(node1.grep_log('parallelism'))
+            assert len(node1.grep_log('parallelism: dc_parallel')) == 1, str(node1.grep_log('parallelism'))
         else:
-            assert len(node1.grep_log('parallelism=PARALLEL')), 1 == str(node1.grep_log('parallelism'))
+            assert len(node1.grep_log('parallelism=PARALLEL')) == 1, str(node1.grep_log('parallelism'))
 
     def _setup_multi_dc(self):
         """
@@ -830,8 +830,8 @@ class TestRepair(BaseRepairTest):
         opts = ['-st', str(node3.initial_token), '-et', str(node1.initial_token), ]
         opts += _repair_options(self.cluster.version(), ks='keyspace1', cf='counter1', sequential=False)
         node1.repair(opts)
-        assert len(node1.grep_log('are consistent for standard1')), 0 == "Nodes 1 and 2 should not be consistent."
-        assert len(node3.grep_log('Repair command')), 0 == "Node 3 should not have been involved in the repair."
+        assert len(node1.grep_log('are consistent for standard1')) == 0, "Nodes 1 and 2 should not be consistent."
+        assert len(node3.grep_log('Repair command')) == 0, "Node 3 should not have been involved in the repair."
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
         assert len(out_of_sync_logs) == 0, "We repaired the wrong CF == so things should still be broke"
 
@@ -839,8 +839,8 @@ class TestRepair(BaseRepairTest):
         opts = ['-st', str(node3.initial_token), '-et', str(node1.initial_token), ]
         opts += _repair_options(self.cluster.version(), ks='keyspace1', cf='standard1', sequential=False)
         node1.repair(opts)
-        assert len(node1.grep_log('are consistent for standard1')), 0 == "Nodes 1 and 2 should not be consistent."
-        assert len(node3.grep_log('Repair command')), 0 == "Node 3 should not have been involved in the repair."
+        assert len(node1.grep_log('are consistent for standard1')) == 0, "Nodes 1 and 2 should not be consistent."
+        assert len(node3.grep_log('Repair command')) == 0, "Node 3 should not have been involved in the repair."
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
         _, matches = out_of_sync_logs[0]
         out_of_sync_nodes = {matches.group(1), matches.group(2)}
@@ -1074,7 +1074,7 @@ class TestRepair(BaseRepairTest):
         node1, node2 = cluster.nodelist()
         node2.stop(wait_other_notice=True)
         profile_path = os.path.join(os.getcwd(), 'stress_profiles/repair_wide_rows.yaml')
-        print(("yaml = " + profile_path))
+        logger.info(("yaml = " + profile_path))
         node1.stress(['user', 'profile=' + profile_path, 'n=50', 'ops(insert=1)', 'no-warmup', '-rate', 'threads=8',
                       '-insert', 'visits=FIXED(100K)', 'revisit=FIXED(100K)'])
         node2.start(wait_for_binary_proto=True)

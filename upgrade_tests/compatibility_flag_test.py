@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.upgrade_test
-class CompatibilityFlagTest(Tester):
+class TestCompatibilityFlag(Tester):
     """
     Test 30 protocol compatibility flag
 
@@ -105,7 +105,7 @@ class CompatibilityFlagTest(Tester):
 
 
 @since('3.0.14', max_version='3.0.x')
-class CompatibilityFlag30XTest(CompatibilityFlagTest):
+class CompatibilityFlag30XTest(TestCompatibilityFlag):
 
     def test_compatibility_flag_off_with_30_node(self):
         self._compatibility_flag_off_with_30_node_test('3.0.12')
@@ -121,7 +121,7 @@ class CompatibilityFlag30XTest(CompatibilityFlagTest):
 
 
 @since('3.11', max_version='4')
-class CompatibilityFlag3XTest(CompatibilityFlagTest):
+class CompatibilityFlag3XTest(TestCompatibilityFlag):
 
     def test_compatibility_flag_off_with_30_node(self):
         self._compatibility_flag_off_with_30_node_test('3.10')

@@ -78,7 +78,7 @@ def block_on_trace(session):
 
 
 @pytest.mark.no_vnodes
-class ReplicationTest(Tester):
+class TestReplication(Tester):
     """
     This test suite looks at how data is replicated across a cluster
     and who the coordinator, replicas and forwarders involved are.
@@ -294,7 +294,7 @@ class ReplicationTest(Tester):
         assert len(forwarders_used) == 3
 
 
-class SnitchConfigurationUpdateTest(Tester):
+class TestSnitchConfigurationUpdate(Tester):
     """
     Test to reproduce CASSANDRA-10238, wherein changing snitch properties to change racks without a restart
     could violate RF contract.

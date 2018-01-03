@@ -4,7 +4,7 @@ import pytest
 import logging
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester
-from sstable_generation_loading_test import BaseSStableLoaderTest
+from sstable_generation_loading_test import TestBaseSStableLoader
 from thrift_bindings.thrift010.Cassandra import (ConsistencyLevel, Deletion,
                                            Mutation, SlicePredicate,
                                            SliceRange)
@@ -463,14 +463,14 @@ class TestBootstrapAfterUpgrade(TestStorageEngineUpgrade):
 
 @pytest.mark.upgrade_test
 @since('3.0', max_version='4')
-class TestLoadKaSStables(BaseSStableLoaderTest):
+class TestLoadKaSStables(TestBaseSStableLoader):
     upgrade_from = '2.1.6'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
 
 
 @pytest.mark.upgrade_test
 @since('3.0', max_version='4')
-class TestLoadKaCompactSStables(BaseSStableLoaderTest):
+class TestLoadKaCompactSStables(TestBaseSStableLoader):
     upgrade_from = '2.1.6'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
     compact = True
@@ -478,14 +478,14 @@ class TestLoadKaCompactSStables(BaseSStableLoaderTest):
 
 @pytest.mark.upgrade_test
 @since('3.0', max_version='4')
-class TestLoadLaSStables(BaseSStableLoaderTest):
+class TestLoadLaSStables(TestBaseSStableLoader):
     upgrade_from = '2.2.4'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
 
 
 @pytest.mark.upgrade_test
 @since('3.0', max_version='4')
-class TestLoadLaCompactSStables(BaseSStableLoaderTest):
+class TestLoadLaCompactSStables(TestBaseSStableLoader):
     upgrade_from = '2.2.4'
     jvm_args = LEGACY_SSTABLES_JVM_ARGS
     compact = True

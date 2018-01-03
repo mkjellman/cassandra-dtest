@@ -10,7 +10,7 @@ since = pytest.mark.since
 
 
 @since('4.0')
-class PreviewRepairTest(Tester):
+class TestPreviewRepair(Tester):
 
     def assert_no_repair_history(self, session):
         rows = session.execute("select * from system_distributed.repair_history")

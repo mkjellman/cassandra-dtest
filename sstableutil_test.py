@@ -28,7 +28,7 @@ def _normcase_all(xs):
 
 
 @since('3.0')
-class SSTableUtilTest(Tester):
+class TestSSTableUtil(Tester):
 
     def test_compaction(self):
         """

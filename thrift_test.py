@@ -52,7 +52,7 @@ def pid():
 
 
 @since('2.0', max_version='4')
-class ThriftTester(Tester):
+class TestThrift(Tester):
 
     @pytest.fixture(scope='function', autouse=True)
     def fixture_dtest_setup_overrides(self):
@@ -341,7 +341,7 @@ _MULTI_SLICE_COLUMNS = [Column('a', '1', 0), Column('b', '2', 0), Column('c', '3
 
 
 @since('2.0', max_version='4')
-class TestMutations(ThriftTester):
+class TestMutations(TestThrift):
 
     def truncate_all(self, *table_names):
         for table in table_names:

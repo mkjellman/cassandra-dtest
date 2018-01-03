@@ -135,7 +135,7 @@ class BaseReplaceAddressTest(Tester):
 
     def _verify_data(self, initial_data, table='keyspace1.standard1', cl=ConsistencyLevel.ONE, limit=10000,
                      restart_nodes=False):
-        assert len(initial_data), 0 > "Initial data must be greater than 0"
+        assert len(initial_data) > 0, "Initial data must be greater than 0"
 
         # query should work again
         logger.debug("Stopping old nodes")
@@ -500,7 +500,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             self.replacement_node.start(jvm_args=["-Dcassandra.replace_address_first_boot={}".format(self.replaced_node.address())],
                                         wait_for_binary_proto=True)
         else:
-            raise RuntimeError('invalid mode value {mode}'.format(mode))
+            raise RuntimeError('invalid mode value {mode}'.format(mode=mode))
 
         # check if bootstrap succeeded
         assert_bootstrap_state(self, self.replacement_node, 'COMPLETED')
@@ -536,7 +536,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         """
         Test that multi-dc replace works when rf=1 on each dc
         """
-        self._setup(n=[1, 1])
+        self._setup(n=1)
 
         yaml_config = """
         # Create the keyspace and table

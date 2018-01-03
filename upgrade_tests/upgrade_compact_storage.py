@@ -17,7 +17,7 @@ VERSION_TRUNK = 'github:apache/trunk'
 
 @pytest.mark.upgrade_test
 @since('4.0')
-class UpgradeSuperColumnsThrough(Tester):
+class TestUpgradeSuperColumnsThrough(Tester):
     def upgrade_to_version(self, tag, start_rpc=True, wait=True, nodes=None):
         logger.debug('Upgrading to ' + tag)
         if nodes is None:

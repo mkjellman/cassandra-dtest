@@ -11,7 +11,7 @@ from dtest import Tester, create_ks
 logger = logging.getLogger(__name__)
 
 
-class DeleteInsertTest(Tester):
+class TestDeleteInsert(Tester):
     """
     Examines scenarios around deleting data and adding data back with the same key
     """

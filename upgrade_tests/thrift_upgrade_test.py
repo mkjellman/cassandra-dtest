@@ -104,7 +104,7 @@ def _validate_dense_thrift(client, cf='dense_super_1'):
 
 
 @pytest.mark.upgrade_test
-class UpgradeSuperColumnsThrough(Tester):
+class TestUpgradeSuperColumnsThrough(Tester):
     def upgrade_to_version(self, tag, nodes=None):
         logger.debug('Upgrading to ' + tag)
         if nodes is None:

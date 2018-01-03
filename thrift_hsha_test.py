@@ -31,7 +31,7 @@ except KeyError:
 
 
 @since('2.0', max_version='4')
-class ThriftHSHATest(Tester):
+class TestThriftHSHA(Tester):
 
     def test_closing_connections(self):
         """

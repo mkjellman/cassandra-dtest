@@ -13,7 +13,7 @@ since = pytest.mark.since
 logger = logging.getLogger(__name__)
 
 
-class NativeTransportSSL(Tester):
+class TestNativeTransportSSL(Tester):
     """
     Native transport integration tests, specifically for ssl and port configurations.
     """

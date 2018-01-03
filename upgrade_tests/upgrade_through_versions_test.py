@@ -225,7 +225,7 @@ def counter_checker(tester, to_verify_queue, verification_done_queue):
 
 @pytest.mark.upgrade_test
 @pytest.mark.resource_intensive
-class UpgradeTester(Tester):
+class TestUpgrade(Tester):
     """
     Upgrades a 3-node Murmur3Partitioner cluster through versions specified in test_version_metas.
     """
@@ -253,7 +253,7 @@ class UpgradeTester(Tester):
         os.environ['CASSANDRA_VERSION'] = self.test_version_metas[0].version
         switch_jdks(self.test_version_metas[0].java_version)
 
-        super(UpgradeTester, self).setUp()
+        super(TestUpgrade, self).setUp()
         logger.debug("Versions to test (%s): %s" % (type(self), str([v.version for v in self.test_version_metas])))
 
     def init_config(self):
@@ -385,7 +385,7 @@ class UpgradeTester(Tester):
         # just to be super sure we get cleaned up
         self._terminate_subprocs()
 
-        super(UpgradeTester, self).tearDown()
+        super(TestUpgrade, self).tearDown()
 
     def _check_on_subprocs(self, subprocs):
         """
@@ -760,9 +760,9 @@ def create_upgrade_class(clsname, version_metas, protocol_version,
         extra_config = (('partitioner', 'org.apache.cassandra.dht.Murmur3Partitioner'),)
 
     if bootstrap_test:
-        parent_classes = (UpgradeTester, BootstrapMixin)
+        parent_classes = (TestUpgrade, BootstrapMixin)
     else:
-        parent_classes = (UpgradeTester,)
+        parent_classes = (TestUpgrade,)
 
     # short names for debug output
     parent_class_names = [cls.__name__ for cls in parent_classes]
