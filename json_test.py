@@ -84,10 +84,10 @@ def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=No
         args = [host, str(port)]
         sys.stdout.flush()
         p = subprocess.Popen([cli] + args, env=env, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        p.stdin.write("USE {};".format(enabled_ks()))
+        p.stdin.write("USE {};".format(enabled_ks()).encode('utf-8'))
         for cmd in cmds.split(';'):
-            p.stdin.write(cmd + ';\n')
-        p.stdin.write("quit;\n")  # may not be necesary, things could simplify a bit if removed
+            p.stdin.write(cmd + ';\n'.encode('utf-8'))
+        p.stdin.write("quit;\n".encode('utf-8'))  # may not be necesary, things could simplify a bit if removed
         return p.communicate()
 
     def cqlsh(cmds, supress_err=False):
