@@ -10,7 +10,7 @@ from cassandra.policies import FallthroughRetryPolicy
 from cassandra.protocol import ProtocolException
 from cassandra.query import SimpleStatement
 
-from dtest import ReusableClusterTester, debug, Tester, create_ks
+from dtest import Tester, create_ks
 from distutils.version import LooseVersion
 from thrift_bindings.thrift010.ttypes import \
     ConsistencyLevel as ThriftConsistencyLevel
@@ -61,7 +61,7 @@ class CQLTester(Tester):
         return session
 
 
-class StorageProxyCQLTester(CQLTester):
+class TestCQL(CQLTester):
     """
     Each CQL statement is exercised at least once in order to
     ensure we execute the code path in StorageProxy.
@@ -472,7 +472,7 @@ class StorageProxyCQLTester(CQLTester):
         session.execute(query)
 
 
-class MiscellaneousCQLTester(CQLTester):
+class TestMiscellaneousCQL(CQLTester):
     """
     CQL tests that cannot be performed as Java unit tests, see CASSANDRA-9160.
     If you're considering adding a test here, consider writing Java unit tests
@@ -548,7 +548,7 @@ class MiscellaneousCQLTester(CQLTester):
         key = struct.pack('>i', 2)
         column_name_component = struct.pack('>i', 4)
         # component length + component + EOC + component length + component + EOC
-        column_name = '\x00\x04' + column_name_component + '\x00' + '\x00\x01' + 'v' + '\x00'
+        column_name = b'\x00\x04' + column_name_component + b'\x00' + b'\x00\x01' + 'v'.encode("utf-8") + b'\x00'
         value = struct.pack('>i', 8)
         client.batch_mutate(
             {key: {'test': [Mutation(ColumnOrSuperColumn(column=Column(name=column_name, value=value, timestamp=100)))]}},
@@ -1002,7 +1002,7 @@ class AbortedQueryTester(CQLTester):
 
 
 @since('3.10')
-class SlowQueryTester(CQLTester):
+class TestCQLSlowQuery(CQLTester):
     """
     Test slow query logging.
 
@@ -1219,15 +1219,15 @@ class SlowQueryTester(CQLTester):
         assert_length_equal(ret, num_expected)
 
 
-class LWTTester(ReusableClusterTester):
+class TestLWTWithCQL(Tester):
     """
     Validate CQL queries for LWTs for static columns for null and non-existing rows
     @jira_ticket CASSANDRA-9842
     """
 
-    @classmethod
-    def post_initialize_cluster(cls):
-        cluster = cls.cluster
+    @pytest.fixture(scope='function', autouse=True)
+    def post_initialize_cluster(self, fixture_dtest_setup):
+        cluster = self.cluster
         cluster.populate(3)
         cluster.start(wait_for_binary_proto=True)
 

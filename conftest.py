@@ -132,15 +132,15 @@ def fixture_dtest_setup_overrides():
 
 
 """
-Not exactly sure why :\ but, this fixture needs to be scoped to class level and not
-session. If you invoke pytest with tests across multiple test classes, when scopped
+Not exactly sure why :\ but, this fixture needs to be scoped to function level and not
+session or class. If you invoke pytest with tests across multiple test classes, when scopped
 at session, the root logger appears to get reset between each test class invocation.
 this means that the first test to run not from the first test class (and all subsequent 
 tests), will have the root logger reset and see a level of NOTSET. Scoping it at the
 class level seems to work, and I guess it's not that much extra overhead to setup the
 logger once per test class vs. once per session in the grand scheme of things.
 """
-@pytest.fixture(scope="class", autouse=True)
+@pytest.fixture(scope="function", autouse=True)
 def fixture_logging_setup(request):
     # set the root logger level to whatever the user asked for
     # all new loggers created will use the root logger as a template
