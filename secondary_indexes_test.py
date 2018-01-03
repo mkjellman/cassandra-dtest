@@ -82,9 +82,10 @@ class TestSecondaryIndexes(Tester):
         session.execute("CREATE INDEX b_index ON ks.cf (b);")
         num_rows = 100
         for i in range(num_rows):
-            indexed_value = i % (num_rows / 3)
+            indexed_value = i % (num_rows // 3)
             # use the same indexed value three times
-            session.execute("INSERT INTO ks.cf (a, b) VALUES ('%d', '%d');" % (i, indexed_value))
+            session.execute("INSERT INTO ks.cf (a, b) VALUES ('{a}', '{b}');"
+                            .format(a=i, b=indexed_value))
 
         cluster.flush()
 
@@ -526,7 +527,7 @@ class TestSecondaryIndexes(Tester):
         session.execute("CREATE INDEX b_index ON ks.cf (b);")
         num_rows = 100
         for i in range(num_rows):
-            indexed_value = i % (num_rows / 3)
+            indexed_value = i % (num_rows // 3)
             # use the same indexed value three times
             session.execute("INSERT INTO ks.cf (a, b) VALUES ('{a}', '{b}');"
                             .format(a=i, b=indexed_value))
