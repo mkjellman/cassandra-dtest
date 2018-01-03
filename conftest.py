@@ -434,6 +434,12 @@ def pytest_collection_modifyitems(items, config):
                 logger.info("SKIP: Deselecting test %s as the test requires vnodes to be disabled. To run this test, "
                       "re-run without the --use-vnodes command line argument" % item.name)
 
+        if item.get_marker("vnodes"):
+            if not config.getoption("--use-vnodes"):
+                deselect_test = True
+                logger.info("SKIP: Deselecting test %s as the test requires vnodes to be enabled. To run this test, "
+                            "re-run with the --use-vnodes command line argument" % item.name)
+
         for test_item_class in inspect.getmembers(item.module, inspect.isclass):
             if not hasattr(test_item_class[1], "pytestmark"):
                 continue

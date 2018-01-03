@@ -60,7 +60,7 @@ class TestCounters(Tester):
         #
 
         cluster.set_install_dir(version='2.1.17')
-        cluster.start();
+        cluster.start()
         cluster.nodetool("upgradesstables")
 
         #
@@ -78,6 +78,7 @@ class TestCounters(Tester):
         session = self.patient_cql_connection(node1, consistency_level=ConsistencyLevel.ALL)
         assert_one(session, "SELECT COUNT(*) FROM test.test", [1000])
 
+    @pytest.mark.vnodes
     def test_counter_leader_with_partial_view(self):
         """
         Test leader election with a starting node.
