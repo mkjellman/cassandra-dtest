@@ -16,7 +16,7 @@ from psutil import virtual_memory
 
 import netifaces as ni
 
-from ccmlib.common import get_version_from_build, is_win
+from ccmlib.common import validate_install_dir, get_version_from_build, is_win
 
 from dtest import cleanup_cluster
 from dtest_setup import DTestSetup
@@ -67,16 +67,13 @@ def check_required_loopback_interfaces_available():
     give the user some helpful advice on how to get their machine into a good known config
     """
     if platform.system() == "Darwin":
-        if len(ni.ifaddresses('lo0')[AF_INET]) < 3:
-            raise Exception("At least 3 loopback interfaces are required to run dtests. "
+        if len(ni.ifaddresses('lo0')[AF_INET]) < 12:
+            pytest.exit("At least 3 loopback interfaces are required to run dtests. "
                             "On Mac you can create the required loopback interfaces by running "
                             "'for i in {1..9}; do sudo ifconfig lo0 alias 127.0.0.$i up; done;'")
 
 
 def pytest_addoption(parser):
-    # if we're on mac, check that we have the required loopback interfaces before doing anything!
-    check_required_loopback_interfaces_available()
-
     parser.addoption("--use-vnodes", action="store_true", default=False,
                      help="Determines wither or not to setup clusters using vnodes for tests")
     parser.addoption("--use-off-heap-memtables", action="store_true", default=False,
@@ -375,21 +372,19 @@ def install_debugging_signal_handler():
     faulthandler.enable()
 
 
-#@pytest.yield_fixture(scope='class')
-#def fixture_class_setup_and_teardown(request):
-#    dtest_config = DTestConfig()
-#    dtest_config.setup(request)
-#    initialize_cluster(request, dtest_config)
-#
-#    yield
-#
-#    ##cleanup_cluster(request.cls.cluster, request.cls.test_path)
-
-
 @pytest.fixture(scope='function')
 def parse_dtest_config(request):
     dtest_config = DTestConfig()
     dtest_config.setup(request)
+
+    # if we're on mac, check that we have the required loopback interfaces before doing anything!
+    check_required_loopback_interfaces_available()
+
+    try:
+        if dtest_config.cassandra_dir is not None:
+            validate_install_dir(dtest_config.cassandra_dir)
+    except Exception as e:
+        pytest.exit("{}. Did you remember to build C*? ('ant clean jar')".format(e))
 
     yield dtest_config
 
