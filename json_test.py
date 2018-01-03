@@ -101,7 +101,7 @@ def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=No
 
         # if output is empty string we want to just return None
         if output:
-            return output
+            return output.decode("utf-8")
 
     def cqlsh_print(cmds, supress_err=False):
         """
