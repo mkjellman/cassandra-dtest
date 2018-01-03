@@ -1,6 +1,7 @@
 import threading
 import time
 import logging
+import pytest
 
 from dtest import Tester
 
