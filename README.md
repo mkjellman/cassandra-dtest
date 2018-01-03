@@ -22,14 +22,14 @@ DTests requires the following native dependencies:
  
 #### Linux
 1. ``apt-get install git-core python3 python3-pip python3-dev libev4 libev-dev``
-2. Optional (solves warning: "jemalloc shared library could not be preloaded to speed up memory allocations"): 
+2. (Optional - solves warning: "jemalloc shared library could not be preloaded to speed up memory allocations"): 
 ``apt-get install -y --no-install-recommends libjemalloc1``
 #### Mac
 On Mac, the easiest path is to install the latest [Xcode and Command Line Utilities](https://developer.apple.com) to 
 bootstrap your development environment and then use [Homebrew](https://brew.sh)
 
-1. ``brew install python3 libev``
-2. ``sudo pip install virtualenv``
+1. (Optional) Make sure brew is in a good state on your system ``brew doctor``
+2. ``brew install python3 libev``
 
 ### Python Dependencies
 There are multiple external Python dependencies required to run DTests. 
@@ -40,7 +40,7 @@ in the root of the cassandra-dtest repository.
 The easiest way to install these dependencies is with pip and virtualenv. 
 
 **Note**: While virtualenv isn't strictly required, using virtualenv is almost always the quickest 
-path to success as it provides common base setup across various configurations.``
+path to success as it provides common base setup across various configurations.
 
 1. Install virtualenv: ``pip install virtualenv``
 2. Create a new virtualenv: ``virtualenv --python=python3 --no-site-packages ~/dtest``
