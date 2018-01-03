@@ -272,7 +272,7 @@ class TestToJsonSelect(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.basic_data_types_test)
+        run_func_docstring(tester=self, test_func=self.test_basic_data_types)
 
     # yes, it's probably weird to use json for counter changes
     def test_counters(self):
@@ -304,7 +304,7 @@ class TestToJsonSelect(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.counters_test)
+        run_func_docstring(tester=self, test_func=self.test_counters)
 
     def test_complex_data_types(self):
         """
@@ -454,7 +454,7 @@ class TestToJsonSelect(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.complex_data_types_test)
+        run_func_docstring(tester=self, test_func=self.test_complex_data_types)
 
 
 @since('2.2')
@@ -527,7 +527,7 @@ class TestFromJsonUpdate(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.basic_data_types_test)
+        run_func_docstring(tester=self, test_func=self.test_basic_data_types)
 
     def test_complex_data_types(self):
         """"
@@ -681,7 +681,7 @@ class TestFromJsonUpdate(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.complex_data_types_test)
+        run_func_docstring(tester=self, test_func=self.test_complex_data_types)
 
     def test_collection_update(self):
         """
@@ -755,7 +755,7 @@ class TestFromJsonUpdate(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.collection_update_test)
+        run_func_docstring(tester=self, test_func=self.test_collection_update)
 
 
 @since('2.2')
@@ -798,7 +798,7 @@ class TestFromJsonSelect(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.selecting_pkey_as_json_test)
+        run_func_docstring(tester=self, test_func=self.test_selecting_pkey_as_json)
 
     def test_select_using_secondary_index(self):
         """
@@ -837,7 +837,7 @@ class TestFromJsonSelect(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.select_using_secondary_index_test)
+        run_func_docstring(tester=self, test_func=self.test_select_using_secondary_index)
 
 
 @since('2.2')
@@ -907,7 +907,7 @@ class TestFromJsonInsert(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.basic_data_types_test)
+        run_func_docstring(tester=self, test_func=self.test_basic_data_types)
 
     def test_complex_data_types(self):
         """
@@ -1060,7 +1060,7 @@ class TestFromJsonInsert(Tester):
             (2 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.complex_data_types_test)
+        run_func_docstring(tester=self, test_func=self.test_complex_data_types)
 
 
 @since('2.2')
@@ -1124,7 +1124,7 @@ class TestFromJsonDelete(Tester):
             <BLANKLINE>
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.delete_using_pkey_json_test)
+        run_func_docstring(tester=self, test_func=self.test_delete_using_pkey_json)
 
 
 @since('2.2')
@@ -1236,7 +1236,7 @@ class TestJsonFullRowInsertSelect(Tester):
             (2 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.simple_schema_test)
+        run_func_docstring(tester=self, test_func=self.test_simple_schema)
 
     def test_pkey_requirement(self):
         """
@@ -1268,7 +1268,7 @@ class TestJsonFullRowInsertSelect(Tester):
             <stdin>:2:InvalidRequest: Error from server: code=2200 [Invalid query] message="Invalid null value in condition for column key1"
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.pkey_requirement_test)
+        run_func_docstring(tester=self, test_func=self.test_pkey_requirement)
 
     def test_null_value(self):
         """
@@ -1311,7 +1311,7 @@ class TestJsonFullRowInsertSelect(Tester):
             (1 rows)
             <BLANKLINE>
         """
-        run_func_docstring(tester=self, test_func=self.null_value_test)
+        run_func_docstring(tester=self, test_func=self.test_null_value)
 
     def test_complex_schema(self):
         """
@@ -1512,4 +1512,4 @@ class TestJsonFullRowInsertSelect(Tester):
             <BLANKLINE>
 
         """
-        run_func_docstring(tester=self, test_func=self.complex_schema_test)
+        run_func_docstring(tester=self, test_func=self.test_complex_schema)
