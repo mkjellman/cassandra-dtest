@@ -184,7 +184,7 @@ class TestRepair(BaseRepairTest):
         for node in cluster.nodelist():
             assert not node.grep_log("Starting anticompaction")
 
-    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', "Test doesn't run on 3.9")
+    @pytest.mark.skipif(CASSANDRA_VERSION_FROM_BUILD == '3.9', reason="Test doesn't run on 3.9")
     def test_nonexistent_table_repair(self):
         """
         * Check that repairing a non-existent table fails
