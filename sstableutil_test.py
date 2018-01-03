@@ -172,7 +172,7 @@ class TestSSTableUtil(Tester):
 
         (stdout, stderr) = p.communicate()
 
-        assert p.returncode, 0 == "Error invoking sstableutil; returned {code}".format(code=p.returncode)
+        assert p.returncode == 0, "Error invoking sstableutil; returned {code}".format(code=p.returncode)
 
         if stdout:
             logger.debug(stdout)

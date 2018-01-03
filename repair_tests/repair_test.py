@@ -81,7 +81,7 @@ class BaseRepairTest(Tester):
         for k in missings:
             query = SimpleStatement("SELECT c1, c2 FROM cf WHERE key='k{}'".format(k), consistency_level=ConsistencyLevel.ONE)
             res = list(session.execute(query))
-            assert len([x for x in res if len(x) != 0]), 0 == res
+            assert len([x for x in res if len(x) != 0]) == 0, res
 
         if restart:
             for node in stopped_nodes:
@@ -935,8 +935,8 @@ class TestRepair(BaseRepairTest):
         opts += _repair_options(self.cluster.version(), ks='keyspace1', cf='standard1', sequential=False)
         node1.repair(opts)
 
-        assert len(node1.grep_log('are consistent for standard1')), 0 == "Nodes 1 and 2 should not be consistent."
-        assert len(node3.grep_log('Repair command')), 0 == "Node 3 should not have been involved in the repair."
+        assert len(node1.grep_log('are consistent for standard1')) == 0, "Nodes 1 and 2 should not be consistent."
+        assert len(node3.grep_log('Repair command')) == 0, "Node 3 should not have been involved in the repair."
 
         out_of_sync_logs = node1.grep_log("/([0-9.]+) and /([0-9.]+) have ([0-9]+) range\(s\) out of sync")
         _, matches = out_of_sync_logs[0]
