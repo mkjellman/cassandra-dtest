@@ -28,7 +28,8 @@ DTests requires the following native dependencies:
 On Mac, the easiest path is to install the latest [Xcode and Command Line Utilities](https://developer.apple.com) to 
 bootstrap your development environment and then use [Homebrew](https://brew.sh)
 
-1. ``brew install python3 virtualenv libev``
+1. ``brew install python3 libev``
+2. ``sudo pip install virtualenv``
 
 ### Python Dependencies
 There are multiple external Python dependencies required to run DTests. 
