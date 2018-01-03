@@ -8,7 +8,7 @@ from sstable_generation_loading_test import BaseSStableLoaderTest
 from thrift_bindings.thrift010.Cassandra import (ConsistencyLevel, Deletion,
                                            Mutation, SlicePredicate,
                                            SliceRange)
-from thrift_tests import composite, get_thrift_client, i32
+from thrift_test import composite, get_thrift_client, i32
 from tools.assertions import (assert_all, assert_length_equal, assert_none,
                               assert_one)
 from tools.misc import new_node

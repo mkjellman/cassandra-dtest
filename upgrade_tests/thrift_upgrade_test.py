@@ -9,7 +9,7 @@ from thrift_bindings.thrift010 import Cassandra
 from thrift_bindings.thrift010.Cassandra import (Column, ColumnDef,
                                            ColumnParent, ConsistencyLevel,
                                            SlicePredicate, SliceRange)
-from thrift_tests import _i64, get_thrift_client
+from thrift_test import _i64, get_thrift_client
 from tools.assertions import assert_length_equal
 from .upgrade_base import UpgradeTester
 from .upgrade_manifest import build_upgrade_pairs

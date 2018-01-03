@@ -10,7 +10,7 @@ from thrift_bindings.thrift010.ttypes import (CfDef, Column, ColumnOrSuperColumn
                                         ColumnParent, KsDef, Mutation,
                                         SlicePredicate, SliceRange,
                                         SuperColumn)
-from thrift_tests import get_thrift_client
+from thrift_test import get_thrift_client
 from tools.misc import ImmutableMapping
 
 since = pytest.mark.since

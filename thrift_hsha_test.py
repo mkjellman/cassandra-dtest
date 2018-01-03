@@ -8,7 +8,7 @@ import pytest
 import logging
 
 from dtest import DEFAULT_DIR, Tester, create_ks
-from thrift_tests import get_thrift_client
+from thrift_test import get_thrift_client
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 since = pytest.mark.since

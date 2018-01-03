@@ -3,7 +3,7 @@ import pytest
 import logging
 
 from dtest import CASSANDRA_VERSION_FROM_BUILD, Tester
-from thrift_tests import get_thrift_client
+from thrift_test import get_thrift_client
 from tools.assertions import assert_all
 
 from thrift_bindings.thrift010.Cassandra import (CfDef, Column, ColumnDef,

@@ -4,11 +4,11 @@ import logging
 
 from dtest_setup_overrides import DTestSetupOverrides
 from dtest import Tester, create_ks
-from thrift_tests import get_thrift_client
+from thrift_test import get_thrift_client
 from tools.misc import ImmutableMapping
 
 from thrift_bindings.thrift010.Cassandra import (CfDef, ColumnParent, ColumnPath,
-                                  ConsistencyLevel, CounterColumn)
+                                                 ConsistencyLevel, CounterColumn)
 
 since = pytest.mark.since
 logger = logging.getLogger(__name__)
