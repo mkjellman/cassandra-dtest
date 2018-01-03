@@ -1226,8 +1226,8 @@ class TestLWTWithCQL(Tester):
     """
 
     @pytest.fixture(scope='function', autouse=True)
-    def post_initialize_cluster(self, fixture_dtest_setup):
-        cluster = self.cluster
+    def fixture_post_initialize_cluster(self, fixture_dtest_setup):
+        cluster = fixture_dtest_setup.cluster
         cluster.populate(3)
         cluster.start(wait_for_binary_proto=True)
 
