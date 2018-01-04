@@ -18,11 +18,19 @@ logger = logging.getLogger(__name__)
 
 
 class TestJMX(Tester):
+
+    @pytest.fixture(autouse=True)
+    def fixture_add_additional_log_patterns(self, fixture_dtest_setup):
+        fixture_dtest_setup.ignore_log_patterns = (
+            r'Failed to properly handshake with peer.* Closing the channel'
+        )
+
     def test_netstats(self):
         """
         Check functioning of nodetool netstats, especially with restarts.
         @jira_ticket CASSANDRA-8122, CASSANDRA-6577
         """
+        #
         cluster = self.cluster
         cluster.populate(3).start(wait_for_binary_proto=True)
         node1, node2, node3 = cluster.nodelist()
@@ -46,8 +54,8 @@ class TestJMX(Tester):
             try:
                 node1.nodetool('netstats')
             except Exception as e:
-                assert 'java.lang.reflect.UndeclaredThrowableException' not in str(e,
-                                 'Netstats failed with UndeclaredThrowableException (CASSANDRA-8122)')
+                assert 'java.lang.reflect.UndeclaredThrowableException' not in str(e), \
+                    'Netstats failed with UndeclaredThrowableException (CASSANDRA-8122)'
                 if not isinstance(e, ToolError):
                     raise
                 else:
