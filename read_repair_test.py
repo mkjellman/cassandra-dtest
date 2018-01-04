@@ -91,7 +91,7 @@ class TestReadRepair(Tester):
             session = self.patient_exclusive_cql_connection(n)
             res = rows_to_list(session.execute(cl_one_stmt))
             # Column a must be 1 everywhere, and column b must be either 1 or None everywhere
-            assert res[0][:2], [[1, 1], [1 in None]]
+            assert res[0][:2] in [[1, 1], [1, None]]
 
         # Now query selecting all columns
         query = "SELECT * FROM alter_rf_test.t1 WHERE k=1"
