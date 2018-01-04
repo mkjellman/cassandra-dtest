@@ -67,8 +67,8 @@ def check_required_loopback_interfaces_available():
     give the user some helpful advice on how to get their machine into a good known config
     """
     if platform.system() == "Darwin":
-        if len(ni.ifaddresses('lo0')[AF_INET]) < 12:
-            pytest.exit("At least 3 loopback interfaces are required to run dtests. "
+        if len(ni.ifaddresses('lo0')[AF_INET]) < 9:
+            pytest.exit("At least 9 loopback interfaces are required to run dtests. "
                             "On Mac you can create the required loopback interfaces by running "
                             "'for i in {1..9}; do sudo ifconfig lo0 alias 127.0.0.$i up; done;'")
 
