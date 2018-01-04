@@ -156,7 +156,7 @@ class BaseRepairTest(Tester):
 
 class TestRepair(BaseRepairTest):
 
-    @since('2.2.1', '4')
+    @since('2.2.1', max_version='4')
     def test_no_anticompaction_after_dclocal_repair(self):
         """
         * Launch a four node, two DC cluster
@@ -213,7 +213,7 @@ class TestRepair(BaseRepairTest):
         t.start()
 
         t.join(timeout=60)
-        assert not t.isAlive(), 'Repair thread on inexistent table is still running'
+        assert not t.is_alive(), 'Repair thread on inexistent table is still running'
 
         if self.cluster.version() >= '2.2':
             node1.watch_log_for("Unknown keyspace/cf pair", timeout=60)
@@ -225,7 +225,7 @@ class TestRepair(BaseRepairTest):
             assert 'Unknown keyspace/cf pair' in repr(nodetool_error),\
                 'Repair thread on inexistent table did not detect inexistent table.'
 
-    @since('2.2.1', '4')
+    @since('2.2.1', max_version='4')
     def test_no_anticompaction_after_hostspecific_repair(self):
         """
         * Launch a four node, two DC cluster
@@ -246,7 +246,7 @@ class TestRepair(BaseRepairTest):
         for node in cluster.nodelist():
             assert not node.grep_log("Starting anticompaction")
 
-    @since('2.2.4', '4')
+    @since('2.2.4', max_version='4')
     def test_no_anticompaction_after_subrange_repair(self):
         """
         * Launch a three node, two DC cluster
@@ -287,7 +287,7 @@ class TestRepair(BaseRepairTest):
         assert repaired_times
         return [_sstable_data(*a) for a in zip(names, repaired_times)]
 
-    @since('2.2.10', '4')
+    @since('2.2.10', max_version='4')
     def test_no_anticompaction_of_already_repaired(self):
         """
         * Launch three node cluster and stress with RF2
@@ -1125,7 +1125,7 @@ class TestRepair(BaseRepairTest):
         """
         self._test_failure_during_repair(phase='sync', initiator=False,)
 
-    @since('2.2', '4')
+    @since('2.2', max_version='4')
     def test_failure_during_anticompaction(self):
         """
         @jira_ticket CASSANDRA-12901
@@ -1211,7 +1211,7 @@ class TestRepair(BaseRepairTest):
 
         logger.debug("Killed {}, now waiting repair to finish".format(node_to_kill.name))
         t.join(timeout=60)
-        assert not t.isAlive, 'Repair still running after sync {} was killed'\
+        assert not t.is_alive(), 'Repair still running after sync {} was killed'\
             .format("initiator" if initiator else "participant")
 
         if cluster.version() < '4.0' or phase != 'sync':
