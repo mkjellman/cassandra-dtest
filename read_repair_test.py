@@ -20,7 +20,6 @@ class TestReadRepair(Tester):
         fixture_dtest_setup.cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
         fixture_dtest_setup.cluster.populate(3).start(wait_for_binary_proto=True)
 
-
     @since('3.0')
     def test_alter_rf_and_run_read_repair(self):
         """
@@ -30,28 +29,79 @@ class TestReadRepair(Tester):
         Test that querying only a subset of all the columns in a row doesn't confuse read-repair to avoid
         the problem described in CASSANDRA-10655.
         """
-        self._test_read_repair()
+
+        # session is only used to setup & do schema modification. Actual data queries are done directly on
+        # each node, using an exclusive connection and CL.ONE
+        session = self.patient_cql_connection(self.cluster.nodelist()[0])
+        initial_replica, non_replicas = self.do_initial_setup(session)
+
+        # Execute a query at CL.ALL on one of the nodes which was *not* the initial replica. It should trigger a
+        # read repair and propagate the data to all 3 nodes.
+        # Note: result of the read repair contains only the selected column (a), not all columns
+        logger.debug("Executing 'SELECT a...' on non-initial replica to trigger read repair " + non_replicas[0].name)
+        read_repair_session = self.patient_exclusive_cql_connection(non_replicas[0])
+        assert_one(read_repair_session, "SELECT a FROM alter_rf_test.t1 WHERE k=1", [1], cl=ConsistencyLevel.ALL)
+
+        # The read repair should have repaired the replicas, at least partially (see CASSANDRA-10655)
+        # verify by querying each replica in turn.
+        self.check_data_on_each_replica(expect_fully_repaired=False)
+
+        # Now query again at CL.ALL but this time selecting all columns, which should ensure that 'b' also gets repaired
+        query = "SELECT * FROM alter_rf_test.t1 WHERE k=1"
+        logger.debug("Executing 'SELECT *...' on non-initial replica to trigger read repair " + non_replicas[0].name)
+        assert_one(read_repair_session, query, [1, 1, 1], cl=ConsistencyLevel.ALL)
+
+        # Check each replica individually again now that we expect the data to be fully repaired
+        self.check_data_on_each_replica(expect_fully_repaired=True)
 
     def test_read_repair_chance(self):
         """
         @jira_ticket CASSANDRA-12368
         """
-        self._test_read_repair(cl_all=False)
-
-    def _test_read_repair(self, cl_all=True):
+        # session is only used to setup & do schema modification. Actual data queries are done directly on
+        # each node, using an exclusive connection and CL.ONE
         session = self.patient_cql_connection(self.cluster.nodelist()[0])
+        initial_replica, non_replicas = self.do_initial_setup(session)
+
+        # To ensure read repairs are triggered, set the table property to 100%
+        logger.debug("Setting table read repair chance to 1")
+        session.execute("""ALTER TABLE alter_rf_test.t1 WITH read_repair_chance = 1;""")
+
+        # Execute a query at CL.ONE on one of the nodes which was *not* the initial replica. It should trigger a
+        # read repair because read_repair_chance == 1, and propagate the data to all 3 nodes.
+        # Note: result of the read repair contains only the selected column (a), not all columns, so we won't expect
+        # 'b' to have been fully repaired afterwards.
+        # The read repair is also run in the background, so we sleep after executing to ensure it has chance to
+        # complete before validating the replicas all have the repaired data
+        logger.debug("Executing 'SELECT a...' on non-initial replica to trigger read repair " + non_replicas[0].name)
+        read_repair_session = self.patient_exclusive_cql_connection(non_replicas[0])
+        read_repair_session.execute(SimpleStatement("SELECT a FROM alter_rf_test.t1 WHERE k=1",
+                                                    consistency_level=ConsistencyLevel.ONE))
+        time.sleep(1)
+
+        # Query each replica individually to ensure that read repair is triggered. We expect the
+        # data to be fully repaired (both 'a' and 'b' columns) by virtue of the query being 'SELECT *...'
+        self.check_data_on_each_replica(expect_fully_repaired=False)
+
+    def do_initial_setup(self, session):
+        """
+        Create a keyspace with rf=1 and a table containing a single row with 2 non-primary key columns.
+        Insert 1 row, placing the data on a single initial replica. Then, alter the keyspace to rf=3, but don't
+        repair. Tests will execute various reads on the replicas and assert the effects of read repair.
+        :param session: Used to perform the schema setup & insert the data
+        :return: a tuple containing the node which initially acts as the replica, and a list of the other two nodes
+        """
         session.execute("""CREATE KEYSPACE alter_rf_test
                            WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};""")
         session.execute("CREATE TABLE alter_rf_test.t1 (k int PRIMARY KEY, a int, b int);")
         session.execute("INSERT INTO alter_rf_test.t1 (k, a, b) VALUES (1, 1, 1);")
-        cl_one_stmt = SimpleStatement("SELECT * FROM alter_rf_test.t1 WHERE k=1",
-                                      consistency_level=ConsistencyLevel.ONE)
 
         # identify the initial replica and trigger a flush to ensure reads come from sstables
-        initial_replica, non_replicas = self.identify_initial_placement('alter_rf_test', 't1', 1)
+        initial_replica, non_replicas = self.identify_initial_placement()
         logger.debug("At RF=1 replica for data is " + initial_replica.name)
         initial_replica.flush()
 
+        # Just some basic validation.
         # At RF=1, it shouldn't matter which node we query, as the actual data should always come from the
         # initial replica when reading at CL ONE
         for n in self.cluster.nodelist():
@@ -59,61 +109,20 @@ class TestReadRepair(Tester):
             session = self.patient_exclusive_cql_connection(n)
             assert_one(session, "SELECT * FROM alter_rf_test.t1 WHERE k=1", [1, 1, 1], cl=ConsistencyLevel.ONE)
 
-        # Alter so RF=n but don't repair, then execute a query which selects only a subset of the columns. Run this at
-        # CL ALL on one of the nodes which doesn't currently have the data, triggering a read repair.
-        # The expectation will be that every replicas will have been repaired for that column (but we make no assumptions
-        # on the other columns).
+        # Alter so RF=n but don't repair, calling tests will execute queries to exercise read repair,
+        # either at CL.ALL or after setting read_repair_chance to 100%.
         logger.debug("Changing RF from 1 to 3")
         session.execute("""ALTER KEYSPACE alter_rf_test
                            WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 3};""")
 
-        if not cl_all:
-            logger.debug("Setting table read repair chance to 1")
-            session.execute("""ALTER TABLE alter_rf_test.t1 WITH read_repair_chance = 1;""")
+        return initial_replica, non_replicas
 
-        cl = ConsistencyLevel.ALL if cl_all else ConsistencyLevel.ONE
-
-        logger.debug("Executing SELECT on non-initial replica to trigger read repair " + non_replicas[0].name)
-        read_repair_session = self.patient_exclusive_cql_connection(non_replicas[0])
-
-        if cl_all:
-            # result of the read repair query at cl=ALL contains only the selected column
-            assert_one(read_repair_session, "SELECT a FROM alter_rf_test.t1 WHERE k=1", [1], cl=cl)
-        else:
-            # With background read repair at CL=ONE, result may or may not be correct
-            stmt = SimpleStatement("SELECT a FROM alter_rf_test.t1 WHERE k=1", consistency_level=cl)
-            session.execute(stmt)
-
-        # Check the results of the read repair by querying each replica again at CL ONE
-        logger.debug("Re-running SELECTs at CL ONE to verify read repair")
-        for n in self.cluster.nodelist():
-            logger.debug("Checking " + n.name)
-            session = self.patient_exclusive_cql_connection(n)
-            res = rows_to_list(session.execute(cl_one_stmt))
-            # Column a must be 1 everywhere, and column b must be either 1 or None everywhere
-            assert res[0][:2] in [[1, 1], [1, None]]
-
-        # Now query selecting all columns
-        query = "SELECT * FROM alter_rf_test.t1 WHERE k=1"
-        logger.debug("Executing SELECT on non-initial replica to trigger read repair " + non_replicas[0].name)
-        read_repair_session = self.patient_exclusive_cql_connection(non_replicas[0])
-
-        if cl_all:
-            # result of the read repair query at cl=ALL should contain all columns
-            assert_one(session, query, [1, 1, 1], cl=cl)
-        else:
-            # With background read repair at CL=ONE, result may or may not be correct
-            stmt = SimpleStatement(query, consistency_level=cl)
-            session.execute(stmt)
-
-        # Check all replica is fully up to date
-        logger.debug("Re-running SELECTs at CL ONE to verify read repair")
-        for n in self.cluster.nodelist():
-            logger.debug("Checking " + n.name)
-            session = self.patient_exclusive_cql_connection(n)
-            assert_one(session, query, [1, 1, 1], cl=ConsistencyLevel.ONE)
-
-    def identify_initial_placement(self, keyspace, table, key):
+    def identify_initial_placement(self):
+        """
+        Identify which node in the 3 node cluster contains the specific key at the point that the test keyspace has
+        rf=1.
+        :return: tuple containing the initial replica, plus a list of the other 2 replicas.
+        """
         nodes = self.cluster.nodelist()
         out, _, _ = nodes[0].nodetool("getendpoints alter_rf_test t1 1")
         address = out.split('\n')[-2]
@@ -128,6 +137,22 @@ class TestReadRepair(Tester):
         assert initial_replica is not None, "Couldn't identify initial replica"
 
         return initial_replica, non_replicas
+
+    def check_data_on_each_replica(self, expect_fully_repaired):
+        """
+        Perform a SELECT * query at CL.ONE on each replica in turn. If expect_fully_repaired is True, we verify that
+        each replica returns the full row being queried. If not, then we only verify that the 'a' column has been
+        repaired.
+        """
+        stmt = SimpleStatement("SELECT * FROM alter_rf_test.t1 WHERE k=1", consistency_level=ConsistencyLevel.ONE)
+        for n in self.cluster.nodelist():
+            logger.debug("Checking " + n.name)
+            session = self.patient_exclusive_cql_connection(n)
+            res = rows_to_list(session.execute(stmt))
+            if expect_fully_repaired:
+                assert res == [[1, 1, 1]]
+            else:
+                assert res[0][:2] in [[1, 1], [1, None]]
 
     @since('2.0')
     def test_range_slice_query_with_tombstones(self):
