@@ -135,7 +135,7 @@ def build_doc_context(tester, test_name, prepare=True, connection=None, nodes=No
         if not err:
             raise RuntimeError("Expected cqlsh error but none occurred!")
 
-        return err
+        return err.decode("utf-8")
 
     def cqlsh_err_print(cmds):
         """
