@@ -97,9 +97,10 @@ class TestBaseSStableLoader(Tester):
                 if os.path.isdir(full_cf_dir):
                     cmd_args = [sstableloader, '--nodes', host, full_cf_dir]
                     p = subprocess.Popen(cmd_args, stderr=subprocess.PIPE, stdout=subprocess.PIPE, env=env)
-                    exit_status = p.wait()
-                    logger.debug('stdout: {out}'.format(out=p.stdout))
-                    logger.debug('stderr: {err}'.format(err=p.stderr))
+                    stdout, stderr = p.communicate()
+                    exit_status = p.returncode
+                    logger.debug('stdout: {out}'.format(out=stdout.decode("utf-8")))
+                    logger.debug('stderr: {err}'.format(err=stderr.decode("utf-8")))
                     assert 0 == exit_status, \
                         "sstableloader exited with a non-zero status: {}".format(exit_status)
 

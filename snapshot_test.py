@@ -74,7 +74,7 @@ class SnapshotTester(Tester):
 
                 if exit_status != 0:
                     raise Exception("sstableloader command '%s' failed; exit status: %d'; stdout: %s; stderr: %s" %
-                                    (" ".join(args), exit_status, stdout, stderr))
+                                    (" ".join(args), exit_status, stdout.decode("utf-8"), stderr.decode("utf-8")))
 
     def restore_snapshot_schema(self, snapshot_dir, node, ks, cf):
         logger.debug("Restoring snapshot schema....")

@@ -122,11 +122,11 @@ class TestHelper(Tester):
         args = [scrub_bin, ks, cf]
         p = subprocess.Popen(args, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
-        logger.debug(out)
+        logger.debug(out.decode("utf-8"))
         # if we have less than 64G free space, we get this warning - ignore it
-        if err and "Consider adding more capacity" not in err:
-            logger.debug(err)
-            assert_stderr_clean(err)
+        if err and "Consider adding more capacity" not in err.decode("utf-8"):
+            logger.debug(err.decode("utf-8"))
+            assert_stderr_clean(err.decode("utf-8"))
 
     def perform_node_tool_cmd(self, cmd, table, indexes):
         """
