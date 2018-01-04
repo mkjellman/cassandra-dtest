@@ -175,7 +175,7 @@ class TestSSTableUtil(Tester):
         assert p.returncode == 0, "Error invoking sstableutil; returned {code}".format(code=p.returncode)
 
         if stdout:
-            logger.debug(stdout)
+            logger.debug(stdout.decode("utf-8"))
 
         match = ks + os.sep + table + '-'
         ret = sorted([s for s in stdout.decode("utf-8").splitlines() if match in s])
