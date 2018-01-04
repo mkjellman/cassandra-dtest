@@ -606,11 +606,10 @@ class TestMiscellaneousCQL(CQLTester):
 
         # this should still fail with an InvalidRequest
         assert_invalid(session, "insert into invalid_string_literals (k, c) VALUES (0, '\u038E\u0394\u03B4\u03E0')")
-        # but since the protocol requires strings to be valid UTF-8, the error
-        # response to this is a ProtocolException, not an error about the
-        # nonexistent column
-        with pytest.raises(ProtocolException, match='Cannot decode string as UTF8'):
-            session.execute("insert into invalid_string_literals (k, c) VALUES (0, '\xc2\x01')")
+
+        # try to insert utf-8 characters into an ascii column and make sure it fails
+        with pytest.raises(InvalidRequest, match='Invalid ASCII character in string literal'):
+            session.execute("insert into invalid_string_literals (k, a) VALUES (0, '\xE0\x80\x80')")
 
     def test_prepared_statement_invalidation(self):
         """
@@ -698,6 +697,7 @@ class TestMiscellaneousCQL(CQLTester):
         res = list(session.execute("SELECT * FROM test"))
         assert len(res) == 2, res
 
+    @pytest.mark.skip(reason="Skipping until PYTHON-893 is fixed")
     def test_many_columns(self):
         """
         Test for tables with thousands of columns.
