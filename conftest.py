@@ -299,6 +299,10 @@ def reset_environment_vars(initial_environment):
 
 @pytest.fixture(scope='function', autouse=False)
 def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrides, fixture_logging_setup):
+    # attempt to wack all existing running Cassandra processes forcefully to get us into a clean state
+    p = subprocess.Popen('ps aux | grep -ie CassandraDaemon | grep java | awk \'{print $2}\' | xargs kill -9', shell=True)
+    p.communicate()
+
     # do all of our setup operations to get the enviornment ready for the actual test
     # to run (e.g. bring up a cluster with the necessary config, populate variables, etc)
     initial_environment = copy.deepcopy(os.environ)
