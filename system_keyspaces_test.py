@@ -9,6 +9,7 @@ since = pytest.mark.since
 logger = logging.getLogger(__name__)
 
 
+
 class TestSystemKeyspaces(Tester):
 
     @since('3.0')
@@ -31,7 +32,7 @@ class TestSystemKeyspaces(Tester):
         assert_exception(session, stmt, expected=Unauthorized)
 
         # DROP KEYSPACE should fail for system and system_schema
-        assert_exception(session, 'DROP KEYSPACE system;',        expected=Unauthorized)
+        assert_exception(session, 'DROP KEYSPACE system;', expected=Unauthorized)
         assert_exception(session, 'DROP KEYSPACE system_schema;', expected=Unauthorized)
 
         # CREATE TABLE should fail in system and system_schema
@@ -53,7 +54,7 @@ class TestSystemKeyspaces(Tester):
                          expected=Unauthorized)
 
         # DROP TABLE should fail in system and system_schema
-        assert_exception(session, 'DROP TABLE system.local;',         expected=Unauthorized)
+        assert_exception(session, 'DROP TABLE system.local;', expected=Unauthorized)
         assert_exception(session, 'DROP TABLE system_schema.tables;', expected=Unauthorized)
 
     @since('3.0')

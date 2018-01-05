@@ -3,9 +3,12 @@ import pytest
 import re
 import logging
 
+from cassandra import ConsistencyLevel
+from cassandra.query import SimpleStatement
 from ccmlib.node import ToolError
-from dtest import Tester
-from tools.assertions import assert_all, assert_invalid
+
+from dtest import Tester,create_ks
+from tools.assertions import assert_all, assert_invalid, assert_none
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
 since = pytest.mark.since
@@ -84,7 +87,7 @@ class TestNodetool(Tester):
                  'truncate', 'misc']
         if cluster.version() < '4.0':
             types.append('streamingsocket')
-    
+
         # read all of the timeouts, make sure we get a sane response
         for timeout_type in types:
             out, err, _ = node.nodetool('gettimeout {}'.format(timeout_type))
@@ -103,6 +106,72 @@ class TestNodetool(Tester):
             assert 0 == len(err), err
             logger.debug(out)
             assert re.search(r'.* 123 ms', out)
+
+    @since('3.0')
+    def test_cleanup_when_no_replica_with_index(self):
+        self._cleanup_when_no_replica(True)
+
+    @since('3.0')
+    def test_cleanup_when_no_replica_without_index(self):
+        self._cleanup_when_no_replica(False)
+
+    def _cleanup_when_no_replica(self, with_index=False):
+        """
+        @jira_ticket CASSANDRA-13526
+        Test nodetool cleanup KS to remove old data when new replicas in current node instead of directly returning success.
+        """
+        self.cluster.populate([1, 1]).start(wait_for_binary_proto=True, wait_other_notice=True)
+
+        node_dc1 = self.cluster.nodelist()[0]
+        node_dc2 = self.cluster.nodelist()[1]
+
+        # init schema with rf on both data centers
+        replication_factor = {'dc1': 1, 'dc2': 1}
+        session = self.patient_exclusive_cql_connection(node_dc1, consistency_level=ConsistencyLevel.ALL)
+        session_dc2 = self.patient_exclusive_cql_connection(node_dc2, consistency_level=ConsistencyLevel.LOCAL_ONE)
+        create_ks(session, 'ks', replication_factor)
+        session.execute('CREATE TABLE ks.cf (id int PRIMARY KEY, value text) with dclocal_read_repair_chance = 0 AND read_repair_chance = 0;', trace=False)
+        if with_index:
+            session.execute('CREATE INDEX value_by_key on ks.cf(value)', trace=False)
+
+        # populate data
+        for i in range(0, 100):
+            session.execute(SimpleStatement("INSERT INTO ks.cf(id, value) VALUES({}, 'value');".format(i), consistency_level=ConsistencyLevel.ALL))
+
+        # generate sstable
+        self.cluster.flush()
+
+        for node in self.cluster.nodelist():
+            assert 0 != len(node.get_sstables('ks', 'cf'))
+        if with_index:
+            assert 100 == len(list(session_dc2.execute("SELECT * FROM ks.cf WHERE value = 'value'"))), 100
+
+        # alter rf to only dc1
+        session.execute("ALTER KEYSPACE ks WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 1, 'dc2' : 0};")
+
+        # nodetool cleanup on dc2
+        node_dc2.nodetool("cleanup ks cf")
+        node_dc2.nodetool("compact ks cf")
+
+        # check local data on dc2
+        for node in self.cluster.nodelist():
+            if node.data_center == 'dc2':
+                assert 0 == len(node.get_sstables('ks', 'cf'))
+            else:
+                assert 0 != len(node.get_sstables('ks', 'cf'))
+
+        # dc1 data remains
+        statement = SimpleStatement("SELECT * FROM ks.cf", consistency_level=ConsistencyLevel.LOCAL_ONE)
+        assert 100 == len(list(session.execute(statement)))
+        if with_index:
+            statement = SimpleStatement("SELECT * FROM ks.cf WHERE value = 'value'", consistency_level=ConsistencyLevel.LOCAL_ONE)
+            assert len(list(session.execute(statement))) == 100
+
+        # alter rf back to query dc2, no data, no index
+        session.execute("ALTER KEYSPACE ks WITH REPLICATION = {'class' : 'NetworkTopologyStrategy', 'dc1' : 0, 'dc2' : 1};")
+        assert_none(session_dc2, "SELECT * FROM ks.cf")
+        if with_index:
+            assert_none(session_dc2, "SELECT * FROM ks.cf WHERE value = 'value'")
 
     def test_meaningless_notice_in_status(self):
         """
@@ -225,3 +294,33 @@ class TestNodetool(Tester):
         # try an insert with the new column again and validate it succeeds this time
         session.execute('INSERT INTO test.test (pk, ck, val) VALUES (0, 1, 2);')
         assert_all(session, 'SELECT pk, ck, val FROM test.test;', [[0, 1, 2]])
+
+    @since('4.0')
+    def test_set_get_concurrent_view_builders(self):
+        """
+        @jira_ticket CASSANDRA-12245
+
+        Test that the number of concurrent view builders can be set and get through nodetool
+        """
+        cluster = self.cluster
+        cluster.populate(2)
+        node = cluster.nodelist()[0]
+        cluster.start()
+
+        # Test that nodetool help messages are displayed
+        assert 'Set the number of concurrent view' in node.nodetool('help setconcurrentviewbuilders').stdout
+        assert 'Get the number of concurrent view' in node.nodetool('help getconcurrentviewbuilders').stdout
+
+        # Set and get throttle with nodetool, ensuring that the rate change is logged
+        node.nodetool('setconcurrentviewbuilders 4')
+        assert 'Current number of concurrent view builders in the system is: \n4' \
+               in node.nodetool('getconcurrentviewbuilders').stdout
+
+        # Try to set an invalid zero value
+        try:
+            node.nodetool('setconcurrentviewbuilders 0')
+        except ToolError as e:
+            assert 'concurrent_view_builders should be great than 0.' in e.stdout
+            assert 'Number of concurrent view builders should be greater than 0.', e.message
+        else:
+            self.fail("Expected error when setting and invalid value")
