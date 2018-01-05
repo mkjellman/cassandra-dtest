@@ -207,6 +207,10 @@ class TestBootstrap(Tester):
         cluster.populate(3)
         cluster.start()
 
+        # not pretty, but add a sleep here to let things settle down before stress runs
+        # otherwise stress might fail trying to create the schema before the nodes are actually up
+        time.sleep(10)
+
         node1 = cluster.nodes['node1']
         node1.stress(['write', 'n=10K', 'no-warmup', '-rate', 'threads=8', '-schema', 'replication(factor=2)'])
 

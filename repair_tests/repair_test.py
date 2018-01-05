@@ -1117,8 +1117,6 @@ class TestRepair(BaseRepairTest):
     def test_dead_sync_initiator(self):
         """
         @jira_ticket CASSANDRA-12901
-
-        MJK: Test is failing very frequently when executed in CI. Tracking with CASSANDRA-14041
         """
         self._test_failure_during_repair(phase='sync', initiator=True)
 
