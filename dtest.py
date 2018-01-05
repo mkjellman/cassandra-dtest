@@ -224,88 +224,6 @@ class Tester:
             node.set_install_dir(install_dir=self.dtest_config.cassandra_dir)
             os.environ.set('CASSANDRA_DIR', self.dtest_config.cassandra_dir)
 
-    """
-    def init_config(self):
-        init_default_config(self.cluster, self.cluster_options)
-
-    def setUp(self):
-        self.set_current_tst_name()
-        kill_windows_cassandra_procs()
-        maybe_cleanup_cluster_from_last_test_file()
-
-        self.test_path = get_test_path()
-        self.cluster = create_ccm_cluster(self.test_path, name='test', config=self.dtest_config)
-
-        self.maybe_begin_active_log_watch()
-        maybe_setup_jacoco(self.test_path)
-
-        self.init_config()
-        write_last_test_file(self.test_path, self.cluster)
-
-        set_log_levels(self.cluster)
-        self.connections = []
-        self.runners = []
-    """
-
-    """
-    @classmethod
-    def tearDownClass(cls):
-        reset_environment_vars()
-        if os.path.exists(LAST_TEST_DIR):
-            with open(LAST_TEST_DIR) as f:
-                test_path = f.readline().strip('\n')
-                name = f.readline()
-                try:
-                    cluster = ClusterFactory.load(test_path, name)
-                    # Avoid waiting too long for node to be marked down
-                    if KEEP_TEST_DIR:
-                        cluster.stop(gently=RECORD_COVERAGE)
-                    else:
-                        cluster.remove()
-                        os.rmdir(test_path)
-                except IOError:
-                    # after a restart, /tmp will be emptied so we'll get an IOError when loading the old cluster here
-                    pass
-            try:
-                os.remove(LAST_TEST_DIR)
-            except IOError:
-                # Ignore - see comment above
-                pass
-
-    def tearDown(self):
-        # test_is_ending prevents active log watching from being able to interrupt the test
-        # which we don't want to happen once tearDown begins
-        self.test_is_ending = True
-
-        reset_environment_vars()
-
-        for con in self.connections:
-            con.cluster.shutdown()
-
-        for runner in self.runners:
-            try:
-                runner.stop()
-            except Exception:
-                pass
-
-        failed = False
-        try:
-            if not self.allow_log_errors and self.check_logs_for_errors():
-                failed = True
-                raise AssertionError('Unexpected error in log, see stdout')
-        finally:
-            try:
-                # save the logs for inspection
-                if failed or KEEP_LOGS:
-                    self.copy_logs(self.cluster)
-            except Exception as e:
-                print("Error saving log:", str(e))
-            finally:
-                log_watch_thread = getattr(self, '_log_watch_thread', None)
-                cleanup_cluster(self.cluster, self.test_path, log_watch_thread)
-    """
-
-
     def go(self, func):
         runner = Runner(func)
         self.runners.append(runner)
@@ -572,7 +490,3 @@ def run_scenarios(scenarios, handler, deferred_exceptions=tuple()):
 
     if errors:
         raise MultiError(errors, tracebacks)
-
-
-def supports_v5_protocol(cluster_version):
-    return cluster_version >= LooseVersion('4.0')

@@ -7,7 +7,7 @@ from cassandra import ConsistencyLevel
 from cassandra.query import SimpleStatement
 from ccmlib.node import ToolError
 
-from dtest import Tester,create_ks
+from dtest import Tester, create_ks
 from tools.assertions import assert_all, assert_invalid, assert_none
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem
 
