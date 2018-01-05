@@ -965,10 +965,12 @@ class TestMaterializedViews(Tester):
                 cl=ConsistencyLevel.ALL
             )
 
+    @pytest.mark.skip(reason="Frequently fails in CI. Skipping until fixed as tracked by CASSANDRA-14148")
     @since('3.0')
     def test_no_base_column_in_view_pk_complex_timestamp_with_flush(self):
         self._test_no_base_column_in_view_pk_complex_timestamp(flush=True)
 
+    @pytest.mark.skip(reason="Frequently fails in CI. Skipping until fixed as tracked by CASSANDRA-14148")
     @since('3.0')
     def test_no_base_column_in_view_pk_complex_timestamp_without_flush(self):
         self._test_no_base_column_in_view_pk_complex_timestamp(flush=False)
