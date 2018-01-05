@@ -194,4 +194,3 @@ class TestNodeToNodeSSLEncryption(Tester):
         node.set_configuration_options(values={
             'server_encryption_options': server_enc_options
         })
-        

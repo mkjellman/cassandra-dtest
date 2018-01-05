@@ -791,8 +791,8 @@ class TestIncRepair(Tester):
     @since('4.0')
     def test_force(self):
         """ 
-        forcing an incremental repair should incrementally repair any nodes 
-        that are up, but should not promote the sstables to repaired 
+        forcing an incremental repair should incrementally repair any nodes
+        that are up, but should not promote the sstables to repaired
         """
         self.fixture_dtest_setup.setup_overrides.cluster_options = ImmutableMapping({'hinted_handoff_enabled': 'false',
                                                                                      'num_tokens': 1,
@@ -824,8 +824,8 @@ class TestIncRepair(Tester):
     @since('4.0')
     def test_hosts(self):
         """ 
-        running an incremental repair with hosts specified should incrementally repair 
-        the given nodes, but should not promote the sstables to repaired 
+        running an incremental repair with hosts specified should incrementally repair
+        the given nodes, but should not promote the sstables to repaired
         """
         self.fixture_dtest_setup.setup_overrides.cluster_options = ImmutableMapping({'hinted_handoff_enabled': 'false',
                                                                                      'num_tokens': 1,
@@ -851,8 +851,8 @@ class TestIncRepair(Tester):
     @since('4.0')
     def test_subrange(self):
         """ 
-        running an incremental repair with hosts specified should incrementally repair 
-        the given nodes, but should not promote the sstables to repaired 
+        running an incremental repair with hosts specified should incrementally repair
+        the given nodes, but should not promote the sstables to repaired
         """
         self.fixture_dtest_setup.setup_overrides.cluster_options = ImmutableMapping({'hinted_handoff_enabled': 'false',
                                                                                      'num_tokens': 1,

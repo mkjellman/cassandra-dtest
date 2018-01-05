@@ -285,7 +285,7 @@ class Tester:
         for runner in self.runners:
             try:
                 runner.stop()
-            except:
+            except Exception:
                 pass
 
         failed = False
@@ -573,3 +573,6 @@ def run_scenarios(scenarios, handler, deferred_exceptions=tuple()):
     if errors:
         raise MultiError(errors, tracebacks)
 
+
+def supports_v5_protocol(cluster_version):
+    return cluster_version >= LooseVersion('4.0')
