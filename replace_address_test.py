@@ -574,10 +574,6 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             # GC after the stress invocation above causing the next step of the test to timeout.
             # and then flush to make sure we really are fully caught up
             time.sleep(30)
-            self.query_node.flush()
-            time.sleep(30)
-            self.cluster.flush()
-            time.sleep(30)
 
         # Save initial data
         table_name = 'keyspace1.users'
