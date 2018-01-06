@@ -126,7 +126,8 @@ class BaseReplaceAddressTest(Tester):
 
     def _insert_data(self, n='1k', rf=3, whitelist=False):
         logger.debug("Inserting {} entries with rf={} with stress...".format(n, rf))
-        self.query_node.stress(['write', 'n={}'.format(n), 'no-warmup', '-schema', 'replication(factor={})'.format(rf)],
+        self.query_node.stress(['write', 'n={}'.format(n), 'no-warmup', '-schema', 'replication(factor={})'.format(rf),
+                                '-rate', 'threads=10'],
                                whitelist=whitelist)
         self.cluster.flush()
         time.sleep(20)
@@ -569,7 +570,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             stress_config.write(yaml_config)
             stress_config.flush()
             self.query_node.stress(['user', 'profile=' + stress_config.name, 'n=10k', 'no-warmup',
-                                    'ops(insert=1)', '-rate', 'threads=50'])
+                                    'ops(insert=1)', '-rate', 'threads=10'])
             # need to sleep for a bit to try and let things catch up as we frequently do a lot of
             # GC after the stress invocation above causing the next step of the test to timeout.
             # and then flush to make sure we really are fully caught up
