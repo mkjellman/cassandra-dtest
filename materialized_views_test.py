@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 MIGRATION_WAIT = 5
 
 
+@flaky
 @since('3.0')
 class TestMaterializedViews(Tester):
     """
@@ -937,7 +938,6 @@ class TestMaterializedViews(Tester):
                 [i, i, 'a', 3.0]
             )
 
-    @flaky
     def test_interrupt_build_process(self):
         """Test that an interrupted MV build process is resumed as it should"""
 
