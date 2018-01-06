@@ -825,7 +825,7 @@ class AbortedQueryTester(CQLTester):
                                     consistency_level=ConsistencyLevel.ONE,
                                     retry_policy=FallthroughRetryPolicy())
         assert_unavailable(lambda c: logger.debug(c.execute(statement)), session)
-        node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
+        node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=120)
 
     def test_remote_query(self):
         """
@@ -944,7 +944,7 @@ class AbortedQueryTester(CQLTester):
         statement.consistency_level = ConsistencyLevel.ONE
         statement.retry_policy = FallthroughRetryPolicy()
         assert_unavailable(lambda c: logger.debug(c.execute(statement, [50])), session)
-        node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=60)
+        node.watch_log_for("operations timed out", filename='debug.log', from_mark=mark, timeout=120)
 
     def test_materialized_view(self):
         """

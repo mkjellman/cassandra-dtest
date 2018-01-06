@@ -1071,13 +1071,13 @@ class TestMaterializedViews(Tester):
 
         logger.debug("Stopping all running view build tasks with nodetool")
         for node in nodes:
-            node.watch_log_for('Starting new view build for range', filename='debug.log', timeout=60)
+            node.watch_log_for('Starting new view build for range', filename='debug.log', timeout=120)
             node.nodetool('stop VIEW_BUILD')
 
         logger.debug("Checking logs to verify that some view build tasks have been stopped")
         for node in nodes:
-            node.watch_log_for('Stopped build for view', filename='debug.log', timeout=60)
-            node.watch_log_for('Compaction interrupted: View build', filename='system.log', timeout=60)
+            node.watch_log_for('Stopped build for view', filename='debug.log', timeout=120)
+            node.watch_log_for('Compaction interrupted: View build', filename='system.log', timeout=120)
             self.check_logs_for_errors()
 
         logger.debug("Drop the MV while it is still building")
@@ -1127,14 +1127,14 @@ class TestMaterializedViews(Tester):
 
         logger.debug("Stopping all running view build tasks with nodetool")
         for node in nodes:
-            node.watch_log_for('Starting new view build for range', filename='debug.log', timeout=60)
+            node.watch_log_for('Starting new view build for range', filename='debug.log', timeout=120)
             node.nodetool('stop VIEW_BUILD')
 
         logger.debug("Checking logs to verify that some view build tasks have been stopped")
         for node in nodes:
-            node.watch_log_for('Stopped build for view', filename='debug.log', timeout=60)
-            node.watch_log_for('Compaction interrupted: View build', filename='system.log', timeout=60)
-            node.watch_log_for('Interrupted build for view', filename='debug.log', timeout=60)
+            node.watch_log_for('Stopped build for view', filename='debug.log', timeout=120)
+            node.watch_log_for('Compaction interrupted: View build', filename='system.log', timeout=120)
+            node.watch_log_for('Interrupted build for view', filename='debug.log', timeout=120)
             assert not node.grep_log('Marking view', filename='debug.log')
             self.check_logs_for_errors()
 

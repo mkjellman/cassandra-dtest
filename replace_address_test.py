@@ -492,8 +492,8 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             self.replacement_node.stop()
 
             logger.debug("Waiting other nodes to detect node stopped")
-            self.query_node.watch_log_for("FatClient /{} has been silent for 30000ms, removing from gossip".format(self.replacement_node.address()), timeout=60)
-            self.query_node.watch_log_for("Node /{} failed during replace.".format(self.replacement_node.address()), timeout=60, filename='debug.log')
+            self.query_node.watch_log_for("FatClient /{} has been silent for 30000ms, removing from gossip".format(self.replacement_node.address()), timeout=120)
+            self.query_node.watch_log_for("Node /{} failed during replace.".format(self.replacement_node.address()), timeout=120, filename='debug.log')
 
             logger.debug("Restarting node after wiping data")
             self._cleanup(self.replacement_node)

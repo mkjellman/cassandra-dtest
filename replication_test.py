@@ -752,4 +752,4 @@ class TestSnitchConfigurationUpdate(Tester):
 
         mark = node.mark_log()
         node.start()
-        node.watch_log_for(expected_error, from_mark=mark, timeout=10)
+        node.watch_log_for(expected_error, from_mark=mark, timeout=120)
