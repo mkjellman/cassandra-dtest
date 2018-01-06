@@ -570,6 +570,11 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             stress_config.flush()
             self.query_node.stress(['user', 'profile=' + stress_config.name, 'n=10k', 'no-warmup',
                                     'ops(insert=1)', '-rate', 'threads=50'])
+            # need to sleep for a bit to try and let things catch up as we frequently do a lot of
+            # GC after the stress invocation above causing the next step of the test to timeout.
+            # and then flush to make sure we really are fully caught up
+            time.sleep(20)
+            self.cluster.flush()
 
         # Save initial data
         table_name = 'keyspace1.users'
