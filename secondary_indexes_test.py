@@ -6,6 +6,8 @@ import uuid
 import pytest
 import logging
 
+from flaky import flaky
+
 from cassandra import InvalidRequest
 from cassandra.concurrent import (execute_concurrent,
                                   execute_concurrent_with_args)
@@ -179,6 +181,7 @@ class TestSecondaryIndexes(Tester):
             count = rows[0][0]
             assert count == 10
 
+    @flaky
     def test_6924_dropping_cf(self):
         """
         @jira_ticket CASSANDRA-6924

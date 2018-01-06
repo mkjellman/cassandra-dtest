@@ -4,6 +4,8 @@ import pytest
 import logging
 import time
 
+from flaky import flaky
+
 from itertools import chain
 from shutil import rmtree
 
@@ -534,6 +536,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
         self.replacement_node.watch_log_for("Unable to find sufficient sources for streaming range")
         assert_not_running(self.replacement_node)
 
+    @flaky
     def test_multi_dc_replace_with_rf1(self):
         """
         Test that multi-dc replace works when rf=1 on each dc

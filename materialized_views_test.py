@@ -7,6 +7,7 @@ import pytest
 import threading
 import logging
 
+from flaky import flaky
 from enum import Enum
 from queue import Empty
 from functools import partial
@@ -936,6 +937,7 @@ class TestMaterializedViews(Tester):
                 [i, i, 'a', 3.0]
             )
 
+    @flaky
     def test_interrupt_build_process(self):
         """Test that an interrupted MV build process is resumed as it should"""
 
@@ -1258,6 +1260,7 @@ class TestMaterializedViews(Tester):
             assert_one(session, "SELECT * FROM t", [1, 6, 1])
             assert_one(session, "SELECT * FROM mv", [1, 6, 1])
 
+    @flaky
     @since('3.0')
     def test_no_base_column_in_view_pk_complex_timestamp_with_flush(self):
         self._test_no_base_column_in_view_pk_complex_timestamp(flush=True)

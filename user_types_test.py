@@ -3,6 +3,8 @@ import uuid
 import pytest
 import logging
 
+from flaky import flaky
+
 from cassandra import ConsistencyLevel, Unauthorized
 from cassandra.query import SimpleStatement
 
@@ -390,6 +392,7 @@ class TestUserTypes(Tester):
         assert first_name == 'Nero'
         assert like == 'arson'
 
+    @flaky
     def test_type_secondary_indexing(self):
         """
         Confirm that user types are secondary-indexable

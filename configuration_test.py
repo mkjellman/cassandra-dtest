@@ -2,6 +2,8 @@ import os
 import logging
 import parse
 
+from flaky import flaky
+
 from cassandra.concurrent import execute_concurrent_with_args
 
 from dtest import Tester, create_ks
@@ -35,6 +37,7 @@ class TestConfiguration(Tester):
         session.execute(alter_chunk_len_query.format(chunk_length=64))
         self._check_chunk_length(session, 64)
 
+    @flaky
     def test_change_durable_writes(self):
         """
         @jira_ticket CASSANDRA-9560
