@@ -233,10 +233,10 @@ def _filter_errors(dtest_setup, errors):
 
 
 def check_logs_for_errors(dtest_setup):
+    errors = []
     for node in dtest_setup.cluster.nodelist():
         errors = list(_filter_errors(dtest_setup, ['\n'.join(msg) for msg in node.grep_log_for_errors()]))
         if len(errors) is not 0:
-            has_errors = False
             for error in errors:
                 if isinstance(error, (bytes, bytearray)):
                     error_str = error.decode("utf-8").strip()
@@ -244,9 +244,11 @@ def check_logs_for_errors(dtest_setup):
                     error_str = error.strip()
 
                 if error_str:
-                    logger.error("Unexpected error in {node_name} log, error: \n{error}".format(node_name=node.name, error=error_str))
-                    has_errors = True
-            return has_errors
+                    logger.error("Unexpected error in {node_name} log, error: \n{error}"
+                                 .format(node_name=node.name, error=error_str))
+                    errors.append(error_str)
+                    break
+    return errors
 
 
 def copy_logs(request, cluster, directory=None, name=None):
@@ -354,9 +356,12 @@ def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrid
 
     failed = False
     try:
-        if not dtest_setup.allow_log_errors and check_logs_for_errors(dtest_setup):
-            failed = True
-            raise AssertionError('Unexpected error in log, see stdout')
+        if not dtest_setup.allow_log_errors:
+            errors = check_logs_for_errors(dtest_setup)
+            if len(errors) > 0:
+                failed = True
+                pytest.fail(msg='Unexpected error found in node logs (see stdout for full details). Errors: [{errors}]'
+                                     .format(errors=str.join(", ", errors)), pytrace=False)
     finally:
         try:
             # save the logs for inspection
