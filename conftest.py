@@ -18,7 +18,6 @@ import netifaces as ni
 
 from ccmlib.common import validate_install_dir, get_version_from_build, is_win
 
-from dtest import cleanup_cluster
 from dtest_setup import DTestSetup
 from dtest_setup_overrides import DTestSetupOverrides
 
@@ -340,12 +339,7 @@ def fixture_dtest_setup(request, parse_dtest_config, fixture_dtest_setup_overrid
         except Exception as e:
             logger.error("Error saving log:", str(e))
         finally:
-            #log_watch_thread = getattr(self, '_log_watch_thread', None)
-            #cleanup_cluster(self.cluster, self.test_path, log_watch_thread)
-            cleanup_cluster(dtest_setup)
-            #if failed:
-            #    cleanup_cluster(request.cls.cluster, request.cls.test_path, None)
-            #    initialize_cluster(request, dtest_config)
+            dtest_setup.cleanup_cluster()
 
 
 def _skip_msg(current_running_version, since_version, max_version):

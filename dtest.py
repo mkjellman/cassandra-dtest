@@ -411,22 +411,6 @@ def stop_active_log_watch(log_watch_thread):
     log_watch_thread.join(timeout=60)
 
 
-def maybe_cleanup_cluster_from_last_test_file():
-    # cleaning up if a previous execution didn't trigger tearDown (which
-    # can happen if it is interrupted by KeyboardInterrupt)
-    if os.path.exists(LAST_TEST_DIR):
-        with open(LAST_TEST_DIR) as f:
-            test_path = f.readline().strip('\n')
-            name = f.readline()
-        try:
-            cluster = ClusterFactory.load(test_path, name)
-            # Avoid waiting too long for node to be marked down
-            cleanup_cluster(cluster, test_path)
-        except IOError:
-            # after a restart, /tmp will be emptied so we'll get an IOError when loading the old cluster here
-            pass
-
-
 def write_last_test_file(test_path, cluster):
     with open(LAST_TEST_DIR, 'w') as f:
         f.write(test_path + '\n')
