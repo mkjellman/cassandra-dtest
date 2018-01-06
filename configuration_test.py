@@ -2,6 +2,7 @@ import os
 import logging
 import parse
 import pytest
+import time
 
 from cassandra.concurrent import execute_concurrent_with_args
 
@@ -46,6 +47,7 @@ class TestConfiguration(Tester):
         session.execute(alter_chunk_len_query.format(chunk_length=64))
         self._check_chunk_length(session, 64)
 
+    @pytest.mark.timeout(60*30)
     def test_change_durable_writes(self):
         """
         @jira_ticket CASSANDRA-9560
@@ -103,6 +105,7 @@ class TestConfiguration(Tester):
                         "AND DURABLE_WRITES = false")
         session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
         session.execute('ALTER KEYSPACE ks WITH DURABLE_WRITES=true')
+        time.sleep(10)
         write_to_trigger_fsync(session, 'ks', 'tab')
         assert commitlog_size(node) > init_size, "ALTER KEYSPACE was not respected"
 
@@ -169,7 +172,7 @@ def write_to_trigger_fsync(session, ks, table):
                                      session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
                                                      'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
                                      (((x * (i + 1)), (x * (i + 1)) + 1, (x * (i + 1)) + 2, (x * (i + 1)) + 3)
-                                      for x in range(1000)), concurrency=1000, results_generator=True)
+                                      for x in range(1000)), concurrency=200, results_generator=True)
         for success, result in results:
             assert success
         logger.info("Successfully inserted keys %d of %d", (1000 * (i + 1)), 50 * 1000)
