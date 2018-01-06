@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import logging
+import signal
 
 from cassandra import ConsistencyLevel
 from cassandra.concurrent import execute_concurrent_with_args
@@ -366,7 +367,7 @@ class TestBootstrap(Tester):
         node1.start()
 
         # restart node3 bootstrap with resetting bootstrap progress
-        node3.stop()
+        node3.stop(signal_event=signal.SIGKILL)
         mark = node3.mark_log()
         node3.start(jvm_args=["-Dcassandra.reset_bootstrap_progress=true"])
         # check if we reset bootstrap state
