@@ -2,6 +2,7 @@ import os
 import tempfile
 import pytest
 import logging
+import time
 
 from itertools import chain
 from shutil import rmtree
@@ -126,6 +127,7 @@ class BaseReplaceAddressTest(Tester):
         self.query_node.stress(['write', 'n={}'.format(n), 'no-warmup', '-schema', 'replication(factor={})'.format(rf)],
                                whitelist=whitelist)
         self.cluster.flush()
+        time.sleep(20)
 
     def _fetch_initial_data(self, table='keyspace1.standard1', cl=ConsistencyLevel.THREE, limit=10000):
         logger.debug("Fetching initial data from {} on {} with CL={} and LIMIT={}".format(table, self.query_node.name, cl, limit))
