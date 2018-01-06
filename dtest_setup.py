@@ -388,7 +388,7 @@ class DTestSetup:
         # the failure detector can be quite slow in such tests with quick start/stop
         phi_values = {'phi_convict_threshold': 5}
 
-        timeout = 10000
+        timeout = 15000
         if self.cluster_options is not None and len(self.cluster_options) > 0:
             values = merge_dicts(self.cluster_options, phi_values)
         else:

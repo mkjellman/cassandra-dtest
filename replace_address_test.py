@@ -136,7 +136,7 @@ class BaseReplaceAddressTest(Tester):
         logger.debug("Fetching initial data from {} on {} with CL={} and LIMIT={}".format(table, self.query_node.name, cl, limit))
         session = self.patient_cql_connection(self.query_node)
         query = SimpleStatement('select * from {} LIMIT {}'.format(table, limit), consistency_level=cl)
-        return rows_to_list(session.execute(query, timeout=10))
+        return rows_to_list(session.execute(query, timeout=20))
 
     def _verify_data(self, initial_data, table='keyspace1.standard1', cl=ConsistencyLevel.ONE, limit=10000,
                      restart_nodes=False):
@@ -570,7 +570,7 @@ class TestReplaceAddress(BaseReplaceAddressTest):
             stress_config.write(yaml_config)
             stress_config.flush()
             self.query_node.stress(['user', 'profile=' + stress_config.name, 'n=10k', 'no-warmup',
-                                    'ops(insert=1)', '-rate', 'threads=10'])
+                                    'ops(insert=1)', '-rate', 'threads=5'])
             # need to sleep for a bit to try and let things catch up as we frequently do a lot of
             # GC after the stress invocation above causing the next step of the test to timeout.
             # and then flush to make sure we really are fully caught up
