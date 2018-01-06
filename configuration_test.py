@@ -161,11 +161,12 @@ def write_to_trigger_fsync(session, ks, table):
     commitlog_segment_size_in_mb is 1. Assumes the table's columns are
     (key int, a int, b int, c int).
     """
-    # https://github.com/datastax/python-driver/pull/877/files
-    # "Note: in the case that `generators` are used, it is important to ensure the consumers do not
-    # block or attempt further synchronous requests, because no further IO will be processed until
-    # the consumer returns. This may also produce a deadlock in the IO event thread."
-    # e.g. this can deadlock ==>
+    """
+    From https://github.com/datastax/python-driver/pull/877/files
+      "Note: in the case that `generators` are used, it is important to ensure the consumers do not
+       block or attempt further synchronous requests, because no further IO will be processed until
+       the consumer returns. This may also produce a deadlock in the IO event thread."
+    """
     execute_concurrent_with_args(session,
                                  session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
                                                  'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
