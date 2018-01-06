@@ -1170,6 +1170,11 @@ class TestConsistency(Tester):
         """
         cluster = self.cluster
 
+        # this test causes the python driver to be extremely noisy due to
+        # frequent starting and stopping of nodes. let's move the log level
+        # of the driver to ERROR for this test only
+        logging.getLogger("cassandra").setLevel('ERROR')
+
         # Disable hinted handoff and set batch commit log so this doesn't
         # interfer with the test
         cluster.set_configuration_options(values={'hinted_handoff_enabled': False})
