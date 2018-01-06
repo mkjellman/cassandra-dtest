@@ -1,16 +1,27 @@
 import os
 import logging
 import parse
+import pytest
 
 from flaky import flaky
 
 from cassandra.concurrent import execute_concurrent_with_args
 
+from tools.misc import ImmutableMapping
+from dtest_setup_overrides import DTestSetupOverrides
 from dtest import Tester, create_ks
 from tools.jmxutils import (JolokiaAgent, make_mbean,
                             remove_perf_disable_shared_mem)
 
 logger = logging.getLogger(__name__)
+
+
+@pytest.fixture()
+def fixture_dtest_setup_overrides(request):
+    dtest_setup_overrides = DTestSetupOverrides()
+    if request.node.name == "test_change_durable_writes":
+        dtest_setup_overrides.cluster_options = ImmutableMapping({'commitlog_segment_size_in_mb': 1})
+    return dtest_setup_overrides
 
 
 class TestConfiguration(Tester):
@@ -59,15 +70,14 @@ class TestConfiguration(Tester):
         """
         def new_commitlog_cluster_node():
             # writes should block on commitlog fsync
-            self.cluster.populate(1)
-            node = self.cluster.nodelist()[0]
-            self.cluster.set_configuration_options(values={'commitlog_segment_size_in_mb': 1})
-            self.cluster.set_batch_commitlog(enabled=True)
+            self.fixture_dtest_setup.cluster.populate(1)
+            node = self.fixture_dtest_setup.cluster.nodelist()[0]
+            self.fixture_dtest_setup.cluster.set_batch_commitlog(enabled=True)
 
             # disable JVM option so we can use Jolokia
-            # this has to happen after .set_configuration_options because of implmentation details
+            # this has to happen after .set_configuration_options because of implementation details
             remove_perf_disable_shared_mem(node)
-            self.cluster.start(wait_for_binary_proto=True)
+            self.fixture_dtest_setup.cluster.start(wait_for_binary_proto=True)
             return node
 
         durable_node = new_commitlog_cluster_node()
@@ -151,10 +161,15 @@ def write_to_trigger_fsync(session, ks, table):
     commitlog_segment_size_in_mb is 1. Assumes the table's columns are
     (key int, a int, b int, c int).
     """
+    # https://github.com/datastax/python-driver/pull/877/files
+    # "Note: in the case that `generators` are used, it is important to ensure the consumers do not
+    # block or attempt further synchronous requests, because no further IO will be processed until
+    # the consumer returns. This may also produce a deadlock in the IO event thread."
+    # e.g. this can deadlock ==>
     execute_concurrent_with_args(session,
                                  session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
                                                  'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
-                                 ((x, x + 1, x + 2, x + 3) for x in range(50000)))
+                                 ((x, x + 1, x + 2, x + 3) for x in range(50000)), results_generator=True)
 
 
 def commitlog_size(node):
