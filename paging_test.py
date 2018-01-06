@@ -3,6 +3,8 @@ import uuid
 import pytest
 import logging
 
+from flaky import flaky
+
 from distutils.version import LooseVersion
 
 from cassandra import ConsistencyLevel as CL
@@ -2786,6 +2788,7 @@ class TestPagingData(BasePagingTester, PageAssertionMixin):
                                                                                                                           [3, 2, 1, 5],
                                                                                                                           [3, 2, 2, 5]])
 
+    @flaky
     @since('2.1')
     def test_paging_with_empty_row_and_empty_static_columns(self):
         """
