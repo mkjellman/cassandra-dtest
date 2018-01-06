@@ -376,9 +376,13 @@ class DTestSetup:
                     self.cleanup_last_test_dir()
 
     def cleanup_and_replace_cluster(self):
+        for con in self.connections:
+            con.cluster.shutdown()
+        self.connections = []
+
         self.cleanup_cluster()
         self.test_path = self.get_test_path()
-        self.cluster = self.create_ccm_cluster(name='test')
+        self.initialize_cluster()
 
     def init_default_config(self):
         # the failure detector can be quite slow in such tests with quick start/stop
@@ -436,7 +440,7 @@ class DTestSetup:
 
     def create_ccm_cluster(self, name):
         logger.debug("cluster ccm directory: " + self.test_path)
-        version = os.environ.get('CASSANDRA_VERSION')
+        version = self.dtest_config.cassandra_version
 
         if version:
             cluster = Cluster(self.test_path, name, cassandra_version=version)
@@ -464,7 +468,11 @@ class DTestSetup:
         Cluster objects we work with "inherit" these logging settings (which we can
         lookup off the root logger)
         """
-        self.cluster.set_log_level(logging.getLevelName(logging.root.level))
+        if logging.root.level != 'NOTSET':
+            log_level = logging.getLevelName(logging.INFO)
+        else:
+            log_level = logging.root.level
+        self.cluster.set_log_level(log_level)
 
     def initialize_cluster(self):
         """

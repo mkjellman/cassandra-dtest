@@ -12,7 +12,7 @@ from cassandra.query import SimpleStatement
 
 from tools.assertions import (assert_all, assert_length_equal, assert_none,
                               assert_unavailable)
-from dtest import MultiError, Tester, PRINT_DEBUG, create_ks, create_cf
+from dtest import MultiError, Tester, create_ks, create_cf
 from tools.data import (create_c1c2_table, insert_c1c2, insert_columns,
                         query_c1c2, rows_to_list)
 from tools.jmxutils import JolokiaAgent, make_mbean, remove_perf_disable_shared_mem

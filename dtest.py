@@ -41,19 +41,7 @@ if len(config.read(os.path.expanduser('~/.cassandra-dtest'))) > 0:
     if config.has_option('main', 'default_dir'):
         DEFAULT_DIR = os.path.expanduser(config.get('main', 'default_dir'))
 
-KEEP_TEST_DIR = os.environ.get('KEEP_TEST_DIR', '').lower() in ('yes', 'true')
-PRINT_DEBUG = os.environ.get('PRINT_DEBUG', '').lower() in ('yes', 'true')
-RECORD_COVERAGE = os.environ.get('RECORD_COVERAGE', '').lower() in ('yes', 'true')
-IGNORE_REQUIRE = os.environ.get('IGNORE_REQUIRE', '').lower() in ('yes', 'true')
-ENABLE_ACTIVE_LOG_WATCHING = os.environ.get('ENABLE_ACTIVE_LOG_WATCHING', '').lower() in ('yes', 'true')
 RUN_STATIC_UPGRADE_MATRIX = os.environ.get('RUN_STATIC_UPGRADE_MATRIX', '').lower() in ('yes', 'true')
-
-"""
-logging.basicConfig(stream=sys.stdout,
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    level=logging.DEBUG)
-"""
 
 logger = logging.getLogger(__name__)
 
@@ -104,13 +92,6 @@ initial_environment = copy.deepcopy(os.environ)
 
 class DtestTimeoutError(Exception):
     pass
-
-
-def reset_environment_vars():
-    pytest_current_test = os.environ.get('PYTEST_CURRENT_TEST')
-    os.environ.clear()
-    os.environ.update(initial_environment)
-    os.environ['PYTEST_CURRENT_TEST'] = pytest_current_test
 
 
 logger.debug("Python driver version in use: {}".format(cassandra.__version__))
@@ -230,9 +211,6 @@ class Tester:
         runner.start()
         return runner
 
-
-
-
 def get_eager_protocol_version(cassandra_version):
     """
     Returns the highest protocol version accepted
@@ -344,77 +322,6 @@ def kill_windows_cassandra_procs():
         except ImportError:
             logger.debug("WARN: psutil not installed. Cannot detect and kill "
                   "running cassandra processes - you may see cascading dtest failures.")
-
-
-def get_test_path():
-    test_path = tempfile.mkdtemp(prefix='dtest-')
-
-    # ccm on cygwin needs absolute path to directory - it crosses from cygwin space into
-    # regular Windows space on wmic calls which will otherwise break pathing
-    if sys.platform == "cygwin":
-        process = subprocess.Popen(["cygpath", "-m", test_path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        test_path = process.communicate()[0].rstrip()
-
-    return test_path
-
-
-# nose will discover this as a test, so we manually make it not a test
-get_test_path.__test__ = False
-
-
-def cleanup_cluster(dtest_setup):
-    with log_filter('cassandra'):  # quiet noise from driver when nodes start going down
-        if KEEP_TEST_DIR:
-            dtest_setup.cluster.stop(gently=RECORD_COVERAGE)
-        else:
-            # when recording coverage the jvm has to exit normally
-            # or the coverage information is not written by the jacoco agent
-            # otherwise we can just kill the process
-            if RECORD_COVERAGE:
-                dtest_setup.cluster.stop(gently=True)
-
-            # Cleanup everything:
-            try:
-                if dtest_setup.log_watch_thread:
-                    stop_active_log_watch(dtest_setup.log_watch_thread)
-            finally:
-                logger.debug("removing ccm cluster {name} at: {path}".format(name=dtest_setup.cluster.name, path=dtest_setup.test_path))
-                dtest_setup.cluster.remove()
-
-                logger.debug("clearing ssl stores from [{0}] directory".format(dtest_setup.test_path))
-                for filename in ('keystore.jks', 'truststore.jks', 'ccm_node.cer'):
-                    try:
-                        os.remove(os.path.join(dtest_setup.test_path, filename))
-                    except OSError as e:
-                        # once we port to py3, which has better reporting for exceptions raised while
-                        # handling other excpetions, we should just assert e.errno == errno.ENOENT
-                        if e.errno != errno.ENOENT:  # ENOENT = no such file or directory
-                            raise
-
-                os.rmdir(dtest_setup.test_path)
-                cleanup_last_test_dir()
-
-
-def cleanup_last_test_dir():
-    if os.path.exists(LAST_TEST_DIR):
-        os.remove(LAST_TEST_DIR)
-
-
-def stop_active_log_watch(log_watch_thread):
-    """
-    Joins the log watching thread, which will then exit.
-    Should be called after each test, ideally after nodes are stopped but before cluster files are removed.
-
-    Can be called multiple times without error.
-    If not called, log watching thread will remain running until the parent process exits.
-    """
-    log_watch_thread.join(timeout=60)
-
-
-def write_last_test_file(test_path, cluster):
-    with open(LAST_TEST_DIR, 'w') as f:
-        f.write(test_path + '\n')
-        f.write(cluster.name)
 
 
 class MultiError(Exception):

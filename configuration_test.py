@@ -94,6 +94,7 @@ class TestConfiguration(Tester):
             "This test will not work in this environment; write_to_trigger_fsync does not trigger fsync."
 
         # get a fresh cluster to work on
+        durable_session.shutdown()
         self.fixture_dtest_setup.cleanup_and_replace_cluster()
 
         node = new_commitlog_cluster_node()
@@ -105,7 +106,6 @@ class TestConfiguration(Tester):
                         "AND DURABLE_WRITES = false")
         session.execute('CREATE TABLE ks.tab (key int PRIMARY KEY, a int, b int, c int)')
         session.execute('ALTER KEYSPACE ks WITH DURABLE_WRITES=true')
-        time.sleep(10)
         write_to_trigger_fsync(session, 'ks', 'tab')
         assert commitlog_size(node) > init_size, "ALTER KEYSPACE was not respected"
 
@@ -167,15 +167,11 @@ def write_to_trigger_fsync(session, ks, table):
        block or attempt further synchronous requests, because no further IO will be processed until
        the consumer returns. This may also produce a deadlock in the IO event thread."
     """
-    for i in range(50):
-        results = execute_concurrent_with_args(session,
-                                     session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
-                                                     'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
-                                     (((x * (i + 1)), (x * (i + 1)) + 1, (x * (i + 1)) + 2, (x * (i + 1)) + 3)
-                                      for x in range(1000)), concurrency=200, results_generator=True)
-        for success, result in results:
-            assert success
-        logger.info("Successfully inserted keys %d of %d", (1000 * (i + 1)), 50 * 1000)
+    execute_concurrent_with_args(session,
+                                 session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
+                                                 'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
+                                 ((x, x + 1, x + 2, x + 3)
+                                 for x in range(50000)), concurrency=5)
 
 
 def commitlog_size(node):
