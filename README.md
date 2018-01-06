@@ -24,6 +24,7 @@ DTests requires the following native dependencies:
 1. ``apt-get install git-core python3 python3-pip python3-dev libev4 libev-dev``
 2. (Optional - solves warning: "jemalloc shared library could not be preloaded to speed up memory allocations"): 
 ``apt-get install -y --no-install-recommends libjemalloc1``
+
 #### Mac
 On Mac, the easiest path is to install the latest [Xcode and Command Line Utilities](https://developer.apple.com) to 
 bootstrap your development environment and then use [Homebrew](https://brew.sh)
@@ -114,10 +115,10 @@ Debugging Tests
 -------------
 Some general tips for debugging dtest/pytest tests
 
-####pytest.set_trace()
+#### pytest.set_trace()
 If there is an unexpected value being asserted on and you'd like to inspect the state of all the tests variables just before a paricular assert, add ``pytest.set_trace()`` right before the problematic code. The next time you execute the test, when that line of code is reached pytest will drop you into an interactive python debugger (pdb). From there you can use standard python options to inspect various methods and variables for debugging.
 
-####Hung tests/hung pytest framework
+#### Hung tests/hung pytest framework
 Debugging hung tests can be very difficult but thanks to improvements in Python 3 it's now pretty painless to get a python thread dump of all the threads currently running in the pytest process.
 
 ```python
@@ -127,6 +128,7 @@ faulthandler.enable()
 Adding the above code will install a signal handler into your process. When the process recieves a *SIGABRT* signal, python will dump python thread dumps for all running threads in the process. DTests installs this by default with the install_debugging_signal_handler fixture.
 
 The following is an example of what you might see if you send a *SIGABRT* signal to the pytest process while in a hung state during the test teardown phase after the successful completion of the actual dtest.
+
 ```bash
 (env) cassandra-dtest vcooluser$ kill -SIGABRT 24142
 
@@ -191,7 +193,7 @@ Current thread 0x00007fffa00dd340 (most recent call first):
 Abort trap: 6
 ```
 
-####Debugging Issues with Fixtures and Test Setup/Teardown
+#### Debugging Issues with Fixtures and Test Setup/Teardown
 pytest can appear to be doing "magic" more often than not. One place it may be hard to follow what actual code will get executed by normal code inspection alone is determining which fixtures will run for a given test and in what order. pytest provides a ``--setup-plan`` command line argument. When pytest is invoked with this argument it will print a execution plan including all fixtures and tests that actually running the test will invoke. The below is an example for the current execution plan pytest generates for dtest *auth_test.py::TestAuthRoles::test_create_drop_role*
 
 ```bash
@@ -233,8 +235,9 @@ TEARDOWN S install_debugging_signal_handler
 ================================================================= no tests ran in 0.12 seconds ==================================================================
 ```
 
-####Instances Failing to Start (Unclean Test Teardown)
+#### Instances Failing to Start (Unclean Test Teardown)
 Getting into a state (especially while writing new tests or debugging problamatic ones) where pytest/dtest fails to fully tear-down all local C* instancse that were started. You can use this handy one liner to kill all C* instances in one go:
+
 ```bash
 ps aux | grep -ie CassandraDaemon | grep java | awk '{print $2}' | xargs kill
 ```
