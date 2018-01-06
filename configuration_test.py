@@ -3,8 +3,6 @@ import logging
 import parse
 import pytest
 
-from flaky import flaky
-
 from cassandra.concurrent import execute_concurrent_with_args
 
 from tools.misc import ImmutableMapping
@@ -48,7 +46,6 @@ class TestConfiguration(Tester):
         session.execute(alter_chunk_len_query.format(chunk_length=64))
         self._check_chunk_length(session, 64)
 
-    @flaky
     def test_change_durable_writes(self):
         """
         @jira_ticket CASSANDRA-9560
@@ -167,10 +164,15 @@ def write_to_trigger_fsync(session, ks, table):
        block or attempt further synchronous requests, because no further IO will be processed until
        the consumer returns. This may also produce a deadlock in the IO event thread."
     """
-    execute_concurrent_with_args(session,
-                                 session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
-                                                 'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
-                                 ((x, x + 1, x + 2, x + 3) for x in range(50000)), results_generator=True)
+    for i in range(50):
+        results = execute_concurrent_with_args(session,
+                                     session.prepare('INSERT INTO "{ks}"."{table}" (key, a, b, c) '
+                                                     'VALUES (?, ?, ?, ?)'.format(ks=ks, table=table)),
+                                     (((x * (i + 1)), (x * (i + 1)) + 1, (x * (i + 1)) + 2, (x * (i + 1)) + 3)
+                                      for x in range(1000)), concurrency=1000, results_generator=True)
+        for success, result in results:
+            assert success
+        logger.info("Successfully inserted keys %d of %d", (1000 * (i + 1)), 50 * 1000)
 
 
 def commitlog_size(node):
