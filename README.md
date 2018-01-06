@@ -56,6 +56,8 @@ is included with the intent to make starting execution of the dtests with sane d
 as possible. Most users will most likely find that invoking the tests directly using ``pytest`` 
 ultimately works the best and provides the most flexibility.
 
+Pytest has a great [Usage and Invocations](https://docs.pytest.org/en/latest/usage.html) document which is a great place to start for basic invocation options when using pytest.
+
 At minimum, 
 
   The only thing the framework needs to know is
@@ -70,8 +72,7 @@ Use ccm ability to download/compile released sources from archives.apache.org:
     pytest --cassandra-version=1.0.0
 
 A convenient option if tests are regularly run against the same existing
-directory is to set a `cassandra_dir` in `~/.cassandra-dtest`. Create the file and
-set it to something like:
+directory is to set a `cassandra_dir` in `~/path/to/cassandra-dtest/pytest.ini`:
 
     [pytest]
     cassandra_dir=~/path/to/cassandra

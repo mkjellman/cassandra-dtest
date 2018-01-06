@@ -49,7 +49,8 @@ class DTestConfig:
         self.data_dir_count = request.config.getoption("--data-dir-count-per-instance")
         self.force_execution_of_resource_intensive_tests = request.config.getoption("--force-resource-intensive-tests")
         self.skip_resource_intensive_tests = request.config.getoption("--skip-resource-intensive-tests")
-        self.cassandra_dir = request.config.getoption("--cassandra-dir")
+        if request.config.getoption("--cassandra-dir") is not None:
+            self.cassandra_dir = os.path.expanduser(request.config.getoption("--cassandra-dir"))
         self.cassandra_version = request.config.getoption("--cassandra-version")
         self.delete_logs = request.config.getoption("--delete-logs")
         self.execute_upgrade_tests = request.config.getoption("--execute-upgrade-tests")
