@@ -14,8 +14,8 @@ from collections import OrderedDict
 
 from cassandra.cluster import Cluster as PyCluster
 from cassandra.cluster import NoHostAvailable
-from cassandra.cluster import ExecutionProfile, EXEC_PROFILE_DEFAULT
-from cassandra.policies import RetryPolicy, WhiteListRoundRobinPolicy, RoundRobinPolicy
+from cassandra.cluster import EXEC_PROFILE_DEFAULT
+from cassandra.policies import WhiteListRoundRobinPolicy
 from ccmlib.common import get_version_from_build, is_win
 from ccmlib.cluster import Cluster
 

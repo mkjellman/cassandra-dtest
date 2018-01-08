@@ -1,29 +1,28 @@
 import configparser
 import copy
-import errno
 import logging
 import os
 import re
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 import traceback
 import pytest
-from subprocess import CalledProcessError
-
 import cassandra
 import ccmlib.repository
-from cassandra import ConsistencyLevel
+
+from subprocess import CalledProcessError
+
+from flaky import flaky
+
+from cassandra import ConsistencyLevel, OperationTimedOut
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import ExecutionProfile
 from cassandra.policies import RetryPolicy, RoundRobinPolicy
-from ccmlib.cluster_factory import ClusterFactory
 from ccmlib.common import get_version_from_build, is_win
 from distutils.version import LooseVersion
 
-from tools.context import log_filter
 
 LOG_SAVED_DIR = "logs"
 try:
@@ -182,6 +181,19 @@ def make_execution_profile(retry_policy=FlakyRetryPolicy(), consistency_level=Co
                                 **kwargs)
 
 
+def test_failure_due_to_timeout(err, *args):
+    """
+    check if we should rerun a test with the flaky plugin or not.
+    for now, only run if we got a cassandra.OperationTimedOut exception.
+    also, introduce a 2 second sleep before we re-run the test to give
+    some time for environmental issues to sort themselves to make
+    the re-run more likely to suceed
+    """
+    time.sleep(2)
+    return issubclass(err[0], OperationTimedOut)
+
+
+@flaky(rerun_filter=test_failure_due_to_timeout)
 class Tester:
 
     def __getattribute__(self, name):

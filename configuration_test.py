@@ -2,7 +2,6 @@ import os
 import logging
 import parse
 import pytest
-import time
 
 from cassandra.concurrent import execute_concurrent_with_args
 
