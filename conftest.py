@@ -9,6 +9,8 @@ import copy
 import inspect
 import subprocess
 
+from dtest import running_in_docker, cleanup_docker_environment_before_test_execution
+
 from datetime import datetime
 from distutils.version import LooseVersion
 from netifaces import AF_INET
@@ -299,35 +301,7 @@ def reset_environment_vars(initial_environment):
     os.environ['PYTEST_CURRENT_TEST'] = pytest_current_test
 
 
-def running_in_docker():
-    return os.path.isfile('/.dockerenv')
 
-
-def cleanup_docker_environment_before_test_execution():
-    """
-    perform a bunch of system cleanup operations, like kill any instances that might be
-    hanging around incorrectly from a previous run, sync the disk, and clear swap.
-    Ideally we would also drop the page cache, but as docker isn't running in privileged
-    mode there is no way for us to do this.
-    """
-    # attempt to wack all existing running Cassandra processes forcefully to get us into a clean state
-    p_kill = subprocess.Popen('ps aux | grep -ie CassandraDaemon | grep java | awk \'{print $2}\' | xargs kill -9',
-                              shell=True)
-    p_kill.wait(timeout=10)
-
-    # explicitly call "sync" to flush everything that might be pending from a previous test
-    # so tests are less likely to hit a very slow fsync during the test by starting from a 'known' state
-    # note: to mitigate this further the docker image is mounting /tmp as a volume, which gives
-    # us an ext4 mount which should talk directly to the underlying device on the host, skipping
-    # the aufs pain that we get with anything else running in the docker image. Originally,
-    # I had a timeout of 120 seconds (2 minutes) but sync was still occasionally timing out.
-    p_sync = subprocess.Popen('sudo /bin/sync', shell=True)
-    p_sync.wait(timeout=300)
-
-    # turn swap off and back on to make sure it's fully cleared if anything happened to swap
-    # from a previous test run
-    p_swap = subprocess.Popen('sudo /sbin/swapoff -a && sudo /sbin/swapon -a', shell=True)
-    p_swap.wait(timeout=60)
 
 
 @pytest.fixture(scope='function', autouse=False)
