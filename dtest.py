@@ -12,6 +12,8 @@ import pytest
 import cassandra
 import ccmlib.repository
 
+from conftest import running_in_docker, cleanup_docker_environment_before_test_execution
+
 from subprocess import CalledProcessError
 
 from flaky import flaky
@@ -190,8 +192,13 @@ def test_failure_due_to_timeout(err, *args):
     some time for environmental issues to sort themselves to make
     the re-run more likely to succeed
     """
-    time.sleep(2)
-    return issubclass(err[0], OperationTimedOut) or issubclass(err[0], ToolError)
+    if issubclass(err[0], OperationTimedOut) or issubclass(err[0], ToolError):
+        if running_in_docker():
+            cleanup_docker_environment_before_test_execution()
+            time.sleep(2)
+        return True
+    else:
+        return False
 
 
 @flaky(rerun_filter=test_failure_due_to_timeout)
