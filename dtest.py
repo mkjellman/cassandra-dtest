@@ -21,6 +21,7 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import ExecutionProfile
 from cassandra.policies import RetryPolicy, RoundRobinPolicy
 from ccmlib.common import get_version_from_build, is_win
+from ccmlib.node import ToolError
 from distutils.version import LooseVersion
 
 
@@ -187,10 +188,10 @@ def test_failure_due_to_timeout(err, *args):
     for now, only run if we got a cassandra.OperationTimedOut exception.
     also, introduce a 2 second sleep before we re-run the test to give
     some time for environmental issues to sort themselves to make
-    the re-run more likely to suceed
+    the re-run more likely to succeed
     """
     time.sleep(2)
-    return issubclass(err[0], OperationTimedOut)
+    return issubclass(err[0], OperationTimedOut) or issubclass(err[0], ToolError)
 
 
 @flaky(rerun_filter=test_failure_due_to_timeout)
