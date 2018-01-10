@@ -317,8 +317,12 @@ def cleanup_docker_environment_before_test_execution():
 
     # explicitly call "sync" to flush everything that might be pending from a previous test
     # so tests are less likely to hit a very slow fsync during the test by starting from a 'known' state
+    # note: to mitigate this further the docker image is mounting /tmp as a volume, which gives
+    # us an ext4 mount which should talk directly to the underlying device on the host, skipping
+    # the aufs pain that we get with anything else running in the docker image. Originally,
+    # I had a timeout of 120 seconds (2 minutes) but sync was still occasionally timing out.
     p_sync = subprocess.Popen('sudo /bin/sync', shell=True)
-    p_sync.wait(timeout=120)
+    p_sync.wait(timeout=300)
 
     # turn swap off and back on to make sure it's fully cleared if anything happened to swap
     # from a previous test run
